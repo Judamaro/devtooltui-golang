@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -27,9 +28,12 @@ func (JWT) Spec() tool.Spec {
 		ID:          "jwt",
 		Name:        "JWT",
 		Category:    tool.Encoders,
-		Description: "Decodifica tokens JWT y verifica firmas HMAC",
+		Description: "Decodifica tokens JWT y verifica firmas (HMAC, RSA, ECDSA, EdDSA)",
 		Keywords:    []string{"token", "bearer", "jws", "auth", "claims"},
-		Inputs:      []tool.InputSpec{{Key: "input", Label: "Token", Multiline: true}},
+		Inputs: []tool.InputSpec{
+			{Key: "input", Label: "Token", Multiline: true},
+			{Key: "key", Label: "Clave pública (PEM, opcional)", Multiline: true},
+		},
 		Options: []tool.Option{
 			{Key: "secret", Label: "Secreto", Help: "Verifica la firma HS256/384/512", Kind: tool.String, Default: ""},
 		},
@@ -92,7 +96,7 @@ func (j JWT) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 	}
 
 	alg, _ := hdr["alg"].(string)
-	sig := verifySignature(token, alg, opts.String("secret"))
+	sig := verifySignature(token, alg, opts.String("secret"), req.Inputs["key"])
 	b.WriteString("\n\n── Firma\n" + sig)
 
 	meta := []tool.KV{{Key: "alg", Value: alg}}
@@ -153,33 +157,75 @@ func timeClaims(claims map[string]any, now time.Time) (lines []string, state str
 	return lines, state
 }
 
-func verifySignature(token, alg, secret string) string {
+// Algoritmos asimétricos por familia de clave.
+var (
+	rsaAlgs   = []string{"RS256", "RS384", "RS512", "PS256", "PS384", "PS512"}
+	ecdsaAlgs = []string{"ES256", "ES384", "ES512"}
+	edAlgs    = []string{"EdDSA"}
+)
+
+func verifySignature(token, alg, secret, pem string) string {
+	var key any
+	var valid []string
 	switch {
 	case strings.EqualFold(alg, "none"):
 		return "⚠ alg \"none\": el token no está firmado"
-	case secret == "":
-		return "sin verificar (escribe el secreto en las opciones)"
-	case !isHMAC(alg):
-		return fmt.Sprintf("sin verificar: %s necesita una clave pública (PEM llega en la semana 3)", alg)
+	case slices.Contains(hmacAlgs, alg):
+		if secret == "" {
+			return "sin verificar (escribe el secreto en las opciones)"
+		}
+		key, valid = []byte(secret), hmacAlgs
+	case strings.TrimSpace(pem) == "":
+		return fmt.Sprintf("sin verificar: %s necesita la clave pública (pégala en la segunda entrada)", alg)
+	default:
+		var err error
+		key, valid, err = parsePublicKey(alg, []byte(pem))
+		if err != nil {
+			return "✗ " + err.Error()
+		}
 	}
-	_, err := jwt.Parse(token, func(*jwt.Token) (any, error) { return []byte(secret), nil },
-		jwt.WithValidMethods(hmacAlgs), jwt.WithoutClaimsValidation())
-	if err != nil {
-		if errors.Is(err, jwt.ErrSignatureInvalid) {
+	_, err := jwt.Parse(token, func(*jwt.Token) (any, error) { return key, nil },
+		jwt.WithValidMethods(valid), jwt.WithoutClaimsValidation())
+	switch {
+	case err == nil:
+		return fmt.Sprintf("✓ firma %s válida", alg)
+	case errors.Is(err, jwt.ErrSignatureInvalid), errors.Is(err, jwt.ErrTokenSignatureInvalid):
+		if slices.Contains(hmacAlgs, alg) {
 			return "✗ firma inválida para ese secreto"
 		}
+		return "✗ firma inválida para esa clave pública"
+	default:
 		return "✗ " + err.Error()
 	}
-	return fmt.Sprintf("✓ firma %s válida", alg)
 }
 
-func isHMAC(alg string) bool {
-	for _, a := range hmacAlgs {
-		if a == alg {
-			return true
+// parsePublicKey lee una clave pública o un certificado PEM del tipo que
+// pide alg.
+func parsePublicKey(alg string, pem []byte) (any, []string, error) {
+	var (
+		key any
+		err error
+	)
+	switch {
+	case slices.Contains(rsaAlgs, alg):
+		key, err = jwt.ParseRSAPublicKeyFromPEM(pem)
+		if err == nil {
+			return key, rsaAlgs, nil
 		}
+	case slices.Contains(ecdsaAlgs, alg):
+		key, err = jwt.ParseECPublicKeyFromPEM(pem)
+		if err == nil {
+			return key, ecdsaAlgs, nil
+		}
+	case slices.Contains(edAlgs, alg):
+		key, err = jwt.ParseEdPublicKeyFromPEM(pem)
+		if err == nil {
+			return key, edAlgs, nil
+		}
+	default:
+		return nil, nil, fmt.Errorf("algoritmo %q no soportado", alg)
 	}
-	return false
+	return nil, nil, fmt.Errorf("la clave no es una clave pública PEM válida para %s: %v", alg, err)
 }
 
 // Detect reconoce tres segmentos Base64URL cuyo header es JSON con "alg".

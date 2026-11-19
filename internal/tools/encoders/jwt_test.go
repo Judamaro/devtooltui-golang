@@ -2,9 +2,18 @@ package encoders_test
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/Judamaro/devtooltui-golang/internal/testutil"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
@@ -169,4 +178,84 @@ func FuzzJWT(f *testing.F) {
 			}
 		}
 	})
+}
+
+// keys genera pares de claves y devuelve un token firmado y la clave
+// pública en PEM para cada algoritmo asimétrico.
+func signedWithPEM(t *testing.T, alg string) (token, pubPEM string) {
+	t.Helper()
+	var priv, pub any
+	switch alg[:2] {
+	case "RS", "PS":
+		k, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			t.Fatal(err)
+		}
+		priv, pub = k, &k.PublicKey
+	case "ES":
+		k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		priv, pub = k, &k.PublicKey
+	default: // EdDSA
+		p, k, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		priv, pub = k, p
+	}
+	tok, err := jwt.NewWithClaims(jwt.GetSigningMethod(alg), jwt.MapClaims{"sub": "x"}).SignedString(priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return tok, string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}))
+}
+
+func TestJWTPublicKeys(t *testing.T) {
+	for _, alg := range []string{"RS256", "PS384", "ES256", "EdDSA"} {
+		t.Run(alg, func(t *testing.T) {
+			tok, pub := signedWithPEM(t, alg)
+			_, otherPub := signedWithPEM(t, alg)
+			tests := []struct {
+				name, key, want string
+			}{
+				{"clave correcta", pub, "✓ firma " + alg + " válida"},
+				{"otra clave", otherPub, "✗ firma inválida para esa clave pública"},
+				{"sin clave", "", "pégala en la segunda entrada"},
+				{"pem roto", "-----BEGIN PUBLIC KEY-----\nxx\n-----END PUBLIC KEY-----", "✗ la clave no es una clave pública PEM válida"},
+			}
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					res, err := encoders.JWT{Now: jwtNow}.Run(context.Background(), tool.Request{
+						Inputs: map[string]string{"input": tok, "key": tt.key},
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !strings.Contains(res.Text, tt.want) {
+						t.Errorf("la salida no contiene %q:\n%s", tt.want, res.Text)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestJWTKeyTypeMismatch(t *testing.T) {
+	tok, _ := signedWithPEM(t, "RS256")
+	_, ecPub := signedWithPEM(t, "ES256")
+	res, err := encoders.JWT{Now: jwtNow}.Run(context.Background(), tool.Request{
+		Inputs: map[string]string{"input": tok, "key": ecPub},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(res.Text, "✗ la clave no es una clave pública PEM válida para RS256") {
+		t.Errorf("no avisa el tipo de clave equivocado:\n%s", res.Text)
+	}
 }

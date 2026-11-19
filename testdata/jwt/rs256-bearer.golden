@@ -17,4 +17,4 @@ exp: 2026-01-04 00:00:00 UTC (en 2 d)
 nbf: 2026-01-03 00:00:00 UTC (en 36 h)
 
 ── Firma
-sin verificar: RS256 necesita una clave pública (PEM llega en la semana 3)
+sin verificar: RS256 necesita la clave pública (pégala en la segunda entrada)
