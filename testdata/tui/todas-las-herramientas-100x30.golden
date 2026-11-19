@@ -6,9 +6,9 @@
     JWT                  │┃
 ▾ Conversores            │┃
     Timestamp            │┃
+    Bases numéricas      │┃
 ▾ Generadores            │┃
     Hash                 │┃
-                         │┃
                          │┃
                          │┃
                          │┃

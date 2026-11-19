@@ -17,6 +17,7 @@ func All() []tool.Tool {
 		encoders.URL{},
 		encoders.JWT{},
 		converters.Timestamp{},
+		converters.NumberBase{},
 		generators.Hash{},
 	}
 }
