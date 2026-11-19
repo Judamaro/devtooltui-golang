@@ -59,6 +59,7 @@ nfpms:
     homepage: https://github.com/Judamaro/devtooltui-golang
     maintainer: Judamaro <noreply@github.com>
     description: Utilidades de desarrollo en la terminal (JSON, JWT, Base64, hashes, regex, diff…) como TUI y CLI.
+    license: MIT
     formats: [deb, rpm, apk]
 
 homebrew_casks:

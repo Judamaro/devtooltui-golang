@@ -101,3 +101,8 @@ make lint    # golangci-lint + govulncheck
 
 Las convenciones (contrato `Tool`, tests y golden files) están en
 [CLAUDE.md](CLAUDE.md) y las decisiones en [docs/adr](docs/adr).
+
+## Licencia
+
+[MIT](LICENSE). Inspirado en [DevToys](https://github.com/DevToys-app/DevToys)
+(MIT); no comparte código con él.
