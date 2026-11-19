@@ -1,0 +1,8 @@
+# Finales de línea LF en todos los sistemas: los golden files y las
+# fixtures se comparan byte a byte, también en el runner de Windows.
+* text=auto eol=lf
+*.golden -text
+*.in -text
+testdata/** -text
+*.gif binary
+*.png binary
