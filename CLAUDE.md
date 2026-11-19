@@ -74,8 +74,15 @@ Reglas (las verifica `internal/registry/contract_test.go` sobre `tools.All()`):
 
 ## Herramientas actuales
 
-`json-format`, `base64`, `url`, `hash` (registradas en ese orden en
-`internal/tools/all.go`).
+`json-format`, `base64`, `url`, `jwt`, `timestamp`, `number-base`, `hash`,
+`uuid` (registradas en ese orden en `internal/tools/all.go`).
+
+- Reloj y aleatoriedad: las herramientas que los necesitan (`jwt`,
+  `timestamp`, `uuid`) tienen campos opcionales `Now func() time.Time` y
+  `Rand io.Reader`; con nil usan `time.Now` y `crypto/rand`. Los tests
+  siempre los fijan. Leerlos no cuenta como I/O prohibido en `Run`.
+- `converters.Relative` ("en 3 h", "hace 2 d") es compartido.
+- `timestamp` embebe `time/tzdata`: las zonas IANA no dependen del sistema.
 
 ## TUI
 
@@ -84,6 +91,16 @@ Reglas (las verifica `internal/registry/contract_test.go` sobre `tools.All()`):
 - Opciones: ↑/↓ cambia de opción, ←/→ cambia el valor, espacio invierte un
   Toggle. Number y String son `textinput`; un Number fuera de rango se marca
   y no se aplica.
+- Ejecución asíncrona: cada cambio de entrada sube `seq` y programa la
+  ejecución tras el debounce (`tui.Options.Debounce`, 120 ms). Lanzar una
+  ejecución cancela el `ctx` anterior; `workspace.ResultMsg` con otra `seq`
+  o cancelado se descarta. Los mensajes llevan `ToolID` y la App los enruta.
+  Opciones, F5, pegado grande y ctrl+l ejecutan sin debounce.
+- La última fila es `internal/tui/statusbar`: estado a la izquierda, ayuda a
+  la derecha. Con error, la salida anterior se atenúa.
+- En tests, `testutil.RunCmds` ejecuta los `tea.Cmd` y entrega los mensajes
+  (descarta los que tardan más de 30 ms, como el parpadeo del cursor). Las
+  Apps de test usan `Options{Debounce: 0}`.
 - `F5` ejecuta (herramientas `Live: false` y modo de entrada grande).
   `ctrl+l` limpia la entrada y sale del modo grande.
 - Los tests de comportamiento de la TUI usan un registro solo con `base64`
