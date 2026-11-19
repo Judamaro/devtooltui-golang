@@ -43,7 +43,7 @@ var optKeys = options.KeyMap{
 
 func newWS(c tool.Tool) *workspace.Model {
 	m := workspace.New(c, workspace.Styles{}, optKeys, 0)
-	m.SetSize(80, 24)
+	m.SetSize(80, 24, false)
 	m.SetFocus(workspace.FocusInput)
 	run(m, m.Init())
 	return m
@@ -225,7 +225,7 @@ func runBatch(cmd tea.Cmd) tea.Msg {
 func TestDebounce(t *testing.T) {
 	c := &counter{live: true}
 	m := workspace.New(c, workspace.Styles{}, optKeys, 50*time.Millisecond)
-	m.SetSize(80, 24)
+	m.SetSize(80, 24, false)
 	m.SetFocus(workspace.FocusInput)
 	runs := c.runs
 

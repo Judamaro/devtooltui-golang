@@ -42,16 +42,12 @@ type Model struct {
 	tool   tool.Tool
 	spec   tool.Spec
 	opts   options.Model
-	input  textarea.Model
+	inputs []*field
+	active int // entrada con foco cuando focus == FocusInput
 	output viewport.Model
 	limits Limits
-
-	// Modo de entrada grande: el texto vive en large y se muestra en
-	// largeView, de solo lectura.
-	large     bool
-	largeText string
-	largeView viewport.Model
-	stale     bool // la entrada cambió y no se ha ejecutado (F5)
+	stale  bool // la entrada cambió y no se ha ejecutado (F5)
+	wide   bool // la terminal permite dos entradas lado a lado
 
 	// Ejecución asíncrona: seq identifica la ejecución vigente; los
 	// resultados con otra seq se descartan.
@@ -98,22 +94,17 @@ type ResultMsg struct {
 // ejecución; con 0 se ejecuta enseguida (útil en tests).
 func New(t tool.Tool, styles Styles, optKeys options.KeyMap, debounce time.Duration) *Model {
 	spec := t.Spec()
-	ta := textarea.New()
-	ta.Placeholder = "Escribe o pega aquí…"
-	ta.CharLimit = 0
-	ta.MaxHeight = 0
-	ta.MaxWidth = 0
-	ta.SetStyles(styles.Textarea)
 	m := &Model{
-		tool:      t,
-		spec:      spec,
-		opts:      options.New(spec, tool.Values{}.WithDefaults(spec), styles.Options, optKeys),
-		input:     ta,
-		output:    viewport.New(),
-		largeView: viewport.New(),
-		limits:    DefaultLimits,
-		debounce:  debounce,
-		styles:    styles,
+		tool:     t,
+		spec:     spec,
+		opts:     options.New(spec, tool.Values{}.WithDefaults(spec), styles.Options, optKeys),
+		output:   viewport.New(),
+		limits:   DefaultLimits,
+		debounce: debounce,
+		styles:   styles,
+	}
+	for _, in := range spec.Inputs {
+		m.inputs = append(m.inputs, newField(in, styles.Textarea))
 	}
 	return m
 }
@@ -122,7 +113,33 @@ func New(t tool.Tool, styles Styles, optKeys options.KeyMap, debounce time.Durat
 func (m *Model) Init() tea.Cmd { return m.runNow() }
 
 // HasInput indica si la herramienta tiene un campo de entrada.
-func (m *Model) HasInput() bool { return len(m.spec.Inputs) > 0 }
+func (m *Model) HasInput() bool { return len(m.inputs) > 0 }
+
+// MoveInput mueve el foco entre entradas (delta ±1) y devuelve false si ya
+// estaba en el extremo, para que la App pase al siguiente panel.
+func (m *Model) MoveInput(delta int) (bool, tea.Cmd) {
+	next := m.active + delta
+	if m.focus != FocusInput || next < 0 || next >= len(m.inputs) {
+		return false, nil
+	}
+	m.active = next
+	return true, m.SetFocus(FocusInput)
+}
+
+// FocusEdge prepara la entrada que recibe el foco al llegar desde atrás
+// (first=true: la primera) o desde adelante (la última).
+func (m *Model) FocusEdge(first bool) {
+	if first {
+		m.active = 0
+	} else {
+		m.active = max(len(m.inputs)-1, 0)
+	}
+}
+
+// ActiveInput devuelve el índice de la entrada con foco.
+func (m *Model) ActiveInput() int { return m.active }
+
+func (m *Model) split() bool { return len(m.inputs) == 2 && m.wide }
 
 // HasOptions indica si la herramienta tiene opciones.
 func (m *Model) HasOptions() bool { return !m.opts.Empty() }
@@ -134,8 +151,10 @@ func (m *Model) CapturesText() bool {
 }
 
 // SetSize reparte el alto entre las opciones, la entrada y la salida.
-func (m *Model) SetSize(w, h int) {
-	m.width, m.height = w, h
+// wide indica si dos entradas van lado a lado (lo decide la App según el
+// ancho de la terminal).
+func (m *Model) SetSize(w, h int, wide bool) {
+	m.width, m.height, m.wide = w, h, wide
 	m.resize()
 }
 
@@ -143,18 +162,32 @@ func (m *Model) resize() {
 	w, h := m.width, m.height
 	// título, separador de salida y opciones (la statusbar es de la App)
 	chrome := 2 + len(m.opts.Lines(w))
-	if m.HasInput() {
-		chrome++
+	switch {
+	case m.split():
+		chrome++ // una fila de encabezados para las dos entradas
+	default:
+		chrome += len(m.inputs) // un encabezado por entrada
 	}
 	avail := max(h-chrome, 2)
-	inH := avail / 2
-	if !m.HasInput() {
-		inH = 0
+	inH := 0
+	if m.HasInput() {
+		inH = avail / 2
 	}
-	m.input.SetWidth(w)
-	m.input.SetHeight(max(inH, 1))
-	m.largeView.SetWidth(w)
-	m.largeView.SetHeight(max(inH, 1))
+	switch {
+	case m.split():
+		lw := (w - 1) / 2
+		m.inputs[0].setSize(lw, inH)
+		m.inputs[1].setSize(w-1-lw, inH)
+	case len(m.inputs) > 0:
+		each := inH / len(m.inputs)
+		for i, f := range m.inputs {
+			fh := each
+			if i == len(m.inputs)-1 {
+				fh = inH - each*(len(m.inputs)-1)
+			}
+			f.setSize(w, fh)
+		}
+	}
 	m.output.SetWidth(w)
 	m.output.SetHeight(avail - inH)
 }
@@ -162,11 +195,13 @@ func (m *Model) resize() {
 // SetFocus cambia el panel con foco.
 func (m *Model) SetFocus(f Focus) tea.Cmd {
 	m.focus = f
-	m.input.Blur()
+	for _, in := range m.inputs {
+		in.ta.Blur()
+	}
 	m.opts.Blur()
 	switch {
 	case f == FocusInput && m.HasInput():
-		return m.input.Focus()
+		return m.inputs[m.active].ta.Focus()
 	case f == FocusOptions:
 		return m.opts.Focus()
 	}
@@ -193,66 +228,45 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 		m.output, cmd = m.output.Update(msg)
 	case FocusNone:
 		// Mensajes internos (p. ej. parpadeo del cursor) siguen llegando.
-		m.input, cmd = m.input.Update(msg)
+		if m.HasInput() {
+			m.inputs[m.active].ta, cmd = m.inputs[m.active].ta.Update(msg)
+		}
 	}
 	return cmd
 }
 
 func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
-	if m.large {
-		if p, ok := msg.(tea.PasteMsg); ok {
-			m.setLarge(m.largeText + p.Content)
-			return m.runNow()
-		}
-		var cmd tea.Cmd
-		m.largeView, cmd = m.largeView.Update(msg)
+	changed, now, cmd := m.inputs[m.active].update(msg, m.limits)
+	switch {
+	case !changed:
 		return cmd
+	case now:
+		return tea.Batch(cmd, m.runNow()) // pegado grande: una vez; después, F5
 	}
-	before := m.input.Value()
-	if p, ok := msg.(tea.PasteMsg); ok && m.exceeds(before+p.Content) {
-		// Se agrega al final: el textarea truncaría o se congelaría.
-		m.setLarge(before + p.Content)
-		return m.runNow() // una vez al pegar; después, solo con F5
-	}
-	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	after := m.input.Value()
-	if after == before {
-		return cmd
-	}
-	if m.exceeds(after) {
-		m.setLarge(after)
-		return tea.Batch(cmd, m.runNow())
-	}
-	m.input.ShowLineNumbers = len(after) <= m.limits.LineNumbersMaxBytes
 	m.stale = true
-	if m.spec.Live {
+	if m.spec.Live && !m.Large() {
 		return tea.Batch(cmd, m.schedule())
 	}
 	return cmd
 }
 
-func (m *Model) exceeds(s string) bool {
-	return len(s) > m.limits.MaxBytes || strings.Count(s, "\n")+1 > m.limits.MaxLines
+// Large indica si alguna entrada está en modo de solo lectura.
+func (m *Model) Large() bool {
+	for _, f := range m.inputs {
+		if f.large {
+			return true
+		}
+	}
+	return false
 }
 
-func (m *Model) setLarge(s string) {
-	m.large = true
-	m.largeText = s
-	m.largeView.SetContent(s)
-	m.input.Reset()
-}
-
-// Large indica si la entrada está en modo de solo lectura.
-func (m *Model) Large() bool { return m.large }
-
-// ClearInput vacía la entrada y sale del modo de entrada grande.
+// ClearInput vacía la entrada con foco (o la primera) y sale del modo de
+// entrada grande.
 func (m *Model) ClearInput() tea.Cmd {
-	m.large = false
-	m.largeText = ""
-	m.largeView.SetContent("")
-	m.input.Reset()
-	m.input.ShowLineNumbers = true
+	if !m.HasInput() {
+		return nil
+	}
+	m.inputs[m.active].clear()
 	return m.runNow()
 }
 
@@ -298,13 +312,9 @@ func (m *Model) launch(seq int) tea.Cmd {
 	m.running = true
 	m.stale = false
 
-	value := m.input.Value()
-	if m.large {
-		value = m.largeText
-	}
-	inputs := make(map[string]string, len(m.spec.Inputs))
-	for _, in := range m.spec.Inputs {
-		inputs[in.Key] = value
+	inputs := make(map[string]string, len(m.inputs))
+	for _, f := range m.inputs {
+		inputs[f.spec.Key] = f.value()
 	}
 	req := tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
 	t, id := m.tool, m.spec.ID
@@ -345,12 +355,18 @@ func (m *Model) View() string {
 	for _, line := range m.opts.Lines(m.width) {
 		b.WriteString(clip(line, m.width) + "\n")
 	}
-	if m.HasInput() {
-		b.WriteString(m.section(m.spec.Inputs[0].Label, m.focus == FocusInput) + "\n")
-		if m.large {
-			b.WriteString(m.largeView.View() + "\n")
-		} else {
-			b.WriteString(m.input.View() + "\n")
+	if m.split() {
+		lw := (m.width - 1) / 2
+		heads := m.sectionW(m.inputs[0].spec.Label, m.inputFocused(0), lw) + " " +
+			m.sectionW(m.inputs[1].spec.Label, m.inputFocused(1), m.width-1-lw)
+		b.WriteString(heads + "\n")
+		left := lipgloss.NewStyle().Width(lw).MaxWidth(lw).Render(m.inputs[0].view())
+		sep := m.styles.Section.Render(strings.TrimSuffix(strings.Repeat("│\n", lipgloss.Height(left)), "\n"))
+		b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, left, sep, m.inputs[1].view()) + "\n")
+	} else {
+		for i, f := range m.inputs {
+			b.WriteString(m.section(f.spec.Label, m.inputFocused(i)) + "\n")
+			b.WriteString(f.view() + "\n")
 		}
 	}
 	b.WriteString(m.section("Salida", m.focus == FocusOutput) + "\n")
@@ -371,20 +387,31 @@ func (m *Model) Status() statusbar.Status {
 		Elapsed: m.elapsed,
 		Meta:    m.result.Meta,
 	}
-	if m.large {
-		st.LargeBytes = len(m.largeText)
-		st.LargeLines = strings.Count(m.largeText, "\n") + 1
+	for _, f := range m.inputs {
+		if f.large {
+			st.LargeBytes += len(f.largeText)
+			st.LargeLines += strings.Count(f.largeText, "\n") + 1
+		}
 	}
 	return st
 }
 
+func (m *Model) inputFocused(i int) bool { return m.focus == FocusInput && m.active == i }
+
 func (m *Model) section(label string, focused bool) string {
+	return m.sectionW(label, focused, m.width)
+}
+
+func (m *Model) sectionW(label string, focused bool, width int) string {
 	st := m.styles.Section
 	if focused {
 		st = m.styles.SectionFocused
 	}
 	head := "── " + label + " "
-	fill := max(m.width-lipgloss.Width(head), 0)
+	if w := lipgloss.Width(head); w > width {
+		return st.Render(lipgloss.NewStyle().MaxWidth(width).Render(head))
+	}
+	fill := max(width-lipgloss.Width(head), 0)
 	return st.Render(head + strings.Repeat("─", fill))
 }
 

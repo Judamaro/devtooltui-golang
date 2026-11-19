@@ -227,6 +227,8 @@ func TestRunAndClearKeys(t *testing.T) {
 	}
 }
 
+func keyCtrl(r rune) tea.KeyPressMsg { return tea.KeyPressMsg{Code: r, Mod: tea.ModCtrl} }
+
 func isQuit(msg tea.Msg) bool {
 	_, ok := msg.(tea.QuitMsg)
 	return ok

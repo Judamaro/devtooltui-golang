@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	sidebarWidth    = 26 // incluye la columna del separador
-	sidebarMinWidth = 90 // por debajo, el sidebar se colapsa
+	sidebarWidth    = 26  // incluye la columna del separador
+	sidebarMinWidth = 90  // por debajo, el sidebar se colapsa
+	splitMinWidth   = 120 // desde aquí, dos entradas van lado a lado
 )
 
 type focus int
@@ -209,11 +210,17 @@ func (a *App) layout() {
 	}
 	a.help.SetWidth(a.width)
 	if ws := a.workspace(); ws != nil {
-		ws.SetSize(max(w, 1), h)
+		ws.SetSize(max(w, 1), h, a.width >= splitMinWidth)
 	}
 }
 
 func (a *App) rotateFocus(delta int) tea.Cmd {
+	// Con varias entradas, Tab recorre primero las del workspace.
+	if ws := a.workspace(); ws != nil && a.focus == focusInput {
+		if moved, cmd := ws.MoveInput(delta); moved {
+			return cmd
+		}
+	}
 	f := a.focus
 	for range focusCount {
 		f = (f + focus(delta) + focusCount) % focusCount
@@ -228,6 +235,9 @@ func (a *App) rotateFocus(delta int) tea.Cmd {
 			continue
 		}
 		break
+	}
+	if ws := a.workspace(); ws != nil && f == focusInput {
+		ws.FocusEdge(delta > 0)
 	}
 	return a.setFocus(f)
 }
