@@ -12,6 +12,8 @@ type KeyMap struct {
 	NextFocus     key.Binding
 	PrevFocus     key.Binding
 	ToggleSidebar key.Binding
+	Run           key.Binding // F5: herramientas no-live y entradas grandes
+	ClearInput    key.Binding // sale del modo de entrada grande
 	Quit          key.Binding
 	QuitOutside   key.Binding // "q": solo fuera de los campos de texto
 	Sidebar       sidebar.KeyMap
@@ -23,6 +25,8 @@ func DefaultKeyMap() KeyMap {
 		NextFocus:     key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "foco")),
 		PrevFocus:     key.NewBinding(key.WithKeys("shift+tab"), key.WithHelp("shift+tab", "foco anterior")),
 		ToggleSidebar: key.NewBinding(key.WithKeys("ctrl+b"), key.WithHelp("ctrl+b", "sidebar")),
+		Run:           key.NewBinding(key.WithKeys("f5"), key.WithHelp("f5", "ejecutar")),
+		ClearInput:    key.NewBinding(key.WithKeys("ctrl+l"), key.WithHelp("ctrl+l", "limpiar entrada")),
 		Quit:          key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "salir")),
 		QuitOutside:   key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "salir")),
 		Sidebar: sidebar.KeyMap{
@@ -47,7 +51,7 @@ func (k KeyMap) ShortHelp() []key.Binding {
 // FullHelp implementa help.KeyMap.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
-		{k.NextFocus, k.PrevFocus, k.ToggleSidebar},
+		{k.NextFocus, k.PrevFocus, k.ToggleSidebar, k.Run, k.ClearInput},
 		{k.Sidebar.Up, k.Sidebar.Down, k.Quit, k.QuitOutside},
 		{k.Options.Prev, k.Options.Next, k.Options.Decrease, k.Options.Increase, k.Options.Toggle},
 	}

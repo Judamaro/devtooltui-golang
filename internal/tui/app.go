@@ -96,6 +96,16 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, a.rotateFocus(1)
 		case key.Matches(msg, a.keys.PrevFocus):
 			return a, a.rotateFocus(-1)
+		case key.Matches(msg, a.keys.Run):
+			if ws := a.workspace(); ws != nil {
+				ws.Run()
+			}
+			return a, nil
+		case key.Matches(msg, a.keys.ClearInput):
+			if ws := a.workspace(); ws != nil {
+				ws.ClearInput()
+			}
+			return a, nil
 		case key.Matches(msg, a.keys.ToggleSidebar):
 			a.showSidebar = !a.showSidebar
 			a.layout()

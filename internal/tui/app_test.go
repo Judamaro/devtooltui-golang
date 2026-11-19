@@ -78,6 +78,10 @@ func TestViewGolden(t *testing.T) {
 		{"inicio-100x30", 100, 30, func(*App) {}},
 		{"base64-hola-100x30", 100, 30, func(a *App) { press(a, "tab", "tab", "hola") }},
 		{"opciones-enfocadas-100x30", 100, 30, func(a *App) { press(a, "tab", "right") }},
+		{"entrada-grande-100x30", 100, 30, func(a *App) {
+			press(a, "tab", "tab")
+			a.Update(tea.PasteMsg{Content: strings.Repeat("hola mundo\n", 3500)})
+		}},
 		{"angosto-80x20", 80, 20, func(a *App) { press(a, "hola") }},
 	}
 	for _, tt := range tests {
@@ -166,6 +170,24 @@ func TestQuitKeys(t *testing.T) {
 				t.Errorf("quit = %v, want %v", quit, tt.wantQuit)
 			}
 		})
+	}
+}
+
+func TestRunAndClearKeys(t *testing.T) {
+	a := newApp(t, 100, 30)
+	press(a, "tab", "tab")
+	a.Update(tea.PasteMsg{Content: strings.Repeat("a", 40000)})
+	ws := a.workspace()
+	if !ws.Large() {
+		t.Fatal("no entró en modo grande")
+	}
+	a.Update(tea.KeyPressMsg{Code: tea.KeyF5})
+	if ws.Err() != nil {
+		t.Fatalf("F5: %v", ws.Err())
+	}
+	a.Update(tea.KeyPressMsg{Code: 'l', Mod: tea.ModCtrl})
+	if ws.Large() || ws.Output() != "" {
+		t.Errorf("ctrl+l no limpió la entrada (Large=%v, salida=%d bytes)", ws.Large(), len(ws.Output()))
 	}
 }
 

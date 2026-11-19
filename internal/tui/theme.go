@@ -27,6 +27,7 @@ func DarkTheme() Theme {
 		muted  = lipgloss.Color("8")
 		errC   = lipgloss.Color("9")
 		ok     = lipgloss.Color("10")
+		warn   = lipgloss.Color("11")
 	)
 	h := help.New()
 	return Theme{
@@ -50,6 +51,7 @@ func DarkTheme() Theme {
 			Section:        lipgloss.NewStyle().Foreground(muted),
 			SectionFocused: lipgloss.NewStyle().Foreground(accent),
 			Error:          lipgloss.NewStyle().Foreground(errC),
+			Warning:        lipgloss.NewStyle().Foreground(warn),
 			Meta:           lipgloss.NewStyle().Foreground(ok),
 			Textarea:       textarea.DefaultDarkStyles(),
 		},
