@@ -3,6 +3,7 @@ package tui
 import (
 	"charm.land/bubbles/v2/key"
 
+	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
@@ -17,10 +18,12 @@ type KeyMap struct {
 	CopyOutput    key.Binding
 	PasteInput    key.Binding
 	DetectClip    key.Binding
+	OpenPalette   key.Binding
 	Quit          key.Binding
 	QuitOutside   key.Binding // "q": solo fuera de los campos de texto
 	Sidebar       sidebar.KeyMap
 	Options       options.KeyMap
+	Palette       palette.KeyMap
 }
 
 func DefaultKeyMap() KeyMap {
@@ -33,8 +36,15 @@ func DefaultKeyMap() KeyMap {
 		CopyOutput:    key.NewBinding(key.WithKeys("ctrl+y"), key.WithHelp("ctrl+y", "copiar salida")),
 		PasteInput:    key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("ctrl+o", "pegar")),
 		DetectClip:    key.NewBinding(key.WithKeys("ctrl+d"), key.WithHelp("ctrl+d", "detectar portapapeles")),
-		Quit:          key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "salir")),
-		QuitOutside:   key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "salir")),
+		OpenPalette:   key.NewBinding(key.WithKeys("ctrl+p"), key.WithHelp("ctrl+p", "paleta")),
+		Palette: palette.KeyMap{
+			Up:     key.NewBinding(key.WithKeys("up", "ctrl+k")),
+			Down:   key.NewBinding(key.WithKeys("down", "ctrl+j")),
+			Choose: key.NewBinding(key.WithKeys("enter")),
+			Close:  key.NewBinding(key.WithKeys("esc")),
+		},
+		Quit:        key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "salir")),
+		QuitOutside: key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "salir")),
 		Sidebar: sidebar.KeyMap{
 			Up:   key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "subir")),
 			Down: key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "bajar")),
@@ -51,14 +61,14 @@ func DefaultKeyMap() KeyMap {
 
 // ShortHelp implementa help.KeyMap.
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.NextFocus, k.CopyOutput, k.Quit}
+	return []key.Binding{k.NextFocus, k.OpenPalette, k.CopyOutput, k.Quit}
 }
 
 // FullHelp implementa help.KeyMap.
 func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.NextFocus, k.PrevFocus, k.ToggleSidebar, k.Run, k.ClearInput},
-		{k.CopyOutput, k.PasteInput, k.DetectClip},
+		{k.OpenPalette, k.CopyOutput, k.PasteInput, k.DetectClip},
 		{k.Sidebar.Up, k.Sidebar.Down, k.Quit, k.QuitOutside},
 		{k.Options.Prev, k.Options.Next, k.Options.Decrease, k.Options.Increase, k.Options.Toggle},
 	}

@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
@@ -55,7 +56,9 @@ type App struct {
 	active  string
 	focus   focus
 
-	flash string // aviso transitorio en la statusbar
+	flash       string         // aviso transitorio en la statusbar
+	palette     *palette.Model // nil: cerrada
+	pendingText string         // texto a cargar al elegir en el selector de detección
 
 	width, height int
 	wide          bool // ancho ≥ sidebarMinWidth en el último resize
@@ -106,6 +109,13 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case sidebar.SelectedMsg:
 		return a, a.activate(msg.ID)
 
+	case palette.ClosedMsg:
+		a.palette, a.pendingText = nil, ""
+		return a, nil
+
+	case palette.ChosenMsg:
+		return a, a.choose(msg.Item)
+
 	case flashMsg:
 		a.flash = string(msg)
 		return a, nil
@@ -135,7 +145,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		a.flash = ""
+		if a.palette != nil {
+			return a, a.palette.Update(msg)
+		}
 		switch {
+		case key.Matches(msg, a.keys.OpenPalette):
+			return a, a.openPalette("Paleta de comandos", a.paletteItems())
 		case key.Matches(msg, a.keys.CopyOutput):
 			return a, a.copyOutput()
 		case key.Matches(msg, a.keys.PasteInput):
@@ -161,12 +176,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return a, nil
 		case key.Matches(msg, a.keys.ToggleSidebar):
-			a.showSidebar = !a.showSidebar
-			a.layout()
-			if !a.showSidebar && a.focus == focusSidebar {
-				return a, a.setFocus(focusInput)
-			}
-			return a, nil
+			return a, a.toggleSidebar()
 		}
 		if a.focus == focusSidebar {
 			var cmd tea.Cmd
@@ -175,6 +185,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	if a.palette != nil { // parpadeo del cursor de la paleta
+		return a, a.palette.Update(msg)
+	}
 	if ws := a.workspace(); ws != nil {
 		return a, ws.Update(msg)
 	}
@@ -182,7 +195,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a *App) View() tea.View {
-	v := tea.NewView(a.render())
+	content := a.render()
+	if a.palette != nil {
+		content = a.palette.Overlay(content, a.width, a.height)
+	}
+	v := tea.NewView(content)
 	v.AltScreen = true
 	return v
 }

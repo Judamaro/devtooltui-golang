@@ -273,3 +273,31 @@ func collect(cmd tea.Cmd, want tea.Msg) []tea.Msg {
 	}
 	return nil
 }
+
+func TestSetInput(t *testing.T) {
+	tests := []struct {
+		name      string
+		text      string
+		focused   bool
+		wantLarge bool
+	}{
+		{"sin foco", "hola", false, false},
+		{"con foco", "hola", true, false},
+		{"grande", strings.Repeat("a", workspace.DefaultLimits.MaxBytes+1), false, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &counter{live: true}
+			m := workspace.New(c, workspace.Styles{}, optKeys, 0)
+			m.SetSize(80, 24, false)
+			if tt.focused {
+				m.SetFocus(workspace.FocusInput)
+				typeText(m, "previo")
+			}
+			run(m, m.SetInput(tt.text))
+			if c.last != tt.text || m.Large() != tt.wantLarge {
+				t.Errorf("la herramienta recibió %d bytes (large=%v), want %d (large=%v)", len(c.last), m.Large(), len(tt.text), tt.wantLarge)
+			}
+		})
+	}
+}

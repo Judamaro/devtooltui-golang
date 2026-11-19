@@ -8,6 +8,7 @@ import (
 	"github.com/alecthomas/chroma/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/render"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
@@ -18,6 +19,7 @@ import (
 // colores ni estilos en línea. Los temas light/auto llegan en la fase 2.
 type Theme struct {
 	Separator lipgloss.Style
+	Palette   palette.Styles
 	Status    statusbar.Styles
 	Sidebar   sidebar.Styles
 	Workspace workspace.Styles
@@ -64,6 +66,14 @@ func DarkTheme() Theme {
 	h := help.New()
 	return Theme{
 		Separator: lipgloss.NewStyle().Foreground(muted),
+		Palette: palette.Styles{
+			Box:      lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(accent).Padding(0, 1),
+			Title:    lipgloss.NewStyle().Bold(true).Foreground(accent),
+			Item:     lipgloss.NewStyle(),
+			Selected: lipgloss.NewStyle().Bold(true).Foreground(accent),
+			Detail:   lipgloss.NewStyle().Foreground(muted),
+			Input:    textinput.DefaultDarkStyles(),
+		},
 		Status: statusbar.Styles{
 			OK:      lipgloss.NewStyle().Foreground(ok),
 			Error:   lipgloss.NewStyle().Foreground(errC),

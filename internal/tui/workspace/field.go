@@ -51,6 +51,18 @@ func (f *field) setLarge(s string) {
 	f.ta.Reset()
 }
 
+// setValue reemplaza el contenido sin pasar por el textarea (que ignora
+// los mensajes si no tiene el foco).
+func (f *field) setValue(s string, lim Limits) {
+	f.clear()
+	if exceeds(s, lim) {
+		f.setLarge(s)
+		return
+	}
+	f.ta.SetValue(s)
+	f.ta.ShowLineNumbers = len(s) <= lim.LineNumbersMaxBytes
+}
+
 func (f *field) clear() {
 	f.large = false
 	f.largeText = ""

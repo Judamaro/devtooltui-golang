@@ -2,11 +2,11 @@ package tui
 
 import (
 	"fmt"
-	"strings"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/detect"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 )
 
 // Clipboard es lo que la TUI necesita del portapapeles.
@@ -105,7 +105,15 @@ func (a *App) jumpTo(id, text string) tea.Cmd {
 	return tea.Batch(activate, ws.SetInput(text), a.setFocus(focusInput))
 }
 
-// openPicker se completa con la paleta; por ahora lista las candidatas.
-func (a *App) openPicker(ids []string, _ string) tea.Cmd {
-	return flash("varias herramientas posibles: " + strings.Join(ids, ", "))
+// openPicker abre la paleta solo con las candidatas empatadas; al elegir,
+// se salta a esa herramienta con text cargado.
+func (a *App) openPicker(ids []string, text string) tea.Cmd {
+	var items []palette.Item
+	for _, id := range ids {
+		if t, ok := a.reg.Get(id); ok {
+			items = append(items, toolItem(t.Spec()))
+		}
+	}
+	a.pendingText = text
+	return a.openPalette("Varias herramientas posibles: elige una", items)
 }

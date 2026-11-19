@@ -285,8 +285,8 @@ func (m *Model) SetInput(text string) tea.Cmd {
 	if m.focus != FocusInput {
 		m.active = 0
 	}
-	m.inputs[m.active].clear()
-	return m.updateInput(tea.PasteMsg{Content: text})
+	m.inputs[m.active].setValue(text, m.limits)
+	return m.runNow()
 }
 
 // Run ejecuta la herramienta a pedido (F5), sin debounce.
