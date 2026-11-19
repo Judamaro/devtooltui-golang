@@ -13,6 +13,7 @@
                          │hola mundo
                          │hola mundo
                          │hola mundo
+                         │hola mundo
                          │── Salida ────────────────────────────────────────────────────────────────
                          │aG9sYSBtdW5kbwpob2xhIG11bmRvCmhvbGEgbXVuZG8KaG9sYSBtdW5kbwpob2xhIG11bmRvCm
                          │
@@ -26,5 +27,4 @@
                          │
                          │
                          │
-                         │⚠ entrada grande (37.6 KB, 3501 líneas): solo lectura · f5 ejecutar · ctrl
-tab foco • ctrl+b sidebar • ctrl+c salir
+⚠ 37.6 KB · 3501 líneas · solo lectura (f5 ejecutar, ctrl+l tab foco • ctrl+b sidebar • ctrl+c salir

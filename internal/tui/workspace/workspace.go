@@ -5,7 +5,6 @@ package workspace
 import (
 	"context"
 	"errors"
-	"fmt"
 	"maps"
 	"strings"
 	"time"
@@ -16,14 +15,15 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
 // Styles los define tui/theme.go.
 type Styles struct {
-	Title, Description, Section, SectionFocused, Error, Warning, Meta lipgloss.Style
-	Textarea                                                          textarea.Styles
-	Options                                                           options.Styles
+	Title, Description, Section, SectionFocused, OutputStale lipgloss.Style
+	Textarea                                                 textarea.Styles
+	Options                                                  options.Styles
 }
 
 // Limits define cuándo la entrada deja de editarse en vivo (ADR 0002).
@@ -141,8 +141,8 @@ func (m *Model) SetSize(w, h int) {
 
 func (m *Model) resize() {
 	w, h := m.width, m.height
-	// título, separadores de entrada y salida, línea de estado y opciones
-	chrome := 3 + len(m.opts.Lines(w))
+	// título, separador de salida y opciones (la statusbar es de la App)
+	chrome := 2 + len(m.opts.Lines(w))
 	if m.HasInput() {
 		chrome++
 	}
@@ -354,40 +354,28 @@ func (m *Model) View() string {
 		}
 	}
 	b.WriteString(m.section("Salida", m.focus == FocusOutput) + "\n")
-	b.WriteString(m.output.View() + "\n")
-	b.WriteString(clip(m.statusText(), m.width))
+	out := m.output.View()
+	if m.err != nil {
+		out = m.styles.OutputStale.Render(out) // salida anterior, atenuada
+	}
+	b.WriteString(out)
 	return b.String()
 }
 
-func (m *Model) statusText() string {
-	prefix := ""
+// Status es el estado para la statusbar.
+func (m *Model) Status() statusbar.Status {
+	st := statusbar.Status{
+		Running: m.running,
+		Stale:   m.stale && !m.running,
+		Err:     m.err,
+		Elapsed: m.elapsed,
+		Meta:    m.result.Meta,
+	}
 	if m.large {
-		prefix = m.styles.Warning.Render(fmt.Sprintf("⚠ entrada grande (%s, %d líneas): solo lectura · f5 ejecutar · ctrl+l limpiar",
-			HumanBytes(len(m.largeText)), strings.Count(m.largeText, "\n")+1)) + " · "
+		st.LargeBytes = len(m.largeText)
+		st.LargeLines = strings.Count(m.largeText, "\n") + 1
 	}
-	if m.err != nil {
-		return prefix + m.styles.Error.Render("✗ "+m.err.Error())
-	}
-	if m.stale {
-		return prefix + m.styles.Warning.Render("● f5 para ejecutar")
-	}
-	parts := []string{fmt.Sprintf("✓ %s", m.elapsed.Round(time.Microsecond))}
-	for _, kv := range m.result.Meta {
-		parts = append(parts, kv.Key+": "+kv.Value)
-	}
-	return prefix + m.styles.Meta.Render(strings.Join(parts, " · "))
-}
-
-// HumanBytes formatea un tamaño en B, KB o MB.
-func HumanBytes(n int) string {
-	switch {
-	case n < 1<<10:
-		return fmt.Sprintf("%d B", n)
-	case n < 1<<20:
-		return fmt.Sprintf("%.1f KB", float64(n)/(1<<10))
-	default:
-		return fmt.Sprintf("%.1f MB", float64(n)/(1<<20))
-	}
+	return st
 }
 
 func (m *Model) section(label string, focused bool) string {

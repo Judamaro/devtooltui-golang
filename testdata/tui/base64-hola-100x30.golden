@@ -13,6 +13,7 @@
                          │┃
                          │┃
                          │┃
+                         │┃
                          │── Salida ────────────────────────────────────────────────────────────────
                          │aG9sYQ==
                          │
@@ -26,5 +27,4 @@
                          │
                          │
                          │
-                         │✓ 0s · Entrada: 4 B · Salida: 8 B
-tab foco • ctrl+b sidebar • ctrl+c salir
+✓ 0 µs · Entrada: 4 B · Salida: 8 B  tab foco • ctrl+b sidebar • ctrl+c salir

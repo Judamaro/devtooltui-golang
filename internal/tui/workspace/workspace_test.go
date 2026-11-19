@@ -10,7 +10,6 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	tea "charm.land/bubbletea/v2"
-	"github.com/charmbracelet/x/ansi"
 
 	"github.com/Judamaro/devtooltui-golang/internal/testutil"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
@@ -100,9 +99,8 @@ func TestLargeInput(t *testing.T) {
 			if len(c.last) != tt.wantLen {
 				t.Errorf("la herramienta recibió %d bytes, want %d", len(c.last), tt.wantLen)
 			}
-			view := ansi.Strip(m.View())
-			if tt.wantLarge && !strings.Contains(view, "entrada grande") {
-				t.Error("la statusbar no avisa del modo de entrada grande")
+			if st := m.Status(); tt.wantLarge && st.LargeBytes != tt.wantLen {
+				t.Errorf("Status().LargeBytes = %d, want %d", st.LargeBytes, tt.wantLen)
 			}
 		})
 	}
@@ -140,26 +138,12 @@ func TestNotLive(t *testing.T) {
 	if c.runs != runs {
 		t.Errorf("una herramienta no-live se ejecutó al escribir")
 	}
-	if !strings.Contains(ansi.Strip(m.View()), "f5 para ejecutar") {
-		t.Error("no se avisa que hay que presionar F5")
+	if !m.Status().Stale {
+		t.Error("el estado no indica que hay que presionar F5")
 	}
 	run(m, m.Run())
 	if c.last != "abc" {
 		t.Errorf("F5 ejecutó con %q", c.last)
-	}
-}
-
-func TestHumanBytes(t *testing.T) {
-	tests := []struct {
-		n    int
-		want string
-	}{
-		{0, "0 B"}, {1023, "1023 B"}, {1024, "1.0 KB"}, {1536, "1.5 KB"}, {1 << 20, "1.0 MB"}, {5 << 20, "5.0 MB"},
-	}
-	for _, tt := range tests {
-		if got := workspace.HumanBytes(tt.n); got != tt.want {
-			t.Errorf("HumanBytes(%d) = %q, want %q", tt.n, got, tt.want)
-		}
 	}
 }
 

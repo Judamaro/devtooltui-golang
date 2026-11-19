@@ -12,6 +12,7 @@ import (
 
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
@@ -169,7 +170,11 @@ func (a *App) render() string {
 		sep := a.theme.Separator.Render(strings.TrimSuffix(strings.Repeat("│\n", h), "\n"))
 		body = lipgloss.JoinHorizontal(lipgloss.Top, a.sidebar.View(), sep, body)
 	}
-	return body + "\n" + a.help.View(a.keys)
+	var st statusbar.Status
+	if ws := a.workspace(); ws != nil {
+		st = ws.Status()
+	}
+	return body + "\n" + statusbar.View(st, a.help.View(a.keys), a.width, a.theme.Status)
 }
 
 func (a *App) workspace() *workspace.Model { return a.spaces[a.active] }
@@ -196,7 +201,7 @@ func (a *App) activate(id string) tea.Cmd {
 }
 
 func (a *App) layout() {
-	h := max(a.height-1, 1) // última línea: ayuda
+	h := max(a.height-1, 1) // última línea: statusbar
 	w := a.width
 	if a.showSidebar {
 		a.sidebar.SetSize(sidebarWidth-1, h)

@@ -81,17 +81,22 @@ func press(a *App, keys ...string) {
 	}
 }
 
-var elapsedRe = regexp.MustCompile(`✓ [0-9.]+[µnm]?s`)
+var elapsedRe = regexp.MustCompile(`✓ [0-9.]+ (µs|ms|s)`)
 
 // plainView quita los códigos ANSI y enmascara el tiempo de ejecución para
 // que los golden sean deterministas.
 func plainView(a *App) string {
 	lines := strings.Split(ansi.Strip(a.View().Content), "\n")
 	for i, l := range lines {
-		lines[i] = strings.TrimRight(elapsedRe.ReplaceAllString(l, "✓ 0s"), " ")
+		lines[i] = strings.TrimRight(elapsedRe.ReplaceAllString(l, "✓ 0 µs"), " ")
 	}
+	// El relleno de la statusbar depende del ancho del tiempo enmascarado.
+	last := len(lines) - 1
+	lines[last] = spacesRe.ReplaceAllString(lines[last], "  ")
 	return strings.Join(lines, "\n")
 }
+
+var spacesRe = regexp.MustCompile(` {2,}`)
 
 func TestViewGolden(t *testing.T) {
 	tests := []struct {
@@ -119,10 +124,11 @@ func TestViewGolden(t *testing.T) {
 				tt.do(a)
 			}
 			got := plainView(a)
-			if n := strings.Count(got, "\n") + 1; n != tt.h {
+			raw := ansi.Strip(a.View().Content)
+			if n := strings.Count(raw, "\n") + 1; n != tt.h {
 				t.Errorf("la vista tiene %d líneas, want %d", n, tt.h)
 			}
-			for i, line := range strings.Split(got, "\n") {
+			for i, line := range strings.Split(raw, "\n") {
 				if w := ansi.StringWidth(line); w > tt.w {
 					t.Errorf("línea %d mide %d columnas, máximo %d", i+1, w, tt.w)
 				}

@@ -7,6 +7,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
@@ -15,6 +16,7 @@ import (
 // colores ni estilos en línea. Los temas light/auto llegan en la fase 2.
 type Theme struct {
 	Separator lipgloss.Style
+	Status    statusbar.Styles
 	Sidebar   sidebar.Styles
 	Workspace workspace.Styles
 	Help      help.Styles
@@ -32,6 +34,13 @@ func DarkTheme() Theme {
 	h := help.New()
 	return Theme{
 		Separator: lipgloss.NewStyle().Foreground(muted),
+		Status: statusbar.Styles{
+			OK:      lipgloss.NewStyle().Foreground(ok),
+			Error:   lipgloss.NewStyle().Foreground(errC),
+			Warning: lipgloss.NewStyle().Foreground(warn),
+			Running: lipgloss.NewStyle().Foreground(muted),
+			Help:    lipgloss.NewStyle().Foreground(muted),
+		},
 		Sidebar: sidebar.Styles{
 			Category:        lipgloss.NewStyle().Bold(true),
 			Item:            lipgloss.NewStyle(),
@@ -50,9 +59,7 @@ func DarkTheme() Theme {
 			},
 			Section:        lipgloss.NewStyle().Foreground(muted),
 			SectionFocused: lipgloss.NewStyle().Foreground(accent),
-			Error:          lipgloss.NewStyle().Foreground(errC),
-			Warning:        lipgloss.NewStyle().Foreground(warn),
-			Meta:           lipgloss.NewStyle().Foreground(ok),
+			OutputStale:    lipgloss.NewStyle().Faint(true),
 			Textarea:       textarea.DefaultDarkStyles(),
 		},
 		Help: h.Styles,
