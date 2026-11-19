@@ -1,4 +1,4 @@
-package workspace
+package render
 
 import (
 	"strings"
@@ -8,15 +8,15 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// DiffStyles los define tui/theme.go.
+// DiffStyles define los colores de un diff.
 type DiffStyles struct {
 	Insert, Delete, Change, Hunk lipgloss.Style
 }
 
-// renderDiff colorea una salida DiffView. Result.Lang dice el formato:
+// Diff colorea una salida DiffView. Result.Lang dice el formato:
 // "diff" (unificado: prefijo +/-/@@), "diff-side" (marcador </>/| al inicio)
 // o vacío (por palabras: se pintan las operaciones de Result.Diff).
-func renderDiff(res tool.Result, s DiffStyles) string {
+func Diff(res tool.Result, s DiffStyles) string {
 	switch res.Lang {
 	case "diff", "diff-side":
 		lines := strings.Split(res.Text, "\n")

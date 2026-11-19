@@ -7,6 +7,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/alecthomas/chroma/v2"
 
+	"github.com/Judamaro/devtooltui-golang/internal/render"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
@@ -36,6 +37,20 @@ var darkChroma = chroma.MustNewStyle("devtooltui-dark", chroma.StyleEntries{
 	chroma.Punctuation:     "#ansilightgray",
 	chroma.NameBuiltin:     "#ansifuchsia",
 })
+
+// RenderStyles son los colores de las salidas; también los usa la CLI.
+func RenderStyles() render.Styles {
+	return render.Styles{
+		Chroma: darkChroma,
+		Match:  lipgloss.NewStyle().Reverse(true),
+		Diff: render.DiffStyles{
+			Insert: lipgloss.NewStyle().Foreground(lipgloss.Color("10")),
+			Delete: lipgloss.NewStyle().Foreground(lipgloss.Color("9")),
+			Change: lipgloss.NewStyle().Foreground(lipgloss.Color("11")),
+			Hunk:   lipgloss.NewStyle().Foreground(lipgloss.Color("12")),
+		},
+	}
+}
 
 // DarkTheme usa solo los 16 colores ANSI.
 func DarkTheme() Theme {
@@ -75,15 +90,8 @@ func DarkTheme() Theme {
 			Section:        lipgloss.NewStyle().Foreground(muted),
 			SectionFocused: lipgloss.NewStyle().Foreground(accent),
 			OutputStale:    lipgloss.NewStyle().Faint(true),
-			Chroma:         darkChroma,
-			Match:          lipgloss.NewStyle().Reverse(true),
-			Diff: workspace.DiffStyles{
-				Insert: lipgloss.NewStyle().Foreground(ok),
-				Delete: lipgloss.NewStyle().Foreground(errC),
-				Change: lipgloss.NewStyle().Foreground(warn),
-				Hunk:   lipgloss.NewStyle().Foreground(accent),
-			},
-			Textarea: textarea.DefaultDarkStyles(),
+			Render:         RenderStyles(),
+			Textarea:       textarea.DefaultDarkStyles(),
 		},
 		Help: h.Styles,
 	}

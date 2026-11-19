@@ -1,4 +1,4 @@
-package workspace
+package render
 
 import (
 	"testing"
@@ -24,7 +24,7 @@ func TestRenderMatches(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := renderMatches(tt.text, tt.spans, mark); got != tt.want {
+			if got := Matches(tt.text, tt.spans, mark); got != tt.want {
 				t.Errorf("= %q, want %q", got, tt.want)
 			}
 		})

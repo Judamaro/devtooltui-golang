@@ -1,4 +1,4 @@
-package workspace
+package render
 
 import (
 	"testing"
@@ -28,7 +28,7 @@ func TestRenderDiff(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := renderDiff(tt.res, st); got != tt.want {
+			if got := Diff(tt.res, st); got != tt.want {
 				t.Errorf("=\n%s\nwant\n%s", got, tt.want)
 			}
 		})

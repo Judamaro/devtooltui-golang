@@ -13,8 +13,8 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/alecthomas/chroma/v2"
 
+	"github.com/Judamaro/devtooltui-golang/internal/render"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
@@ -25,9 +25,7 @@ type Styles struct {
 	Title, Description, Section, SectionFocused, OutputStale lipgloss.Style
 	Textarea                                                 textarea.Styles
 	Options                                                  options.Styles
-	Chroma                                                   *chroma.Style  // colores de las salidas Highlighted
-	Match                                                    lipgloss.Style // coincidencias de las salidas Matches
-	Diff                                                     DiffStyles     // salidas DiffView
+	Render                                                   render.Styles // colores de las salidas
 }
 
 // Limits define cuándo la entrada deja de editarse en vivo (ADR 0002).
@@ -95,7 +93,7 @@ type ResultMsg struct {
 	Elapsed time.Duration
 
 	Rendered string // Result.Text coloreado; vacío si no aplica
-	NoColor  bool   // la salida superó HighlightMaxBytes
+	NoColor  bool   // la salida superó render.MaxBytes
 }
 
 // New crea el workspace. debounce es la espera entre la última tecla y la
@@ -325,36 +323,14 @@ func (m *Model) launch(seq int) tea.Cmd {
 		inputs[f.spec.Key] = f.value()
 	}
 	req := tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
-	t, id, kind, style, match, diffStyles := m.tool, m.spec.ID, m.spec.Output, m.styles.Chroma, m.styles.Match, m.styles.Diff
+	t, id, kind, rs := m.tool, m.spec.ID, m.spec.Output, m.styles.Render
 	return func() tea.Msg {
 		start := time.Now()
 		res, err := t.Run(ctx, req)
 		msg := ResultMsg{ToolID: id, Seq: seq, Result: res, Err: err, Elapsed: time.Since(start)}
 		// El coloreado también corre fuera del bucle de la UI.
-		if err != nil || ctx.Err() != nil {
-			return msg
-		}
-		switch {
-		case kind == tool.Highlighted && res.Lang != "":
-			if len(res.Text) > HighlightMaxBytes {
-				msg.NoColor = true
-			} else if out, ok := highlight(res.Text, res.Lang, style); ok {
-				msg.Rendered = out
-			}
-		case kind == tool.DiffView:
-			if len(res.Text) > HighlightMaxBytes {
-				msg.NoColor = true
-			} else {
-				msg.Rendered = renderDiff(res, diffStyles)
-			}
-		case kind == tool.Matches && len(res.Spans) > 0:
-			// El texto con las coincidencias resaltadas va sobre la lista.
-			subject := req.Inputs[res.Spans[0].Input]
-			if len(subject) > HighlightMaxBytes {
-				msg.NoColor = true
-			} else {
-				msg.Rendered = renderMatches(subject, res.Spans, match) + "\n\n" + res.Text
-			}
+		if err == nil && ctx.Err() == nil {
+			msg.Rendered, msg.NoColor = render.Result(res, kind, req.Inputs, rs)
 		}
 		return msg
 	}
@@ -428,7 +404,7 @@ func (m *Model) Status() statusbar.Status {
 		Meta:    m.result.Meta,
 	}
 	if m.noColor {
-		st.Note = "sin color: salida de más de " + statusbar.HumanBytes(HighlightMaxBytes)
+		st.Note = "sin color: salida de más de " + statusbar.HumanBytes(render.MaxBytes)
 	}
 	for _, f := range m.inputs {
 		if f.large {

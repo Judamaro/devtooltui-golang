@@ -1,4 +1,4 @@
-package workspace
+package render
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ func TestHighlight(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			out, ok := highlight(tt.text, tt.lang, tt.style)
+			out, ok := Highlight(tt.text, tt.lang, tt.style)
 			if ok != tt.wantOK {
 				t.Fatalf("ok = %v, want %v", ok, tt.wantOK)
 			}
@@ -64,7 +64,7 @@ func BenchmarkHighlight(b *testing.B) {
 		b.Run(fmt.Sprintf("%dKB", n>>10), func(b *testing.B) {
 			b.SetBytes(int64(len(text)))
 			for b.Loop() {
-				if _, ok := highlight(text, "json", testStyle); !ok {
+				if _, ok := Highlight(text, "json", testStyle); !ok {
 					b.Fatal("no coloreó")
 				}
 			}

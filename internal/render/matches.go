@@ -1,4 +1,4 @@
-package workspace
+package render
 
 import (
 	"strings"
@@ -8,10 +8,10 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// renderMatches devuelve text con las coincidencias completas (Group 0)
+// Matches devuelve text con las coincidencias completas (Group 0)
 // resaltadas. Los estilos se aplican por línea para que lipgloss no rellene
 // los bloques multilínea.
-func renderMatches(text string, spans []tool.Span, style lipgloss.Style) string {
+func Matches(text string, spans []tool.Span, style lipgloss.Style) string {
 	var b strings.Builder
 	b.Grow(len(text) + len(spans)*16)
 	prev := 0
