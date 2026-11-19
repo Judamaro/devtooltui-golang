@@ -1,0 +1,37 @@
+# El modo se acepta como primer argumento.
+stdin hola.txt
+exec devtooltui base64
+stdout '^aG9sYQo=$'
+stdin hola.b64
+exec devtooltui base64 decode
+stdout '^hola$'
+exec devtooltui base64 --mode decode --variant url url.b64
+stdout '^fbff$'
+
+stdin url.txt
+exec devtooltui url encode
+stdout '^a\+b%26c%0A$'
+exec devtooltui url parse full.txt
+stdout 'Host: +ejemplo.com'
+stdout '  q = hola mundo'
+
+# JWT: token por stdin y secreto por flag.
+stdin token.txt
+exec devtooltui jwt --secret secreto
+stdout '✓ firma HS256 válida'
+stdin token.txt
+exec devtooltui jwt --secret otro
+stdout '✗ firma inválida'
+
+-- hola.txt --
+hola
+-- hola.b64 --
+aG9sYQ==
+-- url.b64 --
+-_8
+-- url.txt --
+a b&c
+-- full.txt --
+https://ejemplo.com/x?q=hola+mundo
+-- token.txt --
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkFuYSBQw6lyZXoiLCJhZG1pbiI6dHJ1ZSwiaWF0IjoxNzY3MjI1NjAwLCJleHAiOjE3NjczMTIwMDB9.yzCN9kY8DE7Uq3esnbzqbXCstU1ucgL8uPKMkzarxWc

@@ -1,0 +1,57 @@
+# JSON por stdin y por archivo, con flags generados.
+stdin in.json
+exec devtooltui json-format --sort-keys --indent 4
+cmp stdout sorted.json
+
+exec devtooltui json-format --indent 0 in.json
+stdout '^\{"b":1,"a":\[1,2\]\}$'
+
+stdin in.json
+exec devtooltui json-format -
+stdout '"b": 1'
+
+# Error con línea:col en stderr y código distinto de cero.
+stdin bad.json
+! exec devtooltui json-format
+stderr '<stdin>:2:11: invalid character'
+! stdout .
+
+# JSON → YAML → JSON.
+exec devtooltui json-yaml in.json
+stdout '^b: 1$'
+exec devtooltui json-yaml to-json conf.yaml
+stdout '"name": "web"'
+
+# XML.
+exec devtooltui xml-format doc.xml
+cmp stdout doc.golden
+
+# --json emite el Result completo.
+exec devtooltui json-format --json in.json
+stdout '"text": '
+stdout '"key": "JSON"'
+
+-- in.json --
+{"b":1,"a":[1,2]}
+-- sorted.json --
+{
+    "a": [
+        1,
+        2
+    ],
+    "b": 1
+}
+-- bad.json --
+{
+  "a": tru
+}
+-- conf.yaml --
+name: web
+port: 80
+-- doc.xml --
+<a><b>x</b><!-- c --></a>
+-- doc.golden --
+<a>
+  <b>x</b>
+  <!-- c -->
+</a>

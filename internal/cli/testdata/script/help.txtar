@@ -1,0 +1,10 @@
+exec devtooltui --help
+stdout '^Uso:'
+stdout '^Herramientas:'
+stdout '  json-format +Indenta'
+stdout '^Generales:'
+
+exec devtooltui base64 --help
+stdout 'devtooltui base64 \[encode\|decode\] \[archivo\|-\]'
+stdout '--variant string +Alfabeto: standard, url'
+stdout '-h, --help +muestra esta ayuda'
