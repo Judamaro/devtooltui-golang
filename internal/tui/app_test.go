@@ -12,12 +12,21 @@ import (
 
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/testutil"
+	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
 )
 
+// newApp arma una App solo con base64, para que los tests de
+// comportamiento no dependan del orden del registro completo.
 func newApp(t *testing.T, w, h int) *App {
 	t.Helper()
-	reg, err := registry.New(tools.All()...)
+	return newAppWith(t, w, h, encoders.Base64{})
+}
+
+func newAppWith(t *testing.T, w, h int, ts ...tool.Tool) *App {
+	t.Helper()
+	reg, err := registry.New(ts...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,6 +85,7 @@ func TestViewGolden(t *testing.T) {
 		do   func(a *App)
 	}{
 		{"inicio-100x30", 100, 30, func(*App) {}},
+		{"todas-las-herramientas-100x30", 100, 30, nil},
 		{"base64-hola-100x30", 100, 30, func(a *App) { press(a, "tab", "tab", "hola") }},
 		{"opciones-enfocadas-100x30", 100, 30, func(a *App) { press(a, "tab", "right") }},
 		{"entrada-grande-100x30", 100, 30, func(a *App) {
@@ -86,8 +96,13 @@ func TestViewGolden(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a := newApp(t, tt.w, tt.h)
-			tt.do(a)
+			var a *App
+			if tt.do == nil {
+				a = newAppWith(t, tt.w, tt.h, tools.All()...)
+			} else {
+				a = newApp(t, tt.w, tt.h)
+				tt.do(a)
+			}
 			got := plainView(a)
 			if n := strings.Count(got, "\n") + 1; n != tt.h {
 				t.Errorf("la vista tiene %d líneas, want %d", n, tt.h)
@@ -227,7 +242,7 @@ func TestOptionsRerun(t *testing.T) {
 // El renderer de v2 solo reescribe las celdas que cambian, así que se
 // comprueba el modelo final en lugar de buscar texto en la salida cruda.
 func TestProgram(t *testing.T) {
-	reg, err := registry.New(tools.All()...)
+	reg, err := registry.New(encoders.Base64{})
 	if err != nil {
 		t.Fatal(err)
 	}
