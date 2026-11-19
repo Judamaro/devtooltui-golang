@@ -21,7 +21,15 @@ make bench          # benchmarks (incluye el spike de textarea)
 
 ## Estructura
 
-- `cmd/devtooltui`: arranque. Sin argumentos y en una TTY abre la TUI.
+- `cmd/devtooltui`: arranque; arma `cli.Deps` y delega en `cli.Execute`.
+- `internal/cli`: cobra. Un subcomando por `Spec` (flags generados desde las
+  opciones, `sort_keys` → `--sort-keys`; `mode` también como primer
+  argumento), más `list`, `detect`, `version` y `completion`. Sin argumentos
+  y en una TTY abre la TUI. Tests: `testdata/script/*.txtar` (testscript) y
+  tablas de códigos de salida en `cli_test.go`.
+- `internal/detect`: muestra de 64 KB, umbral 0.5 y empate a < 0.1.
+- `internal/clipboard`: atotto + OSC 52 (SSH o sin wl-clipboard/xclip).
+- `internal/render`: coloreado compartido por TUI y CLI (Chroma, diff, regex).
 - `internal/tool`: el contrato (Spec, Option, Request, Result, InputError…).
 - `internal/registry`: validación de Specs, `Get`/`All`/`ByCategory`,
   `Search` (difusa) y `Detect` (20 ms y `recover` por detector).
@@ -116,9 +124,24 @@ ese orden en `internal/tools/all.go`; 12 = MVP completo).
   (descarta los que tardan más de 30 ms, como el parpadeo del cursor). Las
   Apps de test usan `Options{Debounce: 0}`.
 - `F5` ejecuta (herramientas `Live: false` y modo de entrada grande).
+- Overlays (paleta `Ctrl+P`, prompt de `Ctrl+S`, ayuda `?`) viven en
+  `internal/tui/palette` y se dibujan con `palette.Place` (compositor de
+  lipgloss). Mientras están abiertos reciben todas las teclas.
+- Atajos que no deben dispararse escribiendo (`q`, `/`, `?`) se chequean con
+  `App.capturesText()` (entrada, opción de texto o filtro del sidebar).
   `ctrl+l` limpia la entrada y sale del modo grande.
 - Los tests de comportamiento de la TUI usan un registro solo con `base64`
   (`newApp`) para no depender del orden de `tools.All()`.
+
+## Release
+
+- `.goreleaser.yaml` (GoReleaser v2): binarios linux/darwin/windows ×
+  amd64/arm64, `checksums.txt`, `.deb/.rpm/.apk` y cask en
+  `Judamaro/homebrew-tap` (necesita el secret `HOMEBREW_TAP_GITHUB_TOKEN`).
+- `.github/workflows/release.yml` publica al empujar un tag `v*`; la CI corre
+  `goreleaser check` y un snapshot. `make release-dry` hace el snapshot local.
+- `docs/demo.gif` lo genera el workflow manual `Demo` desde `docs/demo.tape`.
+- Crear tags, publicar o crear repos solo con confirmación explícita.
 
 ## Convenciones
 
