@@ -1,0 +1,30 @@
+▾ Testers                │RegEx Prueba expresiones regulares RE2 (sin lookaround ni backreferences)
+  ▸ RegEx                │Patrón: \d+   i: [ ]   m: [ ]   s: [ ]
+                         │── Texto ─────────────────────────────────────────────────────────────────
+                         │┃  1 a1 b22
+                         │┃  2 c333
+                         │┃
+                         │┃
+                         │┃
+                         │┃
+                         │┃
+                         │┃
+                         │┃
+                         │┃
+                         │┃
+                         │┃
+                         │── Salida ────────────────────────────────────────────────────────────────
+                         │a1 b22
+                         │c333
+                         │
+                         │3 coincidencias
+                         │#1  1:2–1:3  "1"
+                         │#2  1:5–1:7  "22"
+                         │#3  2:2–2:5  "333"
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+✓ 0 µs · Coincidencias: 3 · Grupos: 0  tab foco • ctrl+b sidebar • ctrl+c salir

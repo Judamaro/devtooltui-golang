@@ -18,6 +18,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/testers"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
@@ -332,4 +333,17 @@ func TestHighlightedOutput(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRegexMatchesView(t *testing.T) {
+	a := newAppWith(t, 100, 30, testers.Regex{})
+	press(a, "tab", `\d+`, "tab", "a1 b22\nc333")
+	content := a.View().Content
+	if !strings.Contains(content, "\x1b[7m") {
+		t.Error("las coincidencias no se ven resaltadas")
+	}
+	if got := a.workspace().Status().Meta[0].Value; got != "3" {
+		t.Errorf("Coincidencias = %s, want 3", got)
+	}
+	testutil.Golden(t, "tui", "regex-coincidencias-100x30", plainView(a))
 }

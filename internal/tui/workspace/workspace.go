@@ -25,7 +25,8 @@ type Styles struct {
 	Title, Description, Section, SectionFocused, OutputStale lipgloss.Style
 	Textarea                                                 textarea.Styles
 	Options                                                  options.Styles
-	Chroma                                                   *chroma.Style // colores de las salidas Highlighted
+	Chroma                                                   *chroma.Style  // colores de las salidas Highlighted
+	Match                                                    lipgloss.Style // coincidencias de las salidas Matches
 }
 
 // Limits define cuándo la entrada deja de editarse en vivo (ADR 0002).
@@ -323,17 +324,29 @@ func (m *Model) launch(seq int) tea.Cmd {
 		inputs[f.spec.Key] = f.value()
 	}
 	req := tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
-	t, id, kind, style := m.tool, m.spec.ID, m.spec.Output, m.styles.Chroma
+	t, id, kind, style, match := m.tool, m.spec.ID, m.spec.Output, m.styles.Chroma, m.styles.Match
 	return func() tea.Msg {
 		start := time.Now()
 		res, err := t.Run(ctx, req)
 		msg := ResultMsg{ToolID: id, Seq: seq, Result: res, Err: err, Elapsed: time.Since(start)}
 		// El coloreado también corre fuera del bucle de la UI.
-		if err == nil && kind == tool.Highlighted && res.Lang != "" && ctx.Err() == nil {
+		if err != nil || ctx.Err() != nil {
+			return msg
+		}
+		switch {
+		case kind == tool.Highlighted && res.Lang != "":
 			if len(res.Text) > HighlightMaxBytes {
 				msg.NoColor = true
 			} else if out, ok := highlight(res.Text, res.Lang, style); ok {
 				msg.Rendered = out
+			}
+		case kind == tool.Matches && len(res.Spans) > 0:
+			// El texto con las coincidencias resaltadas va sobre la lista.
+			subject := req.Inputs[res.Spans[0].Input]
+			if len(subject) > HighlightMaxBytes {
+				msg.NoColor = true
+			} else {
+				msg.Rendered = renderMatches(subject, res.Spans, match) + "\n\n" + res.Text
 			}
 		}
 		return msg

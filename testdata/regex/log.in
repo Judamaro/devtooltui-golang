@@ -1,0 +1,3 @@
+2026-01-01 10:00:01 INFO  servidor iniciado en :8080
+2026-01-01 10:00:05 WARN  disco al 91%
+2026-01-02 11:30:00 ERROR conexión rechazada (código 503)

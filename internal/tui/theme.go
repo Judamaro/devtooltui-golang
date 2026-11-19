@@ -76,6 +76,7 @@ func DarkTheme() Theme {
 			SectionFocused: lipgloss.NewStyle().Foreground(accent),
 			OutputStale:    lipgloss.NewStyle().Faint(true),
 			Chroma:         darkChroma,
+			Match:          lipgloss.NewStyle().Reverse(true),
 			Textarea:       textarea.DefaultDarkStyles(),
 		},
 		Help: h.Styles,
