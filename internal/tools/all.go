@@ -12,5 +12,6 @@ func All() []tool.Tool {
 	return []tool.Tool{
 		formatters.JSONFormat{},
 		encoders.Base64{},
+		encoders.URL{},
 	}
 }

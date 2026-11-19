@@ -1,0 +1,13 @@
+Esquema:    https
+Usuario:    ana
+Contraseña: s3cr3t
+Host:       ejemplo.com
+Puerto:     8443
+Ruta:       /docs/a b/c
+Fragmento:  sec-2
+Query:
+  q = hola mundo
+  tag = a
+  tag = b
+  empty = 
+  solo = 

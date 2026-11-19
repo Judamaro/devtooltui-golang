@@ -1,0 +1,143 @@
+package encoders_test
+
+import (
+	"context"
+	"testing"
+
+	"github.com/Judamaro/devtooltui-golang/internal/testutil"
+	"github.com/Judamaro/devtooltui-golang/internal/tool"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
+)
+
+func runURL(t *testing.T, in string, opts tool.Values) (tool.Result, error) {
+	t.Helper()
+	return encoders.URL{}.Run(context.Background(), tool.Request{
+		Inputs: map[string]string{"input": in},
+		Opts:   opts,
+	})
+}
+
+func TestURLGolden(t *testing.T) {
+	tests := []struct {
+		name, in string
+		opts     tool.Values
+	}{
+		{"encode-query", "text", nil},
+		{"encode-path", "text", tool.Values{"escape": "path"}},
+		{"decode-query", "query-encoded", tool.Values{"mode": "decode"}},
+		{"parse-full", "full", tool.Values{"mode": "parse"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := runURL(t, testutil.ReadInput(t, "url", tt.in), tt.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			testutil.Golden(t, "url", tt.name, res.Text)
+		})
+	}
+}
+
+func TestURL(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		opts tool.Values
+		want string
+	}{
+		{"encode vacio", "", nil, ""},
+		{"encode query espacio", "a b", nil, "a+b"},
+		{"encode path espacio", "a b", tool.Values{"escape": "path"}, "a%20b"},
+		{"encode path barra", "a/b", tool.Values{"escape": "path"}, "a%2Fb"},
+		{"decode query mas", "a+b%21", tool.Values{"mode": "decode"}, "a b!"},
+		{"decode path mas literal", "a+b%20c", tool.Values{"mode": "decode", "escape": "path"}, "a+b c"},
+		{"decode minusculas", "%c3%b1", tool.Values{"mode": "decode"}, "ñ"},
+		{"parse vacio", "  ", tool.Values{"mode": "parse"}, ""},
+		{"parse sin esquema", "ejemplo.com/a", tool.Values{"mode": "parse"}, "Ruta:       ejemplo.com/a"},
+		{"parse opaco", "mailto:ana@ejemplo.com", tool.Values{"mode": "parse"}, "Esquema:    mailto\nOpaco:      ana@ejemplo.com"},
+		{"parse ipv6", "http://[::1]:80/", tool.Values{"mode": "parse"}, "Esquema:    http\nHost:       ::1\nPuerto:     80\nRuta:       /"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := runURL(t, tt.in, tt.opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if res.Text != tt.want {
+				t.Errorf("Text = %q, want %q", res.Text, tt.want)
+			}
+		})
+	}
+}
+
+func TestURLErrors(t *testing.T) {
+	tests := []struct {
+		name      string
+		in        string
+		opts      tool.Values
+		line, col int
+	}{
+		{"escape no hex", "abc%zz", tool.Values{"mode": "decode"}, 1, 4},
+		{"escape cortado", "abc%4", tool.Values{"mode": "decode"}, 1, 4},
+		{"segunda linea", "ok\n%G1", tool.Values{"mode": "decode", "escape": "path"}, 2, 1},
+		{"parse host invalido", "http://[::1", tool.Values{"mode": "parse"}, 1, 0},
+		{"parse varias lineas", "http://a\nhttp://b", tool.Values{"mode": "parse"}, 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := runURL(t, tt.in, tt.opts)
+			ie, ok := tool.AsInputError(err)
+			if !ok {
+				t.Fatalf("error = %v, want *InputError", err)
+			}
+			if ie.Line != tt.line || ie.Col != tt.col {
+				t.Errorf("posición = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
+			}
+		})
+	}
+}
+
+func TestURLDetect(t *testing.T) {
+	tests := []struct {
+		name   string
+		sample string
+		want   float64
+	}{
+		{"query codificada", "q%3Dhola%26x%3D1", 0.55},
+		{"url con escapes", "https://e.com/a%20b", 0.55},
+		{"con espacios", "a%20b c", 0},
+		{"sin escapes", "https://e.com/", 0},
+		{"escape invalido", "100%zz", 0},
+		{"vacio", "", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := (encoders.URL{}).Detect(tt.sample); got != tt.want {
+				t.Errorf("Detect = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func FuzzURLRoundTrip(f *testing.F) {
+	for _, s := range []string{"", "a b&c=d", "ñ/%+", "\x00\xff"} {
+		f.Add(s, true)
+	}
+	f.Fuzz(func(t *testing.T, s string, query bool) {
+		escape := "path"
+		if query {
+			escape = "query"
+		}
+		enc, err := runURL(t, s, tool.Values{"escape": escape})
+		if err != nil {
+			t.Fatal(err)
+		}
+		dec, err := runURL(t, enc.Text, tool.Values{"mode": "decode", "escape": escape})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if dec.Text != s {
+			t.Errorf("ida y vuelta: %q → %q → %q", s, enc.Text, dec.Text)
+		}
+	})
+}
