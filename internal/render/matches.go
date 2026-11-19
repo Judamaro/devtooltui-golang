@@ -8,9 +8,8 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// Matches devuelve text con las coincidencias completas (Group 0)
-// resaltadas. Los estilos se aplican por línea para que lipgloss no rellene
-// los bloques multilínea.
+// Matches returns text with the whole matches (Group 0) highlighted. Styles
+// are applied per line so lipgloss does not pad multi-line blocks.
 func Matches(text string, spans []tool.Span, style lipgloss.Style) string {
 	var b strings.Builder
 	b.Grow(len(text) + len(spans)*16)

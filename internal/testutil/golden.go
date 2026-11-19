@@ -1,4 +1,4 @@
-// Package testutil contiene helpers compartidos por los tests.
+// Package testutil holds helpers shared by the tests.
 package testutil
 
 import (
@@ -7,14 +7,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	// Define el flag -update; teatest también lo usa, así que no puede
-	// declararse dos veces en el mismo binario de test.
+	// Defines the -update flag; teatest uses it too, so it cannot be
+	// declared twice in the same test binary.
 	_ "github.com/charmbracelet/x/exp/golden"
 )
 
-// Updating indica si hay que regenerar los golden files: con -update en un
-// paquete concreto o con UPDATE_GOLDEN=1 (lo usa make golden-update, porque
-// -update rompe los paquetes que no importan testutil).
+// Updating reports whether golden files must be regenerated: with -update in
+// a single package or with UPDATE_GOLDEN=1 (used by make golden-update,
+// because -update breaks packages that do not import testutil).
 func Updating() bool {
 	if f := flag.Lookup("update"); f != nil && f.Value.String() == "true" {
 		return true
@@ -22,7 +22,7 @@ func Updating() bool {
 	return os.Getenv("UPDATE_GOLDEN") == "1"
 }
 
-// Root devuelve la raíz del módulo (el directorio con go.mod).
+// Root returns the module root (the directory holding go.mod).
 func Root(t testing.TB) string {
 	t.Helper()
 	dir, err := os.Getwd()
@@ -35,19 +35,19 @@ func Root(t testing.TB) string {
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			t.Fatal("no se encontró go.mod")
+			t.Fatal("go.mod not found")
 		}
 		dir = parent
 	}
 }
 
-// Path devuelve testdata/<parts...> relativo a la raíz del módulo.
+// Path returns testdata/<parts...> relative to the module root.
 func Path(t testing.TB, parts ...string) string {
 	t.Helper()
 	return filepath.Join(append([]string{Root(t), "testdata"}, parts...)...)
 }
 
-// ReadInput lee testdata/<id>/<name>.in.
+// ReadInput reads testdata/<id>/<name>.in.
 func ReadInput(t testing.TB, id, name string) string {
 	t.Helper()
 	b, err := os.ReadFile(Path(t, id, name+".in"))
@@ -57,8 +57,8 @@ func ReadInput(t testing.TB, id, name string) string {
 	return string(b)
 }
 
-// Golden compara got con testdata/<id>/<name>.golden, o lo reescribe si
-// Updating() es true.
+// Golden compares got with testdata/<id>/<name>.golden, or rewrites it when
+// Updating() is true.
 func Golden(t testing.TB, id, name, got string) {
 	t.Helper()
 	path := Path(t, id, name+".golden")
@@ -73,9 +73,9 @@ func Golden(t testing.TB, id, name, got string) {
 	}
 	want, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("%v (ejecuta make golden-update para crearlo)", err)
+		t.Fatalf("%v (run make golden-update to create it)", err)
 	}
 	if got != string(want) {
-		t.Errorf("salida distinta de %s\n--- got ---\n%s\n--- want ---\n%s", path, got, want)
+		t.Errorf("output differs from %s\n--- got ---\n%s\n--- want ---\n%s", path, got, want)
 	}
 }

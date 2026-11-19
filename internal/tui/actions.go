@@ -16,27 +16,27 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 )
 
-// useOutput copia la salida a la entrada para encadenar herramientas
+// useOutput copies the output into the input to chain tools
 // (Ctrl+R).
 func (a *App) useOutput() tea.Cmd {
 	ws := a.workspace()
 	if ws == nil || ws.Output() == "" {
-		return flash("no hay salida para usar como entrada")
+		return flash("no output to use as input")
 	}
 	if !ws.HasInput() {
-		return flash("esta herramienta no tiene entrada")
+		return flash("this tool has no input")
 	}
-	return tea.Batch(ws.SetInput(ws.Output()), flash("salida usada como entrada"))
+	return tea.Batch(ws.SetInput(ws.Output()), flash("output used as input"))
 }
 
-// editorDoneMsg llega cuando el editor externo termina.
+// editorDoneMsg arrives when the external editor exits.
 type editorDoneMsg struct {
 	path string
 	err  error
 }
 
-// editorCommand arma el comando de $VISUAL o $EDITOR (con sus argumentos,
-// p. ej. "code --wait"); si no hay ninguno usa vi (notepad en Windows).
+// editorCommand builds the $VISUAL or $EDITOR command (with its arguments,
+// e.g. "code --wait"); without either it uses vi (notepad on Windows).
 func editorCommand(path string) *exec.Cmd {
 	editor := os.Getenv("VISUAL")
 	if editor == "" {
@@ -49,19 +49,19 @@ func editorCommand(path string) *exec.Cmd {
 		}
 	}
 	fields := strings.Fields(editor)
-	return exec.Command(fields[0], append(fields[1:], path)...) //nolint:gosec // el editor lo elige el usuario
+	return exec.Command(fields[0], append(fields[1:], path)...) //nolint:gosec // the user chooses the editor
 }
 
-// editInput abre la entrada activa en el editor externo (Ctrl+E). También
-// es la forma de editar una entrada en modo grande.
+// editInput opens the active input in the external editor (Ctrl+E). It is
+// also the way to edit an input in large mode.
 func (a *App) editInput() tea.Cmd {
 	ws := a.workspace()
 	if ws == nil || !ws.HasInput() {
-		return flash("esta herramienta no tiene entrada")
+		return flash("this tool has no input")
 	}
 	f, err := os.CreateTemp("", "devtooltui-*.txt")
 	if err != nil {
-		return flash("no se pudo crear el archivo temporal: " + err.Error())
+		return flash("could not create the temporary file: " + err.Error())
 	}
 	_, werr := f.WriteString(ws.ActiveValue())
 	if cerr := f.Close(); werr == nil {
@@ -69,7 +69,7 @@ func (a *App) editInput() tea.Cmd {
 	}
 	if werr != nil {
 		_ = os.Remove(f.Name())
-		return flash("no se pudo escribir el archivo temporal: " + werr.Error())
+		return flash("could not write the temporary file: " + werr.Error())
 	}
 	path := f.Name()
 	newCmd := a.opts.Editor
@@ -79,22 +79,22 @@ func (a *App) editInput() tea.Cmd {
 	return tea.ExecProcess(newCmd(path), func(err error) tea.Msg { return editorDoneMsg{path: path, err: err} })
 }
 
-// handleEditorDone carga lo editado en la entrada y borra el temporal.
+// handleEditorDone loads the edited text into the input and removes the temp file.
 func (a *App) handleEditorDone(msg editorDoneMsg) tea.Cmd {
 	defer os.Remove(msg.path)
 	if msg.err != nil {
-		return flash("el editor terminó con error: " + msg.err.Error())
+		return flash("the editor exited with an error: " + msg.err.Error())
 	}
 	data, err := os.ReadFile(msg.path)
 	if err != nil {
-		return flash("no se pudo leer lo editado: " + err.Error())
+		return flash("could not read the edited text: " + err.Error())
 	}
 	ws := a.workspace()
 	if ws == nil {
 		return nil
 	}
 	text := string(data)
-	// Los editores agregan un salto final; se quita si antes no estaba.
+	// Editors add a final line break; drop it if it was not there before.
 	if !strings.HasSuffix(ws.ActiveValue(), "\n") {
 		text = strings.TrimSuffix(text, "\n")
 	}
@@ -103,17 +103,17 @@ func (a *App) handleEditorDone(msg editorDoneMsg) tea.Cmd {
 
 var langExt = map[string]string{"json": ".json", "yaml": ".yaml", "xml": ".xml", "diff": ".diff", "diff-side": ".txt"}
 
-// askSave pide la ruta para guardar la salida (Ctrl+S).
+// askSave asks for the path to save the output to (Ctrl+S).
 func (a *App) askSave() tea.Cmd {
 	ws := a.workspace()
 	if ws == nil || ws.Output() == "" {
-		return flash("no hay salida para guardar")
+		return flash("no output to save")
 	}
 	ext := langExt[ws.OutputLang()]
 	if ext == "" {
 		ext = ".txt"
 	}
-	a.prompt = palette.NewPrompt("save", "Guardar la salida en", "salida"+ext, a.theme.Palette, a.keys.Palette)
+	a.prompt = palette.NewPrompt("save", "Save the output to", "output"+ext, a.theme.Palette, a.keys.Palette)
 	return a.prompt.Init()
 }
 
@@ -121,20 +121,20 @@ func (a *App) saveOutput(path string) tea.Cmd {
 	ws := a.workspace()
 	path = strings.TrimSpace(path)
 	if ws == nil || path == "" {
-		return flash("no se guardó: falta la ruta")
+		return flash("not saved: missing path")
 	}
 	out := ws.Output()
 	if !strings.HasSuffix(out, "\n") {
 		out += "\n"
 	}
-	verb := "guardado"
+	verb := "saved"
 	if _, err := os.Stat(path); err == nil {
-		verb = "reemplazado"
+		verb = "replaced"
 	} else if !errors.Is(err, os.ErrNotExist) {
-		return flash("no se guardó: " + err.Error())
+		return flash("not saved: " + err.Error())
 	}
 	if err := os.WriteFile(path, []byte(out), 0o600); err != nil {
-		return flash("no se guardó: " + err.Error())
+		return flash("not saved: " + err.Error())
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -143,14 +143,14 @@ func (a *App) saveOutput(path string) tea.Cmd {
 	return flash(fmt.Sprintf("%s %s (%s)", verb, abs, statusbar.HumanBytes(len(out))))
 }
 
-// helpOverlay dibuja la ayuda completa encima de la vista (?).
+// helpOverlay draws the full help over the view (?).
 func (a *App) helpOverlay(base string) string {
 	h := help.New()
 	h.Styles = a.theme.Help
 	h.ShowAll = true
 	h.SetWidth(max(a.width-8, 20))
-	body := a.theme.Palette.Title.Render("Atajos") + "\n\n" + h.View(a.keys) + "\n\n" +
-		a.theme.Palette.Detail.Render("cualquier tecla cierra")
+	body := a.theme.Palette.Title.Render("Shortcuts") + "\n\n" + h.View(a.keys) + "\n\n" +
+		a.theme.Palette.Detail.Render("press any key to close")
 	box := a.theme.Palette.Box.Render(body)
 	return palette.Place(base, box, a.width, a.height)
 }

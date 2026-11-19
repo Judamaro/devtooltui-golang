@@ -19,7 +19,7 @@ var keys = palette.KeyMap{
 var items = []palette.Item{
 	{Kind: palette.ToolItem, ID: "json-format", Title: "JSON", Detail: "Formateadores", Search: "pretty minify"},
 	{Kind: palette.ToolItem, ID: "base64", Title: "Base64", Detail: "Codificadores"},
-	{Kind: palette.ActionItem, ID: "copy", Title: "Copiar salida", Detail: "ctrl+y"},
+	{Kind: palette.ActionItem, ID: "copy", Title: "Copy output", Detail: "ctrl+y"},
 }
 
 func typeText(m *palette.Model, s string) {
@@ -41,12 +41,12 @@ func TestFilter(t *testing.T) {
 		{"", "json-format,base64,copy"},
 		{"b64", "base64"},
 		{"pretty", "json-format"},
-		{"copiar", "copy"},
+		{"copy", "copy"},
 		{"zzz", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.q, func(t *testing.T) {
-			m := palette.New("Paleta", items, palette.Styles{}, keys)
+			m := palette.New("Palette", items, palette.Styles{}, keys)
 			typeText(m, tt.q)
 			if got := ids(m.Filtered()); got != tt.want {
 				t.Errorf("Filtered = %s, want %s", got, tt.want)
@@ -56,30 +56,30 @@ func TestFilter(t *testing.T) {
 }
 
 func TestChooseAndClose(t *testing.T) {
-	m := palette.New("Paleta", items, palette.Styles{}, keys)
+	m := palette.New("Palette", items, palette.Styles{}, keys)
 	m.Update(tea.KeyPressMsg{Code: tea.KeyDown})
 	msg := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter})()
 	if c, ok := msg.(palette.ChosenMsg); !ok || c.Item.ID != "base64" {
 		t.Errorf("Enter = %#v, want base64", msg)
 	}
 	if _, ok := m.Update(tea.KeyPressMsg{Code: tea.KeyEscape})().(palette.ClosedMsg); !ok {
-		t.Error("Esc no cierra")
+		t.Error("Esc does not close")
 	}
 	typeText(m, "zzz")
 	if cmd := m.Update(tea.KeyPressMsg{Code: tea.KeyEnter}); cmd != nil {
-		t.Error("Enter sin resultados no debería elegir nada")
+		t.Error("Enter without results should not choose anything")
 	}
 }
 
 func TestOverlay(t *testing.T) {
 	base := strings.TrimSuffix(strings.Repeat(strings.Repeat(".", 80)+"\n", 24), "\n")
-	m := palette.New("Paleta", items, palette.Styles{}, keys)
+	m := palette.New("Palette", items, palette.Styles{}, keys)
 	out := ansi.Strip(m.Overlay(base, 80, 24))
 	lines := strings.Split(out, "\n")
 	if len(lines) != 24 {
-		t.Fatalf("la vista cambió de alto: %d", len(lines))
+		t.Fatalf("the view changed height: %d", len(lines))
 	}
-	if !strings.Contains(out, "Paleta") || !strings.Contains(out, "▸ JSON") || !strings.HasPrefix(lines[0], "....") {
-		t.Errorf("overlay inesperado:\n%s", out)
+	if !strings.Contains(out, "Palette") || !strings.Contains(out, "▸ JSON") || !strings.HasPrefix(lines[0], "....") {
+		t.Errorf("unexpected overlay:\n%s", out)
 	}
 }

@@ -44,7 +44,7 @@ func TestTimestampGolden(t *testing.T) {
 	}
 }
 
-// line devuelve el valor de la fila label de la salida.
+// line returns the value of the label row in the output.
 func line(text, label string) string {
 	for _, l := range strings.Split(text, "\n") {
 		if strings.HasPrefix(l, label+":") {
@@ -63,18 +63,18 @@ func TestTimestamp(t *testing.T) {
 		want      string
 		wantMeta0 string
 	}{
-		{"vacio es ahora", "", tool.Values{"tz": "UTC"}, "Unix (s)", "1767268800", "ahora"},
-		{"auto segundos", "0", tool.Values{"tz": "UTC"}, "ISO 8601", "1970-01-01T00:00:00Z", "Unix en segundos"},
-		{"auto ms", "1767225600000", tool.Values{"tz": "UTC"}, "Unix (s)", "1767225600", "Unix en milisegundos"},
-		{"auto us", "1767225600000000", tool.Values{"tz": "UTC"}, "Unix (s)", "1767225600", "Unix en microsegundos"},
-		{"auto ns", "1767225600000000000", tool.Values{"tz": "UTC"}, "Unix (s)", "1767225600", "Unix en nanosegundos"},
-		{"unidad forzada", "1767225600", tool.Values{"tz": "UTC", "unit": "ms"}, "ISO 8601", "1970-01-21T10:53:45.600Z", "Unix en milisegundos"},
-		{"negativo", "-86400", tool.Values{"tz": "UTC"}, "ISO 8601", "1969-12-31T00:00:00Z", "Unix en segundos"},
-		{"decimal", "1.5", tool.Values{"tz": "UTC"}, "Unix (ms)", "1500", "Unix en segundos"},
-		{"fecha sin zona usa tz", "2026-01-01 00:00", tool.Values{"tz": "America/Bogota"}, "Unix (s)", "1767243600", "fecha"},
-		{"fecha sola", "2026-01-01", tool.Values{"tz": "UTC"}, "Relativo", "hace 12 h", "fecha"},
-		{"tz minusculas", "0", tool.Values{"tz": "utc"}, "ISO 8601", "1970-01-01T00:00:00Z", "Unix en segundos"},
-		{"dia en espanol", "1767225600", tool.Values{"tz": "UTC"}, "Día", "jueves, semana 2026-W01, día 1 del año", "Unix en segundos"},
+		{"empty is now", "", tool.Values{"tz": "UTC"}, "Unix (s)", "1767268800", "now"},
+		{"auto seconds", "0", tool.Values{"tz": "UTC"}, "ISO 8601", "1970-01-01T00:00:00Z", "Unix in seconds"},
+		{"auto ms", "1767225600000", tool.Values{"tz": "UTC"}, "Unix (s)", "1767225600", "Unix in milliseconds"},
+		{"auto us", "1767225600000000", tool.Values{"tz": "UTC"}, "Unix (s)", "1767225600", "Unix in microseconds"},
+		{"auto ns", "1767225600000000000", tool.Values{"tz": "UTC"}, "Unix (s)", "1767225600", "Unix in nanoseconds"},
+		{"forced unit", "1767225600", tool.Values{"tz": "UTC", "unit": "ms"}, "ISO 8601", "1970-01-21T10:53:45.600Z", "Unix in milliseconds"},
+		{"negative", "-86400", tool.Values{"tz": "UTC"}, "ISO 8601", "1969-12-31T00:00:00Z", "Unix in seconds"},
+		{"decimal", "1.5", tool.Values{"tz": "UTC"}, "Unix (ms)", "1500", "Unix in seconds"},
+		{"date without zone uses tz", "2026-01-01 00:00", tool.Values{"tz": "America/Bogota"}, "Unix (s)", "1767243600", "date"},
+		{"date only", "2026-01-01", tool.Values{"tz": "UTC"}, "Relative", "12 h ago", "date"},
+		{"lowercase tz", "0", tool.Values{"tz": "utc"}, "ISO 8601", "1970-01-01T00:00:00Z", "Unix in seconds"},
+		{"weekday", "1767225600", tool.Values{"tz": "UTC"}, "Day", "Thursday, week 2026-W01, day 1 of the year", "Unix in seconds"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -86,7 +86,7 @@ func TestTimestamp(t *testing.T) {
 				t.Errorf("%s = %q, want %q\n%s", tt.label, got, tt.want, res.Text)
 			}
 			if res.Meta[0].Value != tt.wantMeta0 {
-				t.Errorf("Entrada = %q, want %q", res.Meta[0].Value, tt.wantMeta0)
+				t.Errorf("Input = %q, want %q", res.Meta[0].Value, tt.wantMeta0)
 			}
 		})
 	}
@@ -98,9 +98,9 @@ func TestTimestampErrors(t *testing.T) {
 		opts      tool.Values
 		wantInput string
 	}{
-		{"texto", "mañana", nil, "input"},
-		{"fuera de rango", "99999999999999999999999", tool.Values{"unit": "s"}, "input"},
-		{"zona desconocida", "0", tool.Values{"tz": "Marte/Olympus"}, "tz"},
+		{"text", "tomorrow", nil, "input"},
+		{"out of range", "99999999999999999999999", tool.Values{"unit": "s"}, "input"},
+		{"unknown zone", "0", tool.Values{"tz": "Mars/Olympus"}, "tz"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -121,13 +121,13 @@ func TestTimestampDetect(t *testing.T) {
 		name, sample string
 		want         float64
 	}{
-		{"segundos", "1767225600", 0.70},
-		{"milisegundos", " 1767225600123\n", 0.70},
-		{"anio 1990", "0631152000", 0},
-		{"anio 2200", "7258118400", 0},
-		{"11 digitos", "17672256000", 0},
-		{"negativo", "-176722560", 0},
-		{"texto", "hola", 0},
+		{"seconds", "1767225600", 0.70},
+		{"milliseconds", " 1767225600123\n", 0.70},
+		{"year 1990", "0631152000", 0},
+		{"year 2200", "7258118400", 0},
+		{"11 digits", "17672256000", 0},
+		{"negative", "-176722560", 0},
+		{"text", "hello", 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -146,7 +146,7 @@ func FuzzTimestamp(f *testing.F) {
 		_ = (converters.Timestamp{}).Detect(in)
 		if _, err := runTS(t, in, tool.Values{"tz": "UTC"}); err != nil {
 			if _, ok := tool.AsInputError(err); !ok {
-				t.Fatalf("error que no es *InputError: %v", err)
+				t.Fatalf("error that is not *InputError: %v", err)
 			}
 		}
 	})

@@ -15,8 +15,8 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
-// Theme reúne todos los estilos de la TUI. Ningún otro archivo define
-// colores ni estilos en línea. Los temas light/auto llegan en la fase 2.
+// Theme gathers every TUI style. No other file defines colours or inline
+// styles. The light/auto themes arrive in phase 2.
 type Theme struct {
 	Separator lipgloss.Style
 	Palette   palette.Styles
@@ -26,11 +26,11 @@ type Theme struct {
 	Help      help.Styles
 }
 
-// darkChroma colorea JSON, YAML y XML con nombres de colores ANSI, que el
-// formatter terminal16 traduce a la paleta de la terminal.
+// darkChroma colours JSON, YAML and XML with ANSI colour names, which the
+// terminal16 formatter maps to the terminal's palette.
 var darkChroma = chroma.MustNewStyle("devtooltui-dark", chroma.StyleEntries{
-	chroma.NameTag:         "#ansiblue",      // claves JSON/YAML, etiquetas XML
-	chroma.NameAttribute:   "#ansiturquoise", // atributos XML
+	chroma.NameTag:         "#ansiblue",      // JSON/YAML keys, XML tags
+	chroma.NameAttribute:   "#ansiturquoise", // XML attributes
 	chroma.LiteralString:   "#ansigreen",
 	chroma.LiteralNumber:   "#ansiyellow",
 	chroma.KeywordConstant: "#ansifuchsia", // true, false, null
@@ -40,7 +40,7 @@ var darkChroma = chroma.MustNewStyle("devtooltui-dark", chroma.StyleEntries{
 	chroma.NameBuiltin:     "#ansifuchsia",
 })
 
-// RenderStyles son los colores de las salidas; también los usa la CLI.
+// RenderStyles are the output colours; the CLI uses them too.
 func RenderStyles() render.Styles {
 	return render.Styles{
 		Chroma: darkChroma,
@@ -54,10 +54,10 @@ func RenderStyles() render.Styles {
 	}
 }
 
-// DarkTheme usa solo los 16 colores ANSI.
+// DarkTheme uses only the 16 ANSI colours.
 func DarkTheme() Theme {
 	var (
-		accent = lipgloss.Color("12") // azul brillante
+		accent = lipgloss.Color("12") // bright blue
 		muted  = lipgloss.Color("8")
 		errC   = lipgloss.Color("9")
 		ok     = lipgloss.Color("10")

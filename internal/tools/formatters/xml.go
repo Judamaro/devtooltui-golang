@@ -12,8 +12,8 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// XMLFormat re-indenta XML conservando el texto original de cada token
-// (atributos, comentarios, CDATA, instrucciones de proceso y DOCTYPE).
+// XMLFormat re-indents XML keeping each token's original text (attributes,
+// comments, CDATA, processing instructions and DOCTYPE).
 type XMLFormat struct{}
 
 func (XMLFormat) Spec() tool.Spec {
@@ -21,11 +21,11 @@ func (XMLFormat) Spec() tool.Spec {
 		ID:          "xml-format",
 		Name:        "XML",
 		Category:    tool.Formatters,
-		Description: "Indenta o minifica XML conservando comentarios y CDATA",
+		Description: "Indent or minify XML, keeping comments and CDATA",
 		Keywords:    []string{"xml", "pretty", "minify", "beautify", "svg", "html"},
-		Inputs:      []tool.InputSpec{{Key: "input", Label: "Entrada", Lang: "xml", Multiline: true}},
+		Inputs:      []tool.InputSpec{{Key: "input", Label: "Input", Lang: "xml", Multiline: true}},
 		Options: []tool.Option{
-			{Key: "indent", Label: "Indentación", Help: "Espacios por nivel; 0 = minificar", Kind: tool.Number, Min: 0, Max: 8, Default: 2},
+			{Key: "indent", Label: "Indent", Help: "Spaces per level; 0 = minify", Kind: tool.Number, Min: 0, Max: 8, Default: 2},
 		},
 		Output: tool.Highlighted,
 		Live:   true,
@@ -58,8 +58,8 @@ func (x XMLFormat) Run(ctx context.Context, req tool.Request) (tool.Result, erro
 		Text: out,
 		Lang: "xml",
 		Meta: []tool.KV{
-			{Key: "XML", Value: "bien formado"},
-			{Key: "Tamaño", Value: fmt.Sprintf("%d B → %d B", len(in), len(out))},
+			{Key: "XML", Value: "well-formed"},
+			{Key: "Size", Value: fmt.Sprintf("%d B → %d B", len(in), len(out))},
 		},
 	}, nil
 }
@@ -93,15 +93,15 @@ func validateXML(in string) error {
 		}
 	}
 	if roots == 0 {
-		return &tool.InputError{Input: "input", Line: 1, Msg: "no hay ningún elemento"}
+		return &tool.InputError{Input: "input", Line: 1, Msg: "there are no elements"}
 	}
 	return nil
 }
 
 var entityRe = regexp.MustCompile(`<!ENTITY\s+([\w.:-]+)\s+("([^"]*)"|'([^']*)')\s*>`)
 
-// dtdEntities lee las entidades internas declaradas en el DOCTYPE, que
-// encoding/xml no resuelve por sí mismo.
+// dtdEntities reads the internal entities declared in the DOCTYPE, which
+// encoding/xml does not resolve on its own.
 func dtdEntities(in string) map[string]string {
 	ents := map[string]string{}
 	for _, m := range entityRe.FindAllStringSubmatch(in, -1) {
@@ -117,7 +117,7 @@ const (
 	xStart
 	xEnd
 	xEmpty
-	xOther // comentario, CDATA, PI, DOCTYPE
+	xOther // comment, CDATA, PI, DOCTYPE
 )
 
 type xmlToken struct {
@@ -125,7 +125,7 @@ type xmlToken struct {
 	raw  string
 }
 
-// tokenizeXML parte la entrada (ya validada) en tokens con su texto crudo.
+// tokenizeXML splits the (already validated) input into tokens with their raw text.
 func tokenizeXML(s string) []xmlToken {
 	var toks []xmlToken
 	for i := 0; i < len(s); {
@@ -173,7 +173,7 @@ func indexAfter(s, sep string) int {
 	return len(s)
 }
 
-// tagEnd encuentra el '>' que cierra la etiqueta, saltando comillas.
+// tagEnd finds the '>' that closes the tag, skipping quotes.
 func tagEnd(s string) int {
 	var quote byte
 	for i := 1; i < len(s); i++ {
@@ -191,7 +191,7 @@ func tagEnd(s string) int {
 	return len(s)
 }
 
-// declEnd cierra un <!DOCTYPE …>, que puede traer un subconjunto [ … ].
+// declEnd closes a <!DOCTYPE …>, which may carry an internal subset [ … ].
 func declEnd(s string) int {
 	var quote byte
 	brackets := 0
@@ -235,7 +235,7 @@ func indentXML(ctx context.Context, toks []xmlToken, unit string) string {
 				line(txt)
 			}
 		case xStart:
-			// <a>texto</a>, <a><![CDATA[…]]></a> y <a></a> quedan en una línea.
+			// <a>text</a>, <a><![CDATA[…]]></a> and <a></a> stay on one line.
 			if i+2 < len(toks) && toks[i+2].kind == xEnd {
 				next := toks[i+1]
 				if next.kind == xText && !strings.Contains(strings.TrimSpace(next.raw), "\n") {
@@ -277,8 +277,8 @@ func minifyXML(toks []xmlToken) string {
 	return b.String()
 }
 
-// Detect reconoce XML que se tokeniza sin errores en los primeros 50 tokens
-// y tiene al menos un elemento.
+// Detect recognises XML that tokenises without errors in its first 50 tokens
+// and has at least one element.
 func (XMLFormat) Detect(sample string) float64 {
 	s := strings.TrimSpace(sample)
 	if !strings.HasPrefix(s, "<") {
@@ -294,7 +294,7 @@ func (XMLFormat) Detect(sample string) float64 {
 		}
 		var syn *xml.SyntaxError
 		if errors.As(err, &syn) && syn.Msg == "unexpected EOF" && elements > 0 {
-			break // la muestra (hasta 64 KB) puede venir cortada
+			break // the sample (up to 64 KB) may be truncated
 		}
 		if err != nil {
 			return 0

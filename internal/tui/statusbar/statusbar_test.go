@@ -20,12 +20,12 @@ func TestText(t *testing.T) {
 		st   statusbar.Status
 		want string
 	}{
-		{"ok con meta", statusbar.Status{Elapsed: 1200 * time.Microsecond, Meta: []tool.KV{{Key: "Salida", Value: "8 B"}}}, "✓ 1.2 ms · Salida: 8 B"},
-		{"ejecutando gana al error", statusbar.Status{Running: true, Err: errors.New("x")}, "⋯ ejecutando"},
-		{"error de entrada", statusbar.Status{Err: &tool.InputError{Line: 3, Col: 7, Msg: "coma de más"}}, "✗ 3:7: coma de más"},
-		{"pendiente de f5", statusbar.Status{Stale: true}, "● f5 para ejecutar"},
-		{"entrada grande", statusbar.Status{LargeBytes: 40000, LargeLines: 2, Elapsed: 5 * time.Microsecond},
-			"⚠ 39.1 KB · 2 líneas · solo lectura (f5 ejecutar, ctrl+l limpiar) · ✓ 5 µs"},
+		{"ok with meta", statusbar.Status{Elapsed: 1200 * time.Microsecond, Meta: []tool.KV{{Key: "Output", Value: "8 B"}}}, "✓ 1.2 ms · Output: 8 B"},
+		{"running beats error", statusbar.Status{Running: true, Err: errors.New("x")}, "⋯ running"},
+		{"input error", statusbar.Status{Err: &tool.InputError{Line: 3, Col: 7, Msg: "extra comma"}}, "✗ 3:7: extra comma"},
+		{"waiting for f5", statusbar.Status{Stale: true}, "● press f5 to run"},
+		{"large input", statusbar.Status{LargeBytes: 40000, LargeLines: 2, Elapsed: 5 * time.Microsecond},
+			"⚠ 39.1 KB · 2 lines · read-only (f5 run, ctrl+l clear) · ✓ 5 µs"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -44,20 +44,20 @@ func TestView(t *testing.T) {
 		help     string
 		wantHelp bool
 	}{
-		{"ancho", 100, "tab foco • ctrl+c salir", true},
-		{"angosto oculta la ayuda", 30, "tab foco • ctrl+b sidebar • ctrl+c salir", false},
+		{"wide", 100, "tab focus • ctrl+c quit", true},
+		{"narrow hides the help", 30, "tab focus • ctrl+b sidebar • ctrl+c quit", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ansi.Strip(statusbar.View(st, tt.help, tt.width, styles))
 			if w := ansi.StringWidth(got); w != tt.width {
-				t.Errorf("ancho = %d, want %d: %q", w, tt.width, got)
+				t.Errorf("width = %d, want %d: %q", w, tt.width, got)
 			}
 			if strings.HasSuffix(got, tt.help) != tt.wantHelp {
-				t.Errorf("ayuda visible = %v, want %v: %q", !tt.wantHelp, tt.wantHelp, got)
+				t.Errorf("help visible = %v, want %v: %q", !tt.wantHelp, tt.wantHelp, got)
 			}
 			if !strings.HasPrefix(got, "✗ 1:2:") {
-				t.Errorf("el estado no va a la izquierda: %q", got)
+				t.Errorf("the status is not on the left: %q", got)
 			}
 		})
 	}

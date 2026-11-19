@@ -1,6 +1,6 @@
 name: Demo
 
-# Se lanza a mano: graba docs/demo.gif con VHS y lo commitea.
+# Run manually: records docs/demo.gif with VHS and commits it.
 on:
   workflow_dispatch:
 
@@ -18,7 +18,7 @@ jobs:
       - uses: charmbracelet/vhs-action@v2
         with:
           path: docs/demo.tape
-      - name: Commit del GIF
+      - name: Commit the GIF
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

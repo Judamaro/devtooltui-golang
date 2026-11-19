@@ -1,4 +1,4 @@
-// Package text agrupa las herramientas que trabajan sobre texto plano.
+// Package text groups the tools that work on plain text.
 package text
 
 import (
@@ -14,10 +14,10 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// Diff compara dos textos por líneas o por palabras.
+// Diff compares two texts by lines or by words.
 type Diff struct{}
 
-// Valores de Result.Lang que la TUI usa para colorear la salida.
+// Result.Lang values the TUI uses to colour the output.
 const (
 	LangUnified = "diff"
 	LangSide    = "diff-side"
@@ -30,16 +30,16 @@ func (Diff) Spec() tool.Spec {
 		ID:          "diff",
 		Name:        "Diff",
 		Category:    tool.Text,
-		Description: "Compara dos textos por líneas o por palabras",
-		Keywords:    []string{"compare", "comparar", "diferencias", "patch", "unified"},
+		Description: "Compare two texts by lines or by words",
+		Keywords:    []string{"compare", "differences", "patch", "unified"},
 		Inputs: []tool.InputSpec{
-			{Key: "a", Label: "Texto A (original)", Multiline: true},
-			{Key: "b", Label: "Texto B (nuevo)", Multiline: true},
+			{Key: "a", Label: "Text A (original)", Multiline: true},
+			{Key: "b", Label: "Text B (new)", Multiline: true},
 		},
 		Options: []tool.Option{
-			{Key: "by", Label: "Por", Kind: tool.Select, Choices: []string{"lines", "words"}, Default: "lines"},
-			{Key: "ignore_space", Label: "Ignorar espacios", Kind: tool.Toggle, Default: false},
-			{Key: "view", Label: "Vista", Help: "Solo por líneas; por palabras es siempre en línea", Kind: tool.Select,
+			{Key: "by", Label: "By", Kind: tool.Select, Choices: []string{"lines", "words"}, Default: "lines"},
+			{Key: "ignore_space", Label: "Ignore spaces", Kind: tool.Toggle, Default: false},
+			{Key: "view", Label: "View", Help: "Lines only; words are always inline", Kind: tool.Select,
 				Choices: []string{"unified", "side-by-side"}, Default: "unified"},
 		},
 		Output: tool.DiffView,
@@ -58,7 +58,7 @@ func (d Diff) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 	if opts.String("by") == "words" {
 		ops := diffTokens(ctx, splitWords(a), splitWords(b), wordKey(ignore))
 		ins, del := countKinds(ops, func(s string) bool { return strings.TrimSpace(s) != "" })
-		return tool.Result{Text: inlineWords(ops), Diff: ops, Meta: changeMeta(ins, del, "palabras")}, ctx.Err()
+		return tool.Result{Text: inlineWords(ops), Diff: ops, Meta: changeMeta(ins, del, "words")}, ctx.Err()
 	}
 
 	la, lb := splitLines(a), splitLines(b)
@@ -76,10 +76,10 @@ func (d Diff) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 			del++
 		}
 	}
-	res := tool.Result{Diff: ops, Meta: changeMeta(ins, del, "líneas")}
+	res := tool.Result{Diff: ops, Meta: changeMeta(ins, del, "lines")}
 	switch {
 	case ins+del == 0:
-		res.Text = "Sin diferencias"
+		res.Text = "No differences"
 	case opts.String("view") == "side-by-side":
 		res.Text, res.Lang = sideBySide(rows), LangSide
 	default:
@@ -90,13 +90,13 @@ func (d Diff) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 
 func changeMeta(ins, del int, unit string) []tool.KV {
 	if ins+del == 0 {
-		return []tool.KV{{Key: "Resultado", Value: "idénticos"}}
+		return []tool.KV{{Key: "Result", Value: "identical"}}
 	}
-	return []tool.KV{{Key: "Cambios", Value: fmt.Sprintf("+%d −%d %s", ins, del, unit)}}
+	return []tool.KV{{Key: "Changes", Value: fmt.Sprintf("+%d −%d %s", ins, del, unit)}}
 }
 
-// splitLines devuelve las líneas terminadas en "\n" (también la última,
-// tenga o no salto final), para que A y B se comparen igual.
+// splitLines returns the lines ending in "\n" (the last one too, with or
+// without a final break), so A and B compare the same way.
 func splitLines(s string) []string {
 	s = strings.TrimSuffix(s, "\n")
 	if s == "" {
@@ -132,9 +132,9 @@ func wordKey(ignore bool) func(string) string {
 	}
 }
 
-// diffTokens compara secuencias de tokens: cada clave distinta se mapea a
-// una runa (como DiffLinesToChars de go-diff) y el texto de salida sale de
-// los tokens originales, así ignorar espacios no altera lo que se muestra.
+// diffTokens compares token sequences: each distinct key maps to a rune (like
+// go-diff's DiffLinesToChars) and the output text comes from the original
+// tokens, so ignoring spaces does not change what is shown.
 func diffTokens(ctx context.Context, a, b []string, key func(string) string) []tool.DiffOp {
 	ids := map[string]rune{}
 	next := rune(1)
@@ -219,7 +219,7 @@ func inlineWords(ops []tool.DiffOp) string {
 	return b.String()
 }
 
-// row es una línea del diff con sus números en A y B (0 = no aplica).
+// row is a diff line with its numbers in A and B (0 = not applicable).
 type row struct {
 	kind  tool.DiffKind
 	text  string
@@ -251,7 +251,7 @@ func toRows(ops []tool.DiffOp) []row {
 	return rows
 }
 
-// unified arma el formato unificado con hunks y 3 líneas de contexto.
+// unified builds the unified format with hunks and 3 lines of context.
 func unified(rows []row) string {
 	var b strings.Builder
 	b.WriteString("--- A\n+++ B")
@@ -262,7 +262,7 @@ func unified(rows []row) string {
 		}
 		start := max(i-contextLines, 0)
 		end := i
-		// Extiende el hunk mientras los cambios estén a menos de 2×contexto.
+		// Extend the hunk while changes are less than 2×context apart.
 		for j := i; j < len(rows); j++ {
 			if rows[j].kind != tool.Equal {
 				end = j
@@ -308,9 +308,9 @@ func writeHunk(b *strings.Builder, rows []row) {
 
 const maxColumn = 60
 
-// sideBySide empareja eliminaciones e inserciones consecutivas como
-// cambios ("|"); las sueltas se marcan con "<" o ">". El marcador va al
-// inicio de la línea para que sea fácil de colorear y de filtrar con grep.
+// sideBySide pairs consecutive deletions and insertions as changes ("|");
+// unpaired ones are marked "<" or ">". The marker goes at the start of the
+// line so it is easy to colour and to filter with grep.
 func sideBySide(rows []row) string {
 	for i := range rows {
 		rows[i].text = strings.ReplaceAll(rows[i].text, "\t", "    ")

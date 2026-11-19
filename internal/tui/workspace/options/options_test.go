@@ -21,10 +21,10 @@ var keys = options.KeyMap{
 }
 
 var spec = tool.Spec{Options: []tool.Option{
-	{Key: "mode", Label: "Modo", Kind: tool.Select, Choices: []string{"encode", "decode", "parse"}, Default: "encode"},
+	{Key: "mode", Label: "Mode", Kind: tool.Select, Choices: []string{"encode", "decode", "parse"}, Default: "encode"},
 	{Key: "pad", Label: "Padding", Kind: tool.Toggle, Default: true},
-	{Key: "indent", Label: "Indentación", Kind: tool.Number, Min: 0, Max: 8, Default: 2},
-	{Key: "secret", Label: "Clave", Kind: tool.String, Default: ""},
+	{Key: "indent", Label: "Indent", Kind: tool.Number, Min: 0, Max: 8, Default: 2},
+	{Key: "secret", Label: "Key", Kind: tool.String, Default: ""},
 }}
 
 func newModel() options.Model {
@@ -61,16 +61,16 @@ func TestUpdate(t *testing.T) {
 		lastChanged bool
 		captures    bool
 	}{
-		{"select siguiente", []string{"right"}, "mode", "decode", true, false},
-		{"select anterior da la vuelta", []string{"left"}, "mode", "parse", true, false},
-		{"toggle con espacio", []string{"down", "space"}, "pad", false, true, false},
-		{"toggle con flecha", []string{"down", "right"}, "pad", false, true, false},
-		{"number incrementa", []string{"down", "down", "right"}, "indent", 3, true, true},
-		{"number no baja del minimo", []string{"down", "down", "left", "left", "left"}, "indent", 0, false, true},
-		{"number tecleado", []string{"down", "down", "backspace", "5"}, "indent", 5, true, true},
-		{"number fuera de rango no aplica", []string{"down", "down", "backspace", "9"}, "indent", 2, false, true},
-		{"string tecleado", []string{"up", "a", "b"}, "secret", "ab", true, true},
-		{"navegar no cambia", []string{"down"}, "mode", "encode", false, false},
+		{"select next", []string{"right"}, "mode", "decode", true, false},
+		{"select previous wraps around", []string{"left"}, "mode", "parse", true, false},
+		{"toggle with space", []string{"down", "space"}, "pad", false, true, false},
+		{"toggle with arrow", []string{"down", "right"}, "pad", false, true, false},
+		{"number increments", []string{"down", "down", "right"}, "indent", 3, true, true},
+		{"number does not go below the minimum", []string{"down", "down", "left", "left", "left"}, "indent", 0, false, true},
+		{"typed number", []string{"down", "down", "backspace", "5"}, "indent", 5, true, true},
+		{"out-of-range number is not applied", []string{"down", "down", "backspace", "9"}, "indent", 2, false, true},
+		{"typed string", []string{"up", "a", "b"}, "secret", "ab", true, true},
+		{"navigating does not change", []string{"down"}, "mode", "encode", false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -98,8 +98,8 @@ func TestLines(t *testing.T) {
 		width int
 		want  []string
 	}{
-		{"todo en una linea", 200, []string{"Modo: ◀ encode ▶   Padding: [x]   Indentación: 2   Clave:"}},
-		{"se parte", 40, []string{"Modo: ◀ encode ▶   Padding: [x]", "Indentación: 2   Clave:"}},
+		{"all on one line", 200, []string{"Mode: ◀ encode ▶   Padding: [x]   Indent: 2   Key:"}},
+		{"wraps", 40, []string{"Mode: ◀ encode ▶   Padding: [x]", "Indent: 2   Key:"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -118,9 +118,9 @@ func TestLines(t *testing.T) {
 func TestEmpty(t *testing.T) {
 	m := options.New(tool.Spec{}, tool.Values{}, options.Styles{}, keys)
 	if !m.Empty() || len(m.Lines(80)) != 0 || m.CapturesText() {
-		t.Error("panel sin opciones no está vacío")
+		t.Error("panel without options is not empty")
 	}
 	if changed, _ := m.Update(k("right")); changed {
-		t.Error("Update en panel vacío cambió algo")
+		t.Error("Update on an empty panel changed something")
 	}
 }

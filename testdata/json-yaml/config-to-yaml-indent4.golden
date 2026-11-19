@@ -16,6 +16,6 @@ empty: {}
 list: []
 quoted: 'a: b'
 multi: |-
-    línea 1
-    línea 2
+    line 1
+    line 2
 num_str: "123"

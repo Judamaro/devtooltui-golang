@@ -10,11 +10,11 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 )
 
-// TestContract verifica el contrato en todas las herramientas registradas.
+// TestContract checks the contract on every registered tool.
 func TestContract(t *testing.T) {
 	r, err := registry.New(tools.All()...)
 	if err != nil {
-		t.Fatalf("registro inválido: %v", err)
+		t.Fatalf("invalid registry: %v", err)
 	}
 	for _, tl := range r.All() {
 		spec := tl.Spec()
@@ -24,11 +24,11 @@ func TestContract(t *testing.T) {
 				empty.Inputs[in.Key] = ""
 			}
 
-			t.Run("entrada vacía", func(t *testing.T) {
+			t.Run("empty input", func(t *testing.T) {
 				_, err := tl.Run(context.Background(), empty)
 				if err != nil {
 					if _, ok := tool.AsInputError(err); !ok {
-						t.Errorf("error que no es *InputError: %v", err)
+						t.Errorf("error that is not *InputError: %v", err)
 					}
 				}
 			})
@@ -38,18 +38,18 @@ func TestContract(t *testing.T) {
 				cancel()
 				_, err := tl.Run(ctx, empty)
 				if !errors.Is(err, context.Canceled) {
-					t.Errorf("Run con ctx cancelado = %v, want context.Canceled", err)
+					t.Errorf("Run with cancelled ctx = %v, want context.Canceled", err)
 				}
 			})
 
-			t.Run("todas las choices", func(t *testing.T) {
+			t.Run("every choice", func(t *testing.T) {
 				for _, o := range spec.Options {
 					for _, c := range o.Choices {
 						req := empty
 						req.Opts = tool.Values{o.Key: c}.WithDefaults(spec)
 						if _, err := tl.Run(context.Background(), req); err != nil {
 							if _, ok := tool.AsInputError(err); !ok {
-								t.Errorf("%s=%s: error que no es *InputError: %v", o.Key, c, err)
+								t.Errorf("%s=%s: error that is not *InputError: %v", o.Key, c, err)
 							}
 						}
 					}
@@ -60,7 +60,7 @@ func TestContract(t *testing.T) {
 				t.Run("detect acotado", func(t *testing.T) {
 					for _, s := range []string{"", " ", "\x00\xff", "{}", "a.b.c"} {
 						if score := d.Detect(s); score < 0 || score > 1 {
-							t.Errorf("Detect(%q) = %v fuera de [0,1]", s, score)
+							t.Errorf("Detect(%q) = %v outside [0,1]", s, score)
 						}
 					}
 				})

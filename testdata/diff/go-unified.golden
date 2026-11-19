@@ -10,13 +10,13 @@
 +)
  
  func main() {
- 	nombre := "mundo"
--	fmt.Println("hola", nombre)
-+	fmt.Println("hola,", nombre)
+ 	name := "world"
+-	fmt.Println("hello", name)
++	fmt.Println("hello,", name)
  	for i := 0; i < 3; i++ {
  		fmt.Println(i)
  	}
- 	// fin
+ 	// end
 -	return
 +	os.Exit(0)
  }

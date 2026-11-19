@@ -1,8 +1,8 @@
 package workspace_test
 
-// Spike de la fase 0: ¿aguanta bubbles/textarea entradas de ~1 MB?
-// Ejecutar con:  go test -run Spike -bench . -benchmem ./internal/tui/workspace/
-// Resultados y decisión: docs/adr/0002-live-max-bytes.md
+// Phase 0 spike: can bubbles/textarea handle ~1 MB inputs?
+// Run with:  go test -run Spike -bench . -benchmem ./internal/tui/workspace/
+// Results and decision: docs/adr/0002-live-max-bytes.md
 
 import (
 	"encoding/json"
@@ -17,8 +17,8 @@ import (
 
 var sizes = []int{100 << 10, 500 << 10, 1 << 20, 2 << 20}
 
-// genJSON genera un JSON de aproximadamente n bytes; pretty=true lo indenta
-// (muchas líneas cortas) y pretty=false lo deja en una sola línea.
+// genJSON generates JSON of about n bytes; pretty=true indents it (many
+// short lines) and pretty=false keeps it on a single line.
 func genJSON(n int, pretty bool) string {
 	type item struct {
 		ID    int      `json:"id"`
@@ -29,7 +29,7 @@ func genJSON(n int, pretty bool) string {
 	var items []item
 	size := 0
 	for i := 0; size < n; i++ {
-		it := item{ID: i, Name: fmt.Sprintf("elemento-%06d", i), Tags: []string{"a", "bb", "ccc"}, Valid: i%2 == 0}
+		it := item{ID: i, Name: fmt.Sprintf("item-%06d", i), Tags: []string{"a", "bb", "ccc"}, Valid: i%2 == 0}
 		items = append(items, it)
 		size += 90
 	}
@@ -65,7 +65,7 @@ func shapes() []struct {
 	}{{"pretty", true}, {"minified", false}}
 }
 
-// TestSpikeTruncation registra si el textarea conserva toda la entrada.
+// TestSpikeTruncation logs whether the textarea keeps the whole input.
 func TestSpikeTruncation(t *testing.T) {
 	for _, sh := range shapes() {
 		for _, n := range sizes {
@@ -73,7 +73,7 @@ func TestSpikeTruncation(t *testing.T) {
 			ta := newTextarea()
 			ta.SetValue(in)
 			got := len(ta.Value())
-			t.Logf("%-8s %5d KB: %6d líneas, conserva %5.1f%%", sh.name, n>>10, strings.Count(in, "\n")+1, 100*float64(got)/float64(len(in)))
+			t.Logf("%-8s %5d KB: %6d lines, keeps %5.1f%%", sh.name, n>>10, strings.Count(in, "\n")+1, 100*float64(got)/float64(len(in)))
 		}
 	}
 }
@@ -107,8 +107,8 @@ func BenchmarkTextareaPaste(b *testing.B) {
 	}
 }
 
-// BenchmarkTextareaKeystroke mide una tecla + View con la entrada ya cargada:
-// es la latencia que percibe el usuario al escribir.
+// BenchmarkTextareaKeystroke measures one key + View with the input already
+// loaded: the latency the user perceives while typing.
 func BenchmarkTextareaKeystroke(b *testing.B) {
 	for _, sh := range shapes() {
 		for _, n := range sizes {
@@ -125,7 +125,7 @@ func BenchmarkTextareaKeystroke(b *testing.B) {
 	}
 }
 
-// BenchmarkTextareaValue mide Value(), que se llama en cada recálculo.
+// BenchmarkTextareaValue measures Value(), which is called on every rerun.
 func BenchmarkTextareaValue(b *testing.B) {
 	for _, sh := range shapes() {
 		for _, n := range sizes {
@@ -141,7 +141,7 @@ func BenchmarkTextareaValue(b *testing.B) {
 	}
 }
 
-// BenchmarkViewportReadOnly es la alternativa de solo lectura.
+// BenchmarkViewportReadOnly is the read-only alternative.
 func BenchmarkViewportReadOnly(b *testing.B) {
 	for _, sh := range shapes() {
 		for _, n := range sizes {
@@ -157,8 +157,8 @@ func BenchmarkViewportReadOnly(b *testing.B) {
 	}
 }
 
-// BenchmarkTextareaKeystrokeSmall busca el umbral en el que una tecla + View
-// baja de 50 ms, con y sin números de línea.
+// BenchmarkTextareaKeystrokeSmall looks for the size at which one key + View
+// drops below 50 ms, with and without line numbers.
 func BenchmarkTextareaKeystrokeSmall(b *testing.B) {
 	for _, sh := range shapes() {
 		for _, lineNumbers := range []bool{true, false} {
@@ -178,8 +178,8 @@ func BenchmarkTextareaKeystrokeSmall(b *testing.B) {
 	}
 }
 
-// BenchmarkViewportScroll mide un frame (scroll + View) con el contenido ya
-// cargado: es el costo por tecla en el modo de solo lectura.
+// BenchmarkViewportScroll measures one frame (scroll + View) with the content
+// already loaded: the per-key cost in read-only mode.
 func BenchmarkViewportScroll(b *testing.B) {
 	for _, sh := range shapes() {
 		for _, n := range sizes {

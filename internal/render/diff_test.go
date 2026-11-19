@@ -18,13 +18,13 @@ func TestRenderDiff(t *testing.T) {
 		res  tool.Result
 		want string
 	}{
-		{"unificado", tool.Result{Lang: "diff", Text: "--- A\n+++ B\n@@ -1 +1 @@\n a\n-b\n+c"},
+		{"unified", tool.Result{Lang: "diff", Text: "--- A\n+++ B\n@@ -1 +1 @@\n a\n-b\n+c"},
 			"hunk(--- A)\nhunk(+++ B)\nhunk(@@ -1 +1 @@)\n a\ndel(-b)\nins(+c)"},
-		{"lado a lado", tool.Result{Lang: "diff-side", Text: "  a │ a\n| b │ c\n<  x │\n>    │ y"},
+		{"side by side", tool.Result{Lang: "diff-side", Text: "  a │ a\n| b │ c\n<  x │\n>    │ y"},
 			"  a │ a\nchg(| b │ c)\ndel(<  x │)\nins(>    │ y)"},
-		{"por palabras", tool.Result{Diff: []tool.DiffOp{{Kind: tool.Equal, Text: "el "}, {Kind: tool.Delete, Text: "gato"}, {Kind: tool.Insert, Text: "perro\nnegro"}}},
-			"el del(gato)ins(perro)\nins(negro)"},
-		{"sin diferencias", tool.Result{Text: "Sin diferencias"}, "Sin diferencias"},
+		{"by words", tool.Result{Diff: []tool.DiffOp{{Kind: tool.Equal, Text: "the "}, {Kind: tool.Delete, Text: "cat"}, {Kind: tool.Insert, Text: "dog\nblack"}}},
+			"the del(cat)ins(dog)\nins(black)"},
+		{"no differences", tool.Result{Text: "No differences"}, "No differences"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

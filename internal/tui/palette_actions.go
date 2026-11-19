@@ -8,7 +8,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 )
 
-// action es una acción de la paleta, ligada a un atajo del keymap.
+// action is a palette action, tied to a keymap shortcut.
 type action struct {
 	id, title string
 	binding   key.Binding
@@ -18,27 +18,27 @@ type action struct {
 func (a *App) actions() []action {
 	k := a.keys
 	return []action{
-		{"copy", "Copiar salida", k.CopyOutput, (*App).copyOutput},
-		{"paste", "Pegar el portapapeles en la entrada", k.PasteInput, func(a *App) tea.Cmd { return a.readClipboard(clipPaste) }},
-		{"detect", "Detectar el portapapeles", k.DetectClip, func(a *App) tea.Cmd { return a.readClipboard(clipDetect) }},
-		{"run", "Ejecutar", k.Run, func(a *App) tea.Cmd {
+		{"copy", "Copy output", k.CopyOutput, (*App).copyOutput},
+		{"paste", "Paste the clipboard into the input", k.PasteInput, func(a *App) tea.Cmd { return a.readClipboard(clipPaste) }},
+		{"detect", "Detect the clipboard", k.DetectClip, func(a *App) tea.Cmd { return a.readClipboard(clipDetect) }},
+		{"run", "Run", k.Run, func(a *App) tea.Cmd {
 			if ws := a.workspace(); ws != nil {
 				return ws.Run()
 			}
 			return nil
 		}},
-		{"clear", "Limpiar la entrada", k.ClearInput, func(a *App) tea.Cmd {
+		{"clear", "Clear the input", k.ClearInput, func(a *App) tea.Cmd {
 			if ws := a.workspace(); ws != nil {
 				return ws.ClearInput()
 			}
 			return nil
 		}},
-		{"use-output", "Usar la salida como entrada", k.UseOutput, (*App).useOutput},
-		{"edit", "Editar la entrada en $EDITOR", k.EditInput, (*App).editInput},
-		{"save", "Guardar la salida en un archivo", k.SaveOutput, (*App).askSave},
-		{"help", "Ayuda: todos los atajos", k.Help, func(a *App) tea.Cmd { a.showHelp = true; return nil }},
-		{"sidebar", "Mostrar u ocultar el sidebar", k.ToggleSidebar, (*App).toggleSidebar},
-		{"quit", "Salir", k.Quit, func(*App) tea.Cmd { return tea.Quit }},
+		{"use-output", "Use the output as input", k.UseOutput, (*App).useOutput},
+		{"edit", "Edit the input in $EDITOR", k.EditInput, (*App).editInput},
+		{"save", "Save the output to a file", k.SaveOutput, (*App).askSave},
+		{"help", "Help: all shortcuts", k.Help, func(a *App) tea.Cmd { a.showHelp = true; return nil }},
+		{"sidebar", "Show or hide the sidebar", k.ToggleSidebar, (*App).toggleSidebar},
+		{"quit", "Quit", k.Quit, func(*App) tea.Cmd { return tea.Quit }},
 	}
 }
 
@@ -66,7 +66,7 @@ func (a *App) openPalette(title string, items []palette.Item) tea.Cmd {
 	return a.palette.Init()
 }
 
-// choose cierra la paleta y ejecuta lo elegido.
+// choose closes the palette and runs what was chosen.
 func (a *App) choose(it palette.Item) tea.Cmd {
 	text := a.pendingText
 	a.palette, a.pendingText = nil, ""

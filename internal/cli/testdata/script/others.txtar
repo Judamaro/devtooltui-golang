@@ -7,7 +7,7 @@ exec devtooltui uuid --version v7 --count 3
 stdout -count=3 '^[0-9a-f]{8}-[0-9a-f]{4}-7'
 stdin uuid.txt
 exec devtooltui uuid
-stdout 'Versión: +4 \(aleatorio\)'
+stdout 'Version: +4 \(random\)'
 
 stdin ts.txt
 exec devtooltui timestamp --tz UTC
@@ -18,20 +18,20 @@ stdout 'Decimal: +255'
 
 stdin log.txt
 exec devtooltui regex --pattern '(\d{4})-\d{2}' --multiline
-stdout '^2 coincidencias$'
+stdout '^2 matches$'
 stdout '1: "2026"'
 
-# diff: dos archivos, o un archivo y stdin.
+# diff: two files, or a file and stdin.
 exec devtooltui diff a.txt b.txt
 stdout '^@@ -1,2 \+1,2 @@$'
 exec devtooltui diff a.txt a.txt
-stdout 'Sin diferencias'
+stdout 'No differences'
 stdin b.txt
 exec devtooltui diff a.txt
-stdout '^-dos$'
-stdout '^\+DOS$'
+stdout '^-two$'
+stdout '^\+TWO$'
 exec devtooltui diff --by words a.txt b.txt
-stdout '\[-dos-\]\{\+DOS\+\}'
+stdout '\[-two-\]\{\+TWO\+\}'
 
 exec devtooltui version
 stdout '^devtooltui test \(abc\) go'
@@ -53,8 +53,8 @@ ff
 2026-01 a
 2027-02 b
 -- a.txt --
-uno
-dos
+one
+two
 -- b.txt --
-uno
-DOS
+one
+TWO

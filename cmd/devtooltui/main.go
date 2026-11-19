@@ -1,4 +1,4 @@
-// Command devtooltui reúne utilidades de desarrollo en una TUI y una CLI.
+// Command devtooltui bundles developer utilities in a TUI and a CLI.
 package main
 
 import (
@@ -14,7 +14,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui"
 )
 
-// Inyectadas con -ldflags en el build.
+// Injected with -ldflags at build time.
 var (
 	version = "dev"
 	commit  = "none"
@@ -27,7 +27,7 @@ func main() {
 func run(args []string) int {
 	reg, err := registry.New(tools.All()...)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "devtooltui: registro inválido:", err)
+		fmt.Fprintln(os.Stderr, "devtooltui: invalid registry:", err)
 		return cli.ExitInternal
 	}
 	clip := clipboard.New(os.Getenv, os.Stderr)
@@ -42,7 +42,7 @@ func run(args []string) int {
 		RenderStyles: tui.RenderStyles(),
 		RunTUI: func(detect bool) error {
 			opts := tui.DefaultOptions()
-			opts.Clipboard = clipboard.New(os.Getenv, nil) // en la TUI, OSC 52 va por tea.SetClipboard
+			opts.Clipboard = clipboard.New(os.Getenv, nil) // in the TUI, OSC 52 goes through tea.SetClipboard
 			opts.DetectOnStart = detect
 			return tui.Run(reg, opts)
 		},

@@ -7,16 +7,16 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// Styles reúne los estilos de coloreado (la TUI los toma de theme.go).
+// Styles gathers the colouring styles (the TUI takes them from theme.go).
 type Styles struct {
-	Chroma *chroma.Style  // salidas Highlighted
-	Match  lipgloss.Style // coincidencias de las salidas Matches
-	Diff   DiffStyles     // salidas DiffView
+	Chroma *chroma.Style  // Highlighted outputs
+	Match  lipgloss.Style // matches in Matches outputs
+	Diff   DiffStyles     // DiffView outputs
 }
 
-// Result colorea el resultado según el tipo de salida de la herramienta.
-// inputs son las entradas de la ejecución (Matches resalta sobre ellas).
-// Devuelve rendered vacío si no aplica, y noColor si se omitió por tamaño.
+// Result colours the result according to the tool's output kind. inputs are
+// the run's inputs (Matches highlights over them). It returns an empty
+// rendered when it does not apply, and noColor when skipped for size.
 func Result(res tool.Result, kind tool.OutputKind, inputs map[string]string, s Styles) (rendered string, noColor bool) {
 	switch {
 	case kind == tool.Highlighted && res.Lang != "":
@@ -31,7 +31,7 @@ func Result(res tool.Result, kind tool.OutputKind, inputs map[string]string, s S
 		}
 		return Diff(res, s.Diff), false
 	case kind == tool.Matches && len(res.Spans) > 0:
-		// El texto con las coincidencias resaltadas va sobre la lista.
+		// The text with highlighted matches goes above the list.
 		subject := inputs[res.Spans[0].Input]
 		if len(subject) > MaxBytes {
 			return "", true

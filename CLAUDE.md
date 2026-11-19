@@ -1,163 +1,165 @@
 # devtooltui
 
-Binario único en Go con utilidades de desarrollo (JSON, Base64, JWT, hashes…)
-en una TUI (Bubble Tea v2) y una CLI componible. Módulo:
-`github.com/Judamaro/devtooltui-golang`. Binario: `devtooltui`.
+Single Go binary with developer utilities (JSON, Base64, JWT, hashes…) in a
+TUI (Bubble Tea v2) and a composable CLI. Module:
+`github.com/Judamaro/devtooltui-golang`. Binary: `devtooltui`.
 
-## Comandos
+## Commands
 
 ```bash
 make build          # CGO_ENABLED=0 → bin/devtooltui
 make test           # go test -race ./...
 make lint           # golangci-lint run && govulncheck ./...
-make golden-update  # regenera testdata/**/*.golden (UPDATE_GOLDEN=1)
-make bench          # benchmarks (incluye el spike de textarea)
+make golden-update  # regenerates testdata/**/*.golden (UPDATE_GOLDEN=1)
+make bench          # benchmarks (including the textarea spike)
 ```
 
-- Go ≥ 1.26 (lo exigen los módulos `charm.land/*` v2). Si `go` no está en el
-  PATH: `/usr/local/go/bin`; las herramientas de lint están en `~/go/bin`.
-- Antes de dar algo por terminado, `make test` y `make lint` deben pasar.
-- En un paquete concreto también vale `go test ./internal/tui/ -update`.
+- Go ≥ 1.26 (required by the `charm.land/*` v2 modules). If `go` is not on the
+  PATH: `/usr/local/go/bin`; the lint tools live in `~/go/bin`.
+- Before calling anything done, `make test` and `make lint` must pass.
+- In a single package, `go test ./internal/tui/ -update` also works.
 
-## Estructura
+## Layout
 
-- `cmd/devtooltui`: arranque; arma `cli.Deps` y delega en `cli.Execute`.
-- `internal/cli`: cobra. Un subcomando por `Spec` (flags generados desde las
-  opciones, `sort_keys` → `--sort-keys`; `mode` también como primer
-  argumento), más `list`, `detect`, `version` y `completion`. Sin argumentos
-  y en una TTY abre la TUI. Tests: `testdata/script/*.txtar` (testscript) y
-  tablas de códigos de salida en `cli_test.go`.
-- `internal/detect`: muestra de 64 KB, umbral 0.5 y empate a < 0.1.
-- `internal/clipboard`: atotto + OSC 52 (SSH o sin wl-clipboard/xclip).
-- `internal/render`: coloreado compartido por TUI y CLI (Chroma, diff, regex).
-- `internal/tool`: el contrato (Spec, Option, Request, Result, InputError…).
-- `internal/registry`: validación de Specs, `Get`/`All`/`ByCategory`,
-  `Search` (difusa) y `Detect` (20 ms y `recover` por detector).
-- `internal/tools/all.go`: **registro explícito** de todas las herramientas.
-  Sin `init()` mágicos.
-- `internal/tools/<categoría>/<id>.go`: una herramienta por archivo.
-- `internal/tui`: `app.go` (modelo raíz), `keys.go` (keymap central),
-  `theme.go` (**todos** los estilos), y los subpaquetes `sidebar/`,
-  `workspace/` y `workspace/options/` (panel generado desde `Spec.Options`).
-  Los subpaquetes exponen structs `Styles` y `KeyMap` que llenan `theme.go`
-  y `keys.go`.
-- `internal/testutil`: helpers de golden files (`ReadInput`, `Golden`).
-- `testdata/<id>/*.in|*.golden`: fixtures por herramienta. `testdata/tui/`
-  guarda las vistas sin ANSI.
-- `docs/adr/`: decisiones de arquitectura.
+- `cmd/devtooltui`: startup; builds `cli.Deps` and delegates to `cli.Execute`.
+- `internal/cli`: cobra. One subcommand per `Spec` (flags generated from the
+  options, `sort_keys` → `--sort-keys`; `mode` also as the first argument),
+  plus `list`, `detect`, `version` and `completion`. Without arguments and on
+  a TTY it opens the TUI. Tests: `testdata/script/*.txtar` (testscript) and
+  exit-code tables in `cli_test.go`.
+- `internal/detect`: 64 KB sample, 0.5 threshold and a tie below 0.1.
+- `internal/clipboard`: atotto + OSC 52 (over SSH or without wl-clipboard/xclip).
+- `internal/render`: colouring shared by the TUI and the CLI (Chroma, diff, regex).
+- `internal/tool`: the contract (Spec, Option, Request, Result, InputError…).
+- `internal/registry`: Spec validation, `Get`/`All`/`ByCategory`, fuzzy
+  `Search` and `Detect` (20 ms and `recover` per detector).
+- `internal/tools/all.go`: **explicit registration** of every tool. No magic
+  `init()`.
+- `internal/tools/<category>/<id>.go`: one tool per file.
+- `internal/tui`: `app.go` (root model), `keys.go` (central keymap),
+  `theme.go` (**all** styles), and the `sidebar/`, `workspace/`,
+  `workspace/options/` (panel generated from `Spec.Options`), `statusbar/` and
+  `palette/` subpackages. Subpackages expose `Styles` and `KeyMap` structs that
+  `theme.go` and `keys.go` fill in.
+- `internal/testutil`: golden file helpers (`ReadInput`, `Golden`) and
+  `RunCmds` for Bubble Tea commands.
+- `testdata/<id>/*.in|*.golden`: per-tool fixtures. `testdata/tui/` keeps the
+  views without ANSI.
+- `docs/adr/`: architecture decisions.
 
-## Contrato Tool
+## Tool contract
 
 ```go
 type Tool interface {
     Spec() Spec
     Run(ctx context.Context, req Request) (Result, error)
 }
-type Detector interface { Detect(sample string) float64 } // opcional, 0..1
+type Detector interface { Detect(sample string) float64 } // optional, 0..1
 ```
 
-Reglas (las verifica `internal/registry/contract_test.go` sobre `tools.All()`):
+Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 
-1. **`Run` no hace I/O** (ni archivos, ni red, ni portapapeles, ni reloj
-   salvo que sea su propósito), no guarda estado global y respeta `ctx`:
-   con `ctx` ya cancelado devuelve `ctx.Err()`.
-2. Las herramientas reversibles usan la opción `mode` (Select) con
-   `encode`/`decode`.
-3. Los errores de entrada son `*tool.InputError` con línea y columna (usa
-   `tool.Position`). Cualquier otro error se considera un bug.
-4. Las salidas binarias se representan en Base64 o hex (opción `output`).
-5. Los `Default` de las opciones deben coincidir con su `Kind` (Toggle→bool,
-   Select→string ∈ Choices, Number→int en [Min, Max], String→string).
-   `registry.New` lo valida.
-6. Las opciones se leen con `req.Opts.WithDefaults(spec)`.
+1. **`Run` does no I/O** (no files, network, clipboard or clock unless that is
+   its purpose), keeps no global state and honours `ctx`: with an already
+   cancelled `ctx` it returns `ctx.Err()`.
+2. Reversible tools use the `mode` option (Select) with `encode`/`decode`.
+3. Input errors are `*tool.InputError` with line and column (use
+   `tool.Position`). Any other error is considered a bug.
+4. Binary outputs are shown as Base64 or hex (`output` option).
+5. Option `Default` values must match their `Kind` (Toggle→bool,
+   Select→string ∈ Choices, Number→int in [Min, Max], String→string).
+   `registry.New` validates it.
+6. Options are read with `req.Opts.WithDefaults(spec)`.
 
-## Agregar una herramienta
+## Adding a tool
 
-1. Crear `internal/tools/<categoría>/<id>.go` con `Spec`, `Run` y, si aplica,
-   `Detect`.
-2. Registrarla en `internal/tools/all.go`.
-3. Desde el primer commit: tests de tabla, `testdata/<id>/*.in` con sus
-   `.golden`, casos de error con línea y columna y, si es reversible, un
-   fuzz de ida y vuelta.
+1. Create `internal/tools/<category>/<id>.go` with `Spec`, `Run` and, when it
+   applies, `Detect`.
+2. Register it in `internal/tools/all.go`.
+3. From the first commit: table tests, `testdata/<id>/*.in` with their
+   `.golden`, error cases with line and column and, if reversible, a
+   round-trip fuzz.
 
-## Herramientas actuales
+## Current tools
 
 `json-format`, `xml-format`, `base64`, `url`, `jwt`, `timestamp`,
-`number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (registradas en
-ese orden en `internal/tools/all.go`; 12 = MVP completo).
+`number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (registered in
+that order in `internal/tools/all.go`; 12 = complete MVP).
 
-- `regex`: el patrón es la opción `pattern` (como el flag `--pattern` de la
-  CLI), no una entrada. `diff` y `jwt` (token + PEM) tienen dos entradas.
-- `diff` usa `Result.Lang` = `"diff"` (unificado) o `"diff-side"` para que la
-  TUI sepa cómo colorear; por palabras deja `Lang` vacío y colorea `Diff`.
-- Los fuzz que encuentran fallos dejan casos en
-  `internal/tools/<cat>/testdata/fuzz/`: se commitean como regresión.
-
-- Reloj y aleatoriedad: las herramientas que los necesitan (`jwt`,
-  `timestamp`, `uuid`) tienen campos opcionales `Now func() time.Time` y
-  `Rand io.Reader`; con nil usan `time.Now` y `crypto/rand`. Los tests
-  siempre los fijan. Leerlos no cuenta como I/O prohibido en `Run`.
-- `converters.Relative` ("en 3 h", "hace 2 d") es compartido.
-- `timestamp` embebe `time/tzdata`: las zonas IANA no dependen del sistema.
+- `regex`: the pattern is the `pattern` option (like the CLI `--pattern`
+  flag), not an input. `diff` and `jwt` (token + PEM) have two inputs.
+- `diff` sets `Result.Lang` to `"diff"` (unified) or `"diff-side"` so the TUI
+  knows how to colour it; by words it leaves `Lang` empty and colours `Diff`.
+- Fuzz targets that find failures leave cases in
+  `internal/tools/<cat>/testdata/fuzz/`: commit them as regressions.
+- Clock and randomness: the tools that need them (`jwt`, `timestamp`, `uuid`)
+  have optional `Now func() time.Time` and `Rand io.Reader` fields; when nil
+  they use `time.Now` and `crypto/rand`. Tests always pin them. Reading them
+  does not count as forbidden I/O in `Run`.
+- `converters.Relative` ("in 3 h", "2 d ago") is shared.
+- `timestamp` embeds `time/tzdata`: IANA zones do not depend on the system.
+  Detectors must not touch `time.Local` (loading it took over 20 ms on the
+  Windows CI runner).
 
 ## TUI
 
-- Foco con Tab: sidebar → opciones → entrada → salida (se saltan los paneles
-  que no aplican).
-- Opciones: ↑/↓ cambia de opción, ←/→ cambia el valor, espacio invierte un
-  Toggle. Number y String son `textinput`; un Number fuera de rango se marca
-  y no se aplica.
-- Ejecución asíncrona: cada cambio de entrada sube `seq` y programa la
-  ejecución tras el debounce (`tui.Options.Debounce`, 120 ms). Lanzar una
-  ejecución cancela el `ctx` anterior; `workspace.ResultMsg` con otra `seq`
-  o cancelado se descarta. Los mensajes llevan `ToolID` y la App los enruta.
-  Opciones, F5, pegado grande y ctrl+l ejecutan sin debounce.
-- Dos entradas van lado a lado desde 120 columnas de terminal; si no, apiladas.
-  Tab recorre sidebar → opciones → entrada A → entrada B → salida.
-- Coloreado (en la goroutine de ejecución, nunca en `Run`): `Highlighted` con
-  Chroma (`theme.go`, 16 colores ANSI), `Matches` con las coincidencias en
-  video inverso sobre la lista, `DiffView` por prefijo/marcador. Por encima
-  de 64 KB no se colorea (`HighlightMaxBytes`, ver `BenchmarkHighlight`).
-- La última fila es `internal/tui/statusbar`: estado a la izquierda, ayuda a
-  la derecha. Con error, la salida anterior se atenúa.
-- En tests, `testutil.RunCmds` ejecuta los `tea.Cmd` y entrega los mensajes
-  (descarta los que tardan más de 30 ms, como el parpadeo del cursor). Las
-  Apps de test usan `Options{Debounce: 0}`.
-- `F5` ejecuta (herramientas `Live: false` y modo de entrada grande).
-- Overlays (paleta `Ctrl+P`, prompt de `Ctrl+S`, ayuda `?`) viven en
-  `internal/tui/palette` y se dibujan con `palette.Place` (compositor de
-  lipgloss). Mientras están abiertos reciben todas las teclas.
-- Atajos que no deben dispararse escribiendo (`q`, `/`, `?`) se chequean con
-  `App.capturesText()` (entrada, opción de texto o filtro del sidebar).
-  `ctrl+l` limpia la entrada y sale del modo grande.
-- Los tests de comportamiento de la TUI usan un registro solo con `base64`
-  (`newApp`) para no depender del orden de `tools.All()`.
+- Tab focus: sidebar → options → input → output (panels that do not apply
+  are skipped).
+- Options: ↑/↓ changes option, ←/→ changes value, space flips a Toggle.
+  Number and String are `textinput`; an out-of-range Number is flagged and
+  not applied.
+- Async runs: every input change bumps `seq` and schedules a run after the
+  debounce (`tui.Options.Debounce`, 120 ms). Starting a run cancels the
+  previous `ctx`; a `workspace.ResultMsg` with another `seq` or cancelled is
+  dropped. Messages carry `ToolID` and the App routes them. Options, F5, a
+  large paste and ctrl+l run without debounce.
+- Two inputs sit side by side from 120 terminal columns; below that they
+  stack. Tab walks sidebar → options → input A → input B → output.
+- Colouring (in the run goroutine, never in `Run`): `Highlighted` with Chroma
+  (`theme.go`, 16 ANSI colours), `Matches` with matches in reverse video above
+  the list, `DiffView` by prefix/marker. Above 64 KB nothing is coloured
+  (`render.MaxBytes`, see `BenchmarkHighlight`).
+- The last row is `internal/tui/statusbar`: status on the left, help on the
+  right. On error the previous output is dimmed.
+- In tests, `testutil.RunCmds` runs the `tea.Cmd`s and delivers the messages
+  (dropping those that take over 30 ms, like the cursor blink). Test Apps use
+  `Options{Debounce: 0}`.
+- `F5` runs (`Live: false` tools and large input mode).
+- Overlays (`Ctrl+P` palette, `Ctrl+S` prompt, `?` help) live in
+  `internal/tui/palette` and are drawn with `palette.Place` (lipgloss
+  compositor). While open they receive every key.
+- Shortcuts that must not fire while typing (`q`, `/`, `?`) are checked with
+  `App.capturesText()` (input, text option or sidebar filter). `ctrl+l` clears
+  the input and leaves large mode.
+- TUI behaviour tests use a base64-only registry (`newApp`) so they do not
+  depend on the order of `tools.All()`.
 
 ## Release
 
-- `.goreleaser.yaml` (GoReleaser v2): binarios linux/darwin/windows ×
-  amd64/arm64, `checksums.txt`, `.deb/.rpm/.apk` y cask en
-  `Judamaro/homebrew-tap` (necesita el secret `HOMEBREW_TAP_GITHUB_TOKEN`).
-- `.github/workflows/release.yml` publica al empujar un tag `v*`; la CI corre
-  `goreleaser check` y un snapshot. `make release-dry` hace el snapshot local.
-- `docs/demo.gif` lo genera el workflow manual `Demo` desde `docs/demo.tape`.
-- Crear tags, publicar o crear repos solo con confirmación explícita.
+- `.goreleaser.yaml` (GoReleaser v2): linux/darwin/windows × amd64/arm64
+  binaries, `checksums.txt`, `.deb/.rpm/.apk` and a cask in
+  `Judamaro/homebrew-tap` (needs the `HOMEBREW_TAP_GITHUB_TOKEN` secret).
+- `.github/workflows/release.yml` publishes when a `v*` tag is pushed; CI runs
+  `goreleaser check` and a snapshot. `make release-dry` runs the snapshot
+  locally.
+- `docs/demo.gif` is generated by the manual `Demo` workflow from
+  `docs/demo.tape`.
+- Create tags, publish or create repositories only with explicit confirmation.
 
-## Convenciones
+## Conventions
 
-- Commits pequeños en formato Conventional Commits (`feat(tools): …`,
-  `test(tui): …`, `docs: …`), en inglés. Los comentarios y textos de la UI van
-  en español.
-- No cambiar el contrato de `internal/tool` ni la estructura de carpetas sin
-  proponerlo antes.
-- Trabajo por fases (ver el roadmap): no se empieza una fase sin aprobar el
-  gate de la anterior.
-- TUI: ningún color ni estilo en línea fuera de `theme.go`. Las dimensiones se
-  recalculan en `tea.WindowSizeMsg`. `q` solo sale fuera de los campos de
-  texto.
-- Entradas grandes (ADR 0002, `workspace.DefaultLimits`): por encima de
-  32 KB o 5 000 líneas la entrada pasa a un viewport de solo lectura; los
-  números de línea se ocultan por encima de 16 KB. El `textarea` trunca a
-  10 000 líneas y renderiza en O(tamaño), así que nunca recibe más que eso.
-- Los algoritmos débiles (MD5, SHA-1) llevan `//nolint:gosec` con motivo.
-- Variable de entorno de config (fase 2): `DEVTOOLTUI_CONFIG`.
+- Small commits in Conventional Commits format (`feat(tools): …`,
+  `test(tui): …`, `docs: …`). Everything is in English: code comments, UI
+  text, tool output, CLI help, tests and docs.
+- Do not change the `internal/tool` contract or the folder layout without
+  proposing it first.
+- Work by phases (see the roadmap): a phase does not start until the previous
+  gate is approved.
+- TUI: no colours or inline styles outside `theme.go`. Dimensions are
+  recomputed on `tea.WindowSizeMsg`. `q` only quits outside text fields.
+- Large inputs (ADR 0002, `workspace.DefaultLimits`): above 32 KB or 5,000
+  lines the input moves to a read-only viewport; line numbers are hidden above
+  16 KB. The `textarea` truncates at 10,000 lines and renders in O(size), so it
+  never receives more than that.
+- Weak algorithms (MD5, SHA-1) carry `//nolint:gosec` with a reason.
+- Config environment variable (phase 2): `DEVTOOLTUI_CONFIG`.

@@ -1,5 +1,5 @@
-// Package cli genera la interfaz de línea de comandos desde el registro:
-// cada Spec produce un subcomando de cobra con sus flags.
+// Package cli builds the command-line interface from the registry: every
+// Spec becomes a cobra subcommand with its flags.
 package cli
 
 import (
@@ -18,18 +18,18 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/render"
 )
 
-// Códigos de salida.
+// Exit codes.
 const (
 	ExitOK       = 0
-	ExitInput    = 1 // entrada inválida
-	ExitUsage    = 2 // uso incorrecto
-	ExitInternal = 3 // error interno
+	ExitInput    = 1 // invalid input
+	ExitUsage    = 2 // usage error
+	ExitInternal = 3 // internal error
 )
 
-// DefaultMaxInput es el límite de --max-input (64 MB).
+// DefaultMaxInput is the --max-input limit (64 MB).
 const DefaultMaxInput = 64 << 20
 
-// Deps es todo lo que la CLI toma del entorno; los tests lo reemplazan.
+// Deps is everything the CLI takes from the environment; tests replace it.
 type Deps struct {
 	Registry        *registry.Registry
 	Stdin           io.Reader
@@ -38,12 +38,12 @@ type Deps struct {
 	StdoutTTY       bool
 	Getenv          func(string) string
 	RenderStyles    render.Styles
-	RunTUI          func(clipboard bool) error // nil: no hay TUI disponible
-	Clipboard       clipboard.Clipboard        // para --copy
+	RunTUI          func(clipboard bool) error // nil: no TUI available
+	Clipboard       clipboard.Clipboard        // for --copy
 	Version, Commit string
 }
 
-// exitError lleva el código de salida junto con el error.
+// exitError carries the exit code along with the error.
 type exitError struct {
 	code int
 	err  error
@@ -56,7 +56,7 @@ func usageErr(format string, a ...any) error {
 	return &exitError{ExitUsage, fmt.Errorf(format, a...)}
 }
 
-// Execute corre la CLI con args y devuelve el código de salida.
+// Execute runs the CLI with args and returns the exit code.
 func Execute(args []string, d Deps) int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -77,7 +77,7 @@ func Execute(args []string, d Deps) int {
 		}
 		return ee.code
 	}
-	// Errores de cobra (comando o flag desconocidos, argumentos): uso.
+	// Cobra errors (unknown command or flag, arguments): usage.
 	fmt.Fprintln(d.Stderr, "devtooltui:", err)
 	return ExitUsage
 }
@@ -94,16 +94,16 @@ func newRoot(d Deps) *cobra.Command {
 	var clip bool
 	root := &cobra.Command{
 		Use:   "devtooltui",
-		Short: "Utilidades de desarrollo en la terminal: TUI y CLI componible",
-		Long: "devtooltui reúne formateadores, codificadores, conversores y testers.\n" +
-			"Sin argumentos y en una terminal abre la TUI; con un subcomando funciona\n" +
-			"como filtro: lee un archivo o stdin y escribe en stdout.",
+		Short: "Developer utilities in the terminal: a TUI and a composable CLI",
+		Long: "devtooltui bundles formatters, encoders, converters and testers.\n" +
+			"Without arguments and in a terminal it opens the TUI; with a subcommand it\n" +
+			"works as a filter: it reads a file or stdin and writes to stdout.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args:          cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if !d.StdinTTY || !d.StdoutTTY || d.RunTUI == nil {
-				return usageErr("la TUI necesita una terminal; usa un subcomando (devtooltui list)")
+				return usageErr("the TUI needs a terminal; use a subcommand (devtooltui list)")
 			}
 			if err := d.RunTUI(clip); err != nil {
 				return &exitError{ExitInternal, err}
@@ -111,16 +111,16 @@ func newRoot(d Deps) *cobra.Command {
 			return nil
 		},
 	}
-	root.Flags().BoolVar(&clip, "clipboard", false, "abrir la TUI con la herramienta detectada en el portapapeles")
-	root.PersistentFlags().BoolVar(&g.json, "json", false, "salida en JSON (el Result completo)")
-	root.PersistentFlags().BoolVar(&g.noColor, "no-color", false, "sin colores (también con NO_COLOR)")
-	root.PersistentFlags().BoolVar(&g.copy, "copy", false, "copiar la salida al portapapeles")
-	root.PersistentFlags().Int64Var(&g.maxInput, "max-input", DefaultMaxInput, "tamaño máximo de entrada en bytes")
+	root.Flags().BoolVar(&clip, "clipboard", false, "open the TUI on the tool detected in the clipboard")
+	root.PersistentFlags().BoolVar(&g.json, "json", false, "JSON output (the full Result)")
+	root.PersistentFlags().BoolVar(&g.noColor, "no-color", false, "no colours (also with NO_COLOR)")
+	root.PersistentFlags().BoolVar(&g.copy, "copy", false, "copy the output to the clipboard")
+	root.PersistentFlags().Int64Var(&g.maxInput, "max-input", DefaultMaxInput, "maximum input size in bytes")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return &exitError{ExitUsage, err} })
-	spanishHelp(root)
+	setupHelp(root)
 	root.CompletionOptions.HiddenDefaultCmd = false
 
-	root.AddGroup(&cobra.Group{ID: "tools", Title: "Herramientas:"}, &cobra.Group{ID: "general", Title: "Generales:"})
+	root.AddGroup(&cobra.Group{ID: "tools", Title: "Tools:"}, &cobra.Group{ID: "general", Title: "General:"})
 	root.SetHelpCommandGroupID("general")
 	root.SetCompletionCommandGroupID("general")
 	root.AddCommand(newVersion(d), newList(d, &g), newDetect(d, &g))
@@ -133,7 +133,7 @@ func newRoot(d Deps) *cobra.Command {
 func newVersion(d Deps) *cobra.Command {
 	return &cobra.Command{
 		Use:     "version",
-		Short:   "Muestra la versión, el commit, Go y la plataforma",
+		Short:   "Show the version, commit, Go version and platform",
 		GroupID: "general",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

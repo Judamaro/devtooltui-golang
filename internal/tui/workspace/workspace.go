@@ -1,5 +1,4 @@
-// Package workspace muestra las opciones, la entrada y la salida de la
-// herramienta activa.
+// Package workspace shows the active tool's options, inputs and output.
 package workspace
 
 import (
@@ -20,39 +19,39 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
-// Styles los define tui/theme.go.
+// Styles are defined by tui/theme.go.
 type Styles struct {
 	Title, Description, Section, SectionFocused, OutputStale lipgloss.Style
 	Textarea                                                 textarea.Styles
 	Options                                                  options.Styles
-	Render                                                   render.Styles // colores de las salidas
+	Render                                                   render.Styles // output colours
 }
 
-// Limits define cuándo la entrada deja de editarse en vivo (ADR 0002).
+// Limits defines when the input stops being edited live (ADR 0002).
 type Limits struct {
-	MaxBytes            int // por encima: viewport de solo lectura + F5
-	MaxLines            int // ídem; el textarea trunca a 10 000 líneas
-	LineNumbersMaxBytes int // por encima se ocultan los números de línea
+	MaxBytes            int // above: read-only viewport + F5
+	MaxLines            int // same; the textarea truncates at 10,000 lines
+	LineNumbersMaxBytes int // above this, line numbers are hidden
 }
 
-// DefaultLimits son los valores aprobados en la ADR 0002.
+// DefaultLimits are the values approved in ADR 0002.
 var DefaultLimits = Limits{MaxBytes: 32 << 10, MaxLines: 5000, LineNumbersMaxBytes: 16 << 10}
 
-// Model es el estado de una herramienta. La TUI guarda uno por herramienta,
-// así que al cambiar de herramienta no se pierde lo escrito.
+// Model is one tool's state. The TUI keeps one per tool, so switching tools
+// does not lose what was typed.
 type Model struct {
 	tool   tool.Tool
 	spec   tool.Spec
 	opts   options.Model
 	inputs []*field
-	active int // entrada con foco cuando focus == FocusInput
+	active int // focused input when focus == FocusInput
 	output viewport.Model
 	limits Limits
-	stale  bool // la entrada cambió y no se ha ejecutado (F5)
-	wide   bool // la terminal permite dos entradas lado a lado
+	stale  bool // the input changed and has not run yet (F5)
+	wide   bool // the terminal allows two inputs side by side
 
-	// Ejecución asíncrona: seq identifica la ejecución vigente; los
-	// resultados con otra seq se descartan.
+	// Async runs: seq identifies the current run; results with another seq
+	// are dropped.
 	debounce time.Duration
 	seq      int
 	cancel   context.CancelFunc
@@ -68,7 +67,7 @@ type Model struct {
 	focus   Focus
 }
 
-// Focus indica qué panel del workspace tiene el foco.
+// Focus tells which workspace panel has focus.
 type Focus int
 
 const (
@@ -78,13 +77,13 @@ const (
 	FocusOutput
 )
 
-// DebounceMsg llega cuando vence el debounce de la ejecución Seq.
+// DebounceMsg arrives when run Seq's debounce expires.
 type DebounceMsg struct {
 	ToolID string
 	Seq    int
 }
 
-// ResultMsg trae el resultado de la ejecución Seq.
+// ResultMsg carries the result of run Seq.
 type ResultMsg struct {
 	ToolID  string
 	Seq     int
@@ -92,12 +91,12 @@ type ResultMsg struct {
 	Err     error
 	Elapsed time.Duration
 
-	Rendered string // Result.Text coloreado; vacío si no aplica
-	NoColor  bool   // la salida superó render.MaxBytes
+	Rendered string // coloured Result.Text; empty when not applicable
+	NoColor  bool   // the output exceeded render.MaxBytes
 }
 
-// New crea el workspace. debounce es la espera entre la última tecla y la
-// ejecución; con 0 se ejecuta enseguida (útil en tests).
+// New builds the workspace. debounce is the wait between the last key and
+// the run; 0 runs right away (handy in tests).
 func New(t tool.Tool, styles Styles, optKeys options.KeyMap, debounce time.Duration) *Model {
 	spec := t.Spec()
 	m := &Model{
@@ -115,14 +114,14 @@ func New(t tool.Tool, styles Styles, optKeys options.KeyMap, debounce time.Durat
 	return m
 }
 
-// Init lanza la primera ejecución (entrada vacía).
+// Init starts the first run (empty input).
 func (m *Model) Init() tea.Cmd { return m.runNow() }
 
-// HasInput indica si la herramienta tiene un campo de entrada.
+// HasInput reports whether the tool has an input field.
 func (m *Model) HasInput() bool { return len(m.inputs) > 0 }
 
-// MoveInput mueve el foco entre entradas (delta ±1) y devuelve false si ya
-// estaba en el extremo, para que la App pase al siguiente panel.
+// MoveInput moves focus between inputs (delta ±1) and returns false when it
+// was already at the edge, so the App moves on to the next panel.
 func (m *Model) MoveInput(delta int) (bool, tea.Cmd) {
 	next := m.active + delta
 	if m.focus != FocusInput || next < 0 || next >= len(m.inputs) {
@@ -132,8 +131,8 @@ func (m *Model) MoveInput(delta int) (bool, tea.Cmd) {
 	return true, m.SetFocus(FocusInput)
 }
 
-// FocusEdge prepara la entrada que recibe el foco al llegar desde atrás
-// (first=true: la primera) o desde adelante (la última).
+// FocusEdge prepares the input that receives focus when arriving from
+// behind (first=true: the first one) or from ahead (the last one).
 func (m *Model) FocusEdge(first bool) {
 	if first {
 		m.active = 0
@@ -142,23 +141,23 @@ func (m *Model) FocusEdge(first bool) {
 	}
 }
 
-// ActiveInput devuelve el índice de la entrada con foco.
+// ActiveInput returns the index of the focused input.
 func (m *Model) ActiveInput() int { return m.active }
 
 func (m *Model) split() bool { return len(m.inputs) == 2 && m.wide }
 
-// HasOptions indica si la herramienta tiene opciones.
+// HasOptions reports whether the tool has options.
 func (m *Model) HasOptions() bool { return !m.opts.Empty() }
 
-// CapturesText indica si el foco está en un campo de texto (entrada u
-// opción Number/String), donde "q" se escribe en lugar de salir.
+// CapturesText reports whether focus is on a text field (input or a
+// Number/String option), where "q" is typed instead of quitting.
 func (m *Model) CapturesText() bool {
 	return m.focus == FocusInput || (m.focus == FocusOptions && m.opts.CapturesText())
 }
 
-// SetSize reparte el alto entre las opciones, la entrada y la salida.
-// wide indica si dos entradas van lado a lado (lo decide la App según el
-// ancho de la terminal).
+// SetSize splits the height between options, inputs and output. wide tells
+// whether two inputs sit side by side (the App decides from the terminal
+// width).
 func (m *Model) SetSize(w, h int, wide bool) {
 	m.width, m.height, m.wide = w, h, wide
 	m.resize()
@@ -166,13 +165,13 @@ func (m *Model) SetSize(w, h int, wide bool) {
 
 func (m *Model) resize() {
 	w, h := m.width, m.height
-	// título, separador de salida y opciones (la statusbar es de la App)
+	// title, output separator and options (the statusbar belongs to the App)
 	chrome := 2 + len(m.opts.Lines(w))
 	switch {
 	case m.split():
-		chrome++ // una fila de encabezados para las dos entradas
+		chrome++ // one header row for both inputs
 	default:
-		chrome += len(m.inputs) // un encabezado por entrada
+		chrome += len(m.inputs) // one header per input
 	}
 	avail := max(h-chrome, 2)
 	inH := 0
@@ -198,7 +197,7 @@ func (m *Model) resize() {
 	m.output.SetHeight(avail - inH)
 }
 
-// SetFocus cambia el panel con foco.
+// SetFocus changes the focused panel.
 func (m *Model) SetFocus(f Focus) tea.Cmd {
 	m.focus = f
 	for _, in := range m.inputs {
@@ -214,14 +213,14 @@ func (m *Model) SetFocus(f Focus) tea.Cmd {
 	return nil
 }
 
-// Update recibe los mensajes cuando el workspace tiene el foco.
+// Update receives messages while the workspace has focus.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch m.focus {
 	case FocusOptions:
 		var changed bool
 		changed, cmd = m.opts.Update(msg)
-		m.resize() // el panel puede cambiar de alto al editar un valor
+		m.resize() // the panel may change height while editing a value
 		if changed {
 			cmd = tea.Batch(cmd, m.runNow())
 		}
@@ -233,7 +232,7 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case FocusOutput:
 		m.output, cmd = m.output.Update(msg)
 	case FocusNone:
-		// Mensajes internos (p. ej. parpadeo del cursor) siguen llegando.
+		// Internal messages (e.g. cursor blink) keep arriving.
 		if m.HasInput() {
 			m.inputs[m.active].ta, cmd = m.inputs[m.active].ta.Update(msg)
 		}
@@ -247,7 +246,7 @@ func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 	case !changed:
 		return cmd
 	case now:
-		return tea.Batch(cmd, m.runNow()) // pegado grande: una vez; después, F5
+		return tea.Batch(cmd, m.runNow()) // large paste: once; afterwards, F5
 	}
 	m.stale = true
 	if m.spec.Live && !m.Large() {
@@ -256,7 +255,7 @@ func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-// Large indica si alguna entrada está en modo de solo lectura.
+// Large reports whether any input is in read-only mode.
 func (m *Model) Large() bool {
 	for _, f := range m.inputs {
 		if f.large {
@@ -266,8 +265,8 @@ func (m *Model) Large() bool {
 	return false
 }
 
-// ClearInput vacía la entrada con foco (o la primera) y sale del modo de
-// entrada grande.
+// ClearInput empties the focused input (or the first one) and leaves large
+// input mode.
 func (m *Model) ClearInput() tea.Cmd {
 	if !m.HasInput() {
 		return nil
@@ -276,8 +275,8 @@ func (m *Model) ClearInput() tea.Cmd {
 	return m.runNow()
 }
 
-// SetInput reemplaza el contenido de la primera entrada (o de la que tenga
-// el foco) por text, como si se pegara; respeta el modo de entrada grande.
+// SetInput replaces the content of the first input (or the focused one)
+// with text, as if pasted; it honours large input mode.
 func (m *Model) SetInput(text string) tea.Cmd {
 	if !m.HasInput() {
 		return nil
@@ -289,7 +288,7 @@ func (m *Model) SetInput(text string) tea.Cmd {
 	return m.runNow()
 }
 
-// ActiveValue devuelve el contenido de la entrada que recibirá SetInput.
+// ActiveValue returns the content of the input SetInput would replace.
 func (m *Model) ActiveValue() string {
 	if !m.HasInput() {
 		return ""
@@ -300,17 +299,17 @@ func (m *Model) ActiveValue() string {
 	return m.inputs[m.active].value()
 }
 
-// OutputLang es el lenguaje de la última salida (para sugerir extensión).
+// OutputLang is the language of the last output (to suggest an extension).
 func (m *Model) OutputLang() string { return m.result.Lang }
 
-// Run ejecuta la herramienta a pedido (F5), sin debounce.
+// Run runs the tool on demand (F5), without debounce.
 func (m *Model) Run() tea.Cmd { return m.runNow() }
 
-// Running indica si hay una ejecución en curso.
+// Running reports whether a run is in progress.
 func (m *Model) Running() bool { return m.running }
 
-// schedule programa una ejecución tras el debounce. Cada llamada invalida
-// las anteriores.
+// schedule queues a run after the debounce. Each call invalidates the
+// previous ones.
 func (m *Model) schedule() tea.Cmd {
 	m.seq++
 	if m.debounce <= 0 {
@@ -320,13 +319,13 @@ func (m *Model) schedule() tea.Cmd {
 	return tea.Tick(m.debounce, func(time.Time) tea.Msg { return DebounceMsg{ToolID: id, Seq: seq} })
 }
 
-// runNow ejecuta sin esperar el debounce.
+// runNow runs without waiting for the debounce.
 func (m *Model) runNow() tea.Cmd {
 	m.seq++
 	return m.launch(m.seq)
 }
 
-// HandleDebounce lanza la ejecución si el tick sigue vigente.
+// HandleDebounce starts the run if the tick is still current.
 func (m *Model) HandleDebounce(msg DebounceMsg) tea.Cmd {
 	if msg.Seq != m.seq {
 		return nil
@@ -334,8 +333,8 @@ func (m *Model) HandleDebounce(msg DebounceMsg) tea.Cmd {
 	return m.launch(msg.Seq)
 }
 
-// launch cancela la ejecución anterior y corre la herramienta en una
-// goroutine con una copia de la entrada y las opciones.
+// launch cancels the previous run and runs the tool in a goroutine with a
+// copy of the inputs and options.
 func (m *Model) launch(seq int) tea.Cmd {
 	if m.cancel != nil {
 		m.cancel()
@@ -355,7 +354,7 @@ func (m *Model) launch(seq int) tea.Cmd {
 		start := time.Now()
 		res, err := t.Run(ctx, req)
 		msg := ResultMsg{ToolID: id, Seq: seq, Result: res, Err: err, Elapsed: time.Since(start)}
-		// El coloreado también corre fuera del bucle de la UI.
+		// Colouring also runs outside the UI loop.
 		if err == nil && ctx.Err() == nil {
 			msg.Rendered, msg.NoColor = render.Result(res, kind, req.Inputs, rs)
 		}
@@ -363,17 +362,17 @@ func (m *Model) launch(seq int) tea.Cmd {
 	}
 }
 
-// HandleResult aplica un resultado si corresponde a la ejecución vigente.
+// HandleResult applies a result if it belongs to the current run.
 func (m *Model) HandleResult(msg ResultMsg) {
 	if msg.Seq != m.seq || errors.Is(msg.Err, context.Canceled) {
-		return // resultado viejo o cancelado
+		return // stale or cancelled result
 	}
 	m.running = false
 	m.cancel = nil
 	m.elapsed = msg.Elapsed
 	m.err = msg.Err
 	if msg.Err != nil {
-		return // la salida anterior se mantiene
+		return // the previous output stays
 	}
 	m.result = msg.Result
 	m.noColor = msg.NoColor
@@ -384,10 +383,10 @@ func (m *Model) HandleResult(msg ResultMsg) {
 	}
 }
 
-// Output devuelve el texto de la última ejecución correcta.
+// Output returns the text of the last successful run.
 func (m *Model) Output() string { return m.result.Text }
 
-// Err devuelve el error de la última ejecución, si lo hubo.
+// Err returns the error of the last run, if any.
 func (m *Model) Err() error { return m.err }
 
 func (m *Model) View() string {
@@ -412,28 +411,28 @@ func (m *Model) View() string {
 			b.WriteString(f.view() + "\n")
 		}
 	}
-	b.WriteString(m.section("Salida", m.focus == FocusOutput) + "\n")
+	b.WriteString(m.section("Output", m.focus == FocusOutput) + "\n")
 	out := m.output.View()
 	if m.err != nil {
-		out = m.styles.OutputStale.Render(out) // salida anterior, atenuada
+		out = m.styles.OutputStale.Render(out) // previous output, dimmed
 	}
 	b.WriteString(out)
 	return b.String()
 }
 
-// Status es el estado para la statusbar.
+// Status is the state for the statusbar.
 func (m *Model) Status() statusbar.Status {
 	st := statusbar.Status{
 		Running: m.running,
-		// "f5 para ejecutar" solo si no se va a ejecutar sola: en las
-		// herramientas live, durante el debounce, no hay nada que pedir.
+		// "press f5 to run" only when it will not run by itself: for live
+		// tools, during the debounce, there is nothing to ask for.
 		Stale:   m.stale && !m.running && (!m.spec.Live || m.Large()),
 		Err:     m.err,
 		Elapsed: m.elapsed,
 		Meta:    m.result.Meta,
 	}
 	if m.noColor {
-		st.Note = "sin color: salida de más de " + statusbar.HumanBytes(render.MaxBytes)
+		st.Note = "no colour: output over " + statusbar.HumanBytes(render.MaxBytes)
 	}
 	for _, f := range m.inputs {
 		if f.large {

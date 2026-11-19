@@ -21,13 +21,13 @@ func allTools(t testing.TB) *registry.Registry {
 	return reg
 }
 
-// TestRunRealTools recorre la tabla de detección del plan con las
-// herramientas reales.
+// TestRunRealTools walks the plan's detection table with the real
+// tools.
 func TestRunRealTools(t *testing.T) {
 	reg := allTools(t)
 	tests := []struct {
 		name, sample string
-		want         string // "" = sin detección
+		want         string // "" = no detection
 	}{
 		{"jwt", testutil.ReadInput(t, "jwt", "hs256"), "jwt"},
 		{"uuid", "f47ac10b-58cc-4372-a567-0e02b2c3d479", "uuid"},
@@ -36,9 +36,9 @@ func TestRunRealTools(t *testing.T) {
 		{"timestamp", "1767225600", "timestamp"},
 		{"base64", "SG9sYSwgbXVuZG8u", "base64"},
 		{"url", "q%3Dhola%26x%3D1", "url"},
-		{"texto plano", "hola mundo, esto no es nada en especial", ""},
-		{"vacio", "", ""},
-		{"yaml (0.40) no supera el umbral", "a: 1\nb:\n  c: 2", ""},
+		{"plain text", "hello world, nothing special here", ""},
+		{"empty", "", ""},
+		{"yaml (0.40) stays below the threshold", "a: 1\nb:\n  c: 2", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestRunRealTools(t *testing.T) {
 				got = out.Best.Tool.Spec().ID
 			}
 			if got != tt.want || out.Ambiguous {
-				t.Errorf("Best = %q (ambiguo %v), want %q; candidatas %v", got, out.Ambiguous, tt.want, ids(out.Candidates))
+				t.Errorf("Best = %q (ambiguous %v), want %q; candidates %v", got, out.Ambiguous, tt.want, ids(out.Candidates))
 			}
 		})
 	}
@@ -73,11 +73,11 @@ func TestRunRules(t *testing.T) {
 		ambiguous bool
 		cands     string
 	}{
-		{"gana clara", []tool.Tool{fixed{"a", 0.9}, fixed{"b", 0.6}}, "a", false, "a,b"},
-		{"empate pregunta", []tool.Tool{fixed{"a", 0.9}, fixed{"b", 0.85}, fixed{"c", 0.6}}, "", true, "a,b"},
-		{"umbral exclusivo", []tool.Tool{fixed{"a", 0.5}}, "", false, ""},
-		{"ninguna", []tool.Tool{fixed{"a", 0.2}}, "", false, ""},
-		{"empate de tres", []tool.Tool{fixed{"a", 0.7}, fixed{"b", 0.65}, fixed{"c", 0.61}}, "", true, "a,b,c"},
+		{"clear winner", []tool.Tool{fixed{"a", 0.9}, fixed{"b", 0.6}}, "a", false, "a,b"},
+		{"tie asks", []tool.Tool{fixed{"a", 0.9}, fixed{"b", 0.85}, fixed{"c", 0.6}}, "", true, "a,b"},
+		{"exclusive threshold", []tool.Tool{fixed{"a", 0.5}}, "", false, ""},
+		{"none", []tool.Tool{fixed{"a", 0.2}}, "", false, ""},
+		{"three-way tie", []tool.Tool{fixed{"a", 0.7}, fixed{"b", 0.65}, fixed{"c", 0.61}}, "", true, "a,b,c"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -91,7 +91,7 @@ func TestRunRules(t *testing.T) {
 				best = out.Best.Tool.Spec().ID
 			}
 			if best != tt.best || out.Ambiguous != tt.ambiguous || ids(out.Candidates) != tt.cands {
-				t.Errorf("= %q ambiguo=%v [%s], want %q ambiguo=%v [%s]", best, out.Ambiguous, ids(out.Candidates), tt.best, tt.ambiguous, tt.cands)
+				t.Errorf("= %q ambiguous=%v [%s], want %q ambiguous=%v [%s]", best, out.Ambiguous, ids(out.Candidates), tt.best, tt.ambiguous, tt.cands)
 			}
 		})
 	}
@@ -103,10 +103,10 @@ func TestSample(t *testing.T) {
 		in   string
 		want int
 	}{
-		{"corto", "abc", 3},
-		{"exacto", strings.Repeat("a", detect.SampleBytes), detect.SampleBytes},
-		{"largo", strings.Repeat("a", detect.SampleBytes+10), detect.SampleBytes},
-		{"no parte runas", strings.Repeat("a", detect.SampleBytes-1) + "ñ", detect.SampleBytes - 1},
+		{"short", "abc", 3},
+		{"exact", strings.Repeat("a", detect.SampleBytes), detect.SampleBytes},
+		{"long", strings.Repeat("a", detect.SampleBytes+10), detect.SampleBytes},
+		{"does not split runes", strings.Repeat("a", detect.SampleBytes-1) + "ñ", detect.SampleBytes - 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -117,7 +117,7 @@ func TestSample(t *testing.T) {
 	}
 }
 
-// BenchmarkRun64KB: el plan pide detectar 64 KB en menos de 20 ms.
+// BenchmarkRun64KB: the plan asks for detecting 64 KB in under 20 ms.
 func BenchmarkRun64KB(b *testing.B) {
 	reg := allTools(b)
 	sample := strings.Repeat(`{"id": 1, "name": "elemento", "ok": true},`, detect.SampleBytes/42)
@@ -127,7 +127,7 @@ func BenchmarkRun64KB(b *testing.B) {
 	}
 }
 
-// FuzzRun: ninguna entrada hace entrar en pánico a la detección.
+// FuzzRun: no input makes detection panic.
 func FuzzRun(f *testing.F) {
 	reg := allTools(f)
 	for _, s := range []string{"", "{", "<a", "a.b.c", "%zz", "0x", "ñ\x00\xff"} {
@@ -137,7 +137,7 @@ func FuzzRun(f *testing.F) {
 		out := detect.Run(reg, s)
 		for _, c := range out.Candidates {
 			if c.Score <= detect.Threshold || c.Score > 1 {
-				t.Fatalf("puntaje fuera de rango: %v", c.Score)
+				t.Fatalf("score out of range: %v", c.Score)
 			}
 		}
 	})

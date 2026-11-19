@@ -50,15 +50,15 @@ func TestJSONFormat(t *testing.T) {
 		opts tool.Values
 		want string
 	}{
-		{"vacio", "", nil, ""},
-		{"solo espacios", "  \n ", nil, ""},
-		{"escalar", " 42 ", nil, "42"},
-		{"string", `"hola"`, nil, `"hola"`},
-		{"conserva orden", `{"b":1,"a":2}`, tool.Values{"indent": 0}, `{"b":1,"a":2}`},
-		{"ordena", `{"b":1,"a":2}`, tool.Values{"indent": 0, "sort_keys": true}, `{"a":2,"b":1}`},
-		{"conserva numeros", `[1.50,1e10]`, tool.Values{"indent": 0}, `[1.50,1e10]`},
-		{"ordenado conserva numeros", `[1.50,1e10]`, tool.Values{"indent": 0, "sort_keys": true}, `[1.50,1e10]`},
-		{"sin escapar html al ordenar", `{"a":"<&>"}`, tool.Values{"indent": 0, "sort_keys": true}, `{"a":"<&>"}`},
+		{"empty", "", nil, ""},
+		{"only spaces", "  \n ", nil, ""},
+		{"scalar", " 42 ", nil, "42"},
+		{"string", `"hello"`, nil, `"hello"`},
+		{"keeps order", `{"b":1,"a":2}`, tool.Values{"indent": 0}, `{"b":1,"a":2}`},
+		{"sorts", `{"b":1,"a":2}`, tool.Values{"indent": 0, "sort_keys": true}, `{"a":2,"b":1}`},
+		{"keeps numbers", `[1.50,1e10]`, tool.Values{"indent": 0}, `[1.50,1e10]`},
+		{"sorted keeps numbers", `[1.50,1e10]`, tool.Values{"indent": 0, "sort_keys": true}, `[1.50,1e10]`},
+		{"no html escaping when sorting", `{"a":"<&>"}`, tool.Values{"indent": 0, "sort_keys": true}, `{"a":"<&>"}`},
 		{"indent 1", `{"a":[1]}`, tool.Values{"indent": 1}, "{\n \"a\": [\n  1\n ]\n}"},
 	}
 	for _, tt := range tests {
@@ -81,14 +81,14 @@ func TestJSONFormatErrors(t *testing.T) {
 		sorted    bool
 		line, col int
 	}{
-		{"coma de mas", `{"a":1,}`, false, 1, 8},
-		{"coma de mas ordenado", `{"a":1,}`, true, 1, 8},
-		{"segunda linea", "{\n  \"a\": tru\n}", false, 2, 11},
-		{"sin cerrar", `{"a":[1,2`, false, 1, 10},
-		{"sin cerrar ordenado", `{"a":[1,2`, true, 1, 10},
-		{"dos valores", `{} {}`, false, 1, 4},
-		{"dos valores ordenado", `{} {}`, true, 1, 4},
-		{"comilla simple", `{'a':1}`, false, 1, 2},
+		{"trailing comma", `{"a":1,}`, false, 1, 8},
+		{"trailing comma sorted", `{"a":1,}`, true, 1, 8},
+		{"second line", "{\n  \"a\": tru\n}", false, 2, 11},
+		{"unclosed", `{"a":[1,2`, false, 1, 10},
+		{"unclosed sorted", `{"a":[1,2`, true, 1, 10},
+		{"two values", `{} {}`, false, 1, 4},
+		{"two values sorted", `{} {}`, true, 1, 4},
+		{"single quote", `{'a':1}`, false, 1, 2},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -98,7 +98,7 @@ func TestJSONFormatErrors(t *testing.T) {
 				t.Fatalf("error = %v, want *InputError", err)
 			}
 			if ie.Line != tt.line || ie.Col != tt.col {
-				t.Errorf("posición = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
+				t.Errorf("position = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
 			}
 		})
 	}
@@ -110,12 +110,12 @@ func TestJSONFormatDetect(t *testing.T) {
 		sample string
 		want   float64
 	}{
-		{"objeto", ` {"a":1} `, 0.9},
-		{"arreglo", `[1,2]`, 0.9},
-		{"escalar no", `42`, 0},
-		{"invalido", `{"a":}`, 0},
-		{"texto", `hola`, 0},
-		{"vacio", ``, 0},
+		{"object", ` {"a":1} `, 0.9},
+		{"array", `[1,2]`, 0.9},
+		{"scalar is not", `42`, 0},
+		{"invalid", `{"a":}`, 0},
+		{"text", `hello`, 0},
+		{"empty", ``, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -126,7 +126,7 @@ func TestJSONFormatDetect(t *testing.T) {
 	}
 }
 
-// FuzzJSONFormatIdempotent: formatear dos veces da lo mismo que una.
+// FuzzJSONFormatIdempotent: formatting twice gives the same as once.
 func FuzzJSONFormatIdempotent(f *testing.F) {
 	for _, s := range []string{`{"b":1,"a":[1,2,{"c":null}]}`, `[]`, `"x"`, `1.5e3`, `{"a":"<é>"}`} {
 		f.Add(s, 2, false)
@@ -138,14 +138,14 @@ func FuzzJSONFormatIdempotent(f *testing.F) {
 		opts := tool.Values{"indent": ((indent % 9) + 9) % 9, "sort_keys": sorted}
 		once, err := runJSON(t, in, opts)
 		if err != nil {
-			t.Fatalf("JSON válido rechazado: %v", err)
+			t.Fatalf("valid JSON rejected: %v", err)
 		}
 		twice, err := runJSON(t, once.Text, opts)
 		if err != nil {
-			t.Fatalf("la salida no es JSON válido: %v\n%s", err, once.Text)
+			t.Fatalf("the output is not valid JSON: %v\n%s", err, once.Text)
 		}
 		if once.Text != twice.Text {
-			t.Errorf("no es idempotente:\n%s\n---\n%s", once.Text, twice.Text)
+			t.Errorf("not idempotent:\n%s\n---\n%s", once.Text, twice.Text)
 		}
 	})
 }
@@ -157,13 +157,13 @@ func genJSON(n int) string {
 		if i > 0 {
 			b.WriteString(",")
 		}
-		fmt.Fprintf(&b, `{"id":%d,"name":"elemento-%06d","tags":["a","bb"],"valid":%t,"score":%d.5}`, i, i, i%2 == 0, i)
+		fmt.Fprintf(&b, `{"id":%d,"name":"item-%06d","tags":["a","bb"],"valid":%t,"score":%d.5}`, i, i, i%2 == 0, i)
 	}
 	b.WriteString("]")
 	return b.String()
 }
 
-// BenchmarkJSONFormat1MB: el objetivo del plan es menos de 30 ms.
+// BenchmarkJSONFormat1MB: the plan's target is under 30 ms.
 func BenchmarkJSONFormat1MB(b *testing.B) {
 	in := genJSON(1 << 20)
 	for _, tc := range []struct {

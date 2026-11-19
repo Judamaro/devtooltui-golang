@@ -1,6 +1,6 @@
-▾ Testers                │RegEx Prueba expresiones regulares RE2 (sin lookaround ni backreferences)
-  ▸ RegEx                │Patrón: \d+   i: [ ]   m: [ ]   s: [ ]
-                         │── Texto ─────────────────────────────────────────────────────────────────
+▾ Testers                │RegEx Test RE2 regular expressions (no lookaround nor backreferences)
+  ▸ RegEx                │Pattern: \d+   i: [ ]   m: [ ]   s: [ ]
+                         │── Text ──────────────────────────────────────────────────────────────────
                          │┃  1 a1 b22
                          │┃  2 c333
                          │┃
@@ -13,11 +13,11 @@
                          │┃
                          │┃
                          │┃
-                         │── Salida ────────────────────────────────────────────────────────────────
+                         │── Output ────────────────────────────────────────────────────────────────
                          │a1 b22
                          │c333
                          │
-                         │3 coincidencias
+                         │3 matches
                          │#1  1:2–1:3  "1"
                          │#2  1:5–1:7  "22"
                          │#3  2:2–2:5  "333"
@@ -27,4 +27,4 @@
                          │
                          │
                          │
-✓ 0 µs · Coincidencias: 3 · Grupos: 0
+✓ 0 µs · Matches: 3 · Groups: 0

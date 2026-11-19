@@ -46,19 +46,19 @@ func TestNumberBase(t *testing.T) {
 		label    string
 		want     string
 	}{
-		{"decimal a hex", "255", nil, "Hexadecimal", "0xff"},
-		{"prefijo binario", "0b1010", nil, "Decimal", "10"},
-		{"prefijo octal", "0o777", nil, "Decimal", "511"},
-		{"hex mayusculas", "0XFF", nil, "Binario", "0b1111_1111"},
-		{"base forzada", "ff", tool.Values{"from": "16"}, "Decimal", "255"},
-		{"base forzada con su prefijo", "0x10", tool.Values{"from": "16"}, "Decimal", "16"},
-		{"separadores", "1 000_000", nil, "Decimal", "1_000_000"},
-		{"agrupado decimal", "1234567", nil, "Decimal", "1_234_567"},
-		{"sin agrupar", "1234567", tool.Values{"group": false}, "Decimal", "1234567"},
-		{"cero", "0", nil, "Binario", "0b0"},
-		{"signo mas", "+8", nil, "Octal", "0o10"},
-		{"negativo hex", "-0x10", nil, "Decimal", "-16"},
-		{"mas de 64 bits", "18446744073709551616", tool.Values{"group": false}, "Hexadecimal", "0x10000000000000000"},
+		{"decimal to hex", "255", nil, "Hexadecimal", "0xff"},
+		{"binary prefix", "0b1010", nil, "Decimal", "10"},
+		{"octal prefix", "0o777", nil, "Decimal", "511"},
+		{"uppercase hex", "0XFF", nil, "Binary", "0b1111_1111"},
+		{"forced base", "ff", tool.Values{"from": "16"}, "Decimal", "255"},
+		{"forced base with its prefix", "0x10", tool.Values{"from": "16"}, "Decimal", "16"},
+		{"separators", "1 000_000", nil, "Decimal", "1_000_000"},
+		{"grouped decimal", "1234567", nil, "Decimal", "1_234_567"},
+		{"ungrouped", "1234567", tool.Values{"group": false}, "Decimal", "1234567"},
+		{"zero", "0", nil, "Binary", "0b0"},
+		{"plus sign", "+8", nil, "Octal", "0o10"},
+		{"negative hex", "-0x10", nil, "Decimal", "-16"},
+		{"over 64 bits", "18446744073709551616", tool.Values{"group": false}, "Hexadecimal", "0x10000000000000000"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -75,9 +75,9 @@ func TestNumberBase(t *testing.T) {
 
 func TestNumberBaseMeta(t *testing.T) {
 	tests := []struct{ in, bits, rango string }{
-		{"255", "8", "cabe en int64"},
-		{"18446744073709551615", "64", "cabe en uint64"},
-		{"18446744073709551616", "65", "no cabe en 64 bits"},
+		{"255", "8", "fits in int64"},
+		{"18446744073709551615", "64", "fits in uint64"},
+		{"18446744073709551616", "65", "does not fit in 64 bits"},
 	}
 	for _, tt := range tests {
 		res, err := runNB(t, tt.in, nil)
@@ -96,12 +96,12 @@ func TestNumberBaseErrors(t *testing.T) {
 		opts      tool.Values
 		line, col int
 	}{
-		{"letra en decimal", "12a4", nil, 1, 3},
-		{"dos en binario", "0b1012", nil, 1, 6},
-		{"base forzada", "  789", tool.Values{"from": "8"}, 1, 4},
-		{"prefijo solo", "0x", nil, 1, 2},
-		{"signo solo", "-", nil, 1, 2},
-		{"prefijo de otra base", "0x10", tool.Values{"from": "2"}, 1, 2},
+		{"letter in decimal", "12a4", nil, 1, 3},
+		{"two in binary", "0b1012", nil, 1, 6},
+		{"forced base", "  789", tool.Values{"from": "8"}, 1, 4},
+		{"prefix only", "0x", nil, 1, 2},
+		{"sign only", "-", nil, 1, 2},
+		{"prefix of another base", "0x10", tool.Values{"from": "2"}, 1, 2},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -111,13 +111,13 @@ func TestNumberBaseErrors(t *testing.T) {
 				t.Fatalf("error = %v, want *InputError", err)
 			}
 			if ie.Line != tt.line || ie.Col != tt.col {
-				t.Errorf("posición = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
+				t.Errorf("position = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
 			}
 		})
 	}
 }
 
-// FuzzNumberBaseRoundTrip: cada salida, releída en auto, da el mismo número.
+// FuzzNumberBaseRoundTrip: every output, read back in auto, gives the same number.
 func FuzzNumberBaseRoundTrip(f *testing.F) {
 	for _, s := range []string{"0", "-1", "255", "18446744073709551616"} {
 		f.Add(s)
@@ -131,10 +131,10 @@ func FuzzNumberBaseRoundTrip(f *testing.F) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, label := range []string{"Binario", "Octal", "Decimal", "Hexadecimal"} {
+		for _, label := range []string{"Binary", "Octal", "Decimal", "Hexadecimal"} {
 			back, err := runNB(t, line(res.Text, label), nil)
 			if err != nil {
-				t.Fatalf("%s %q no se puede releer: %v", label, line(res.Text, label), err)
+				t.Fatalf("%s %q cannot be read back: %v", label, line(res.Text, label), err)
 			}
 			if got := strings.ReplaceAll(line(back.Text, "Decimal"), "_", ""); got != want.String() {
 				t.Errorf("%s: %s → %s", label, want, got)

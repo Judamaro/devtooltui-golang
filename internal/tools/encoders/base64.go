@@ -1,4 +1,4 @@
-// Package encoders agrupa las herramientas de codificación.
+// Package encoders groups the encoding tools.
 package encoders
 
 import (
@@ -14,7 +14,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// Base64 codifica y decodifica Base64 estándar o URL-safe.
+// Base64 encodes and decodes standard or URL-safe Base64.
 type Base64 struct{}
 
 func (Base64) Spec() tool.Spec {
@@ -22,14 +22,14 @@ func (Base64) Spec() tool.Spec {
 		ID:          "base64",
 		Name:        "Base64",
 		Category:    tool.Encoders,
-		Description: "Codifica y decodifica Base64 estándar o URL-safe",
+		Description: "Encode and decode standard or URL-safe Base64",
 		Keywords:    []string{"b64", "base64url", "encode", "decode"},
-		Inputs:      []tool.InputSpec{{Key: "input", Label: "Entrada", Multiline: true}},
+		Inputs:      []tool.InputSpec{{Key: "input", Label: "Input", Multiline: true}},
 		Options: []tool.Option{
-			{Key: "mode", Label: "Modo", Kind: tool.Select, Choices: []string{"encode", "decode"}, Default: "encode"},
-			{Key: "variant", Label: "Alfabeto", Kind: tool.Select, Choices: []string{"standard", "url"}, Default: "standard"},
-			{Key: "padding", Label: "Padding", Help: "Agregar '=' al codificar", Kind: tool.Toggle, Default: true},
-			{Key: "output", Label: "Salida", Help: "Al decodificar: auto muestra hex si el resultado es binario", Kind: tool.Select, Choices: []string{"auto", "text", "hex"}, Default: "auto"},
+			{Key: "mode", Label: "Mode", Kind: tool.Select, Choices: []string{"encode", "decode"}, Default: "encode"},
+			{Key: "variant", Label: "Alphabet", Kind: tool.Select, Choices: []string{"standard", "url"}, Default: "standard"},
+			{Key: "padding", Label: "Padding", Help: "Add '=' when encoding", Kind: tool.Toggle, Default: true},
+			{Key: "output", Label: "Output", Help: "When decoding: auto shows hex if the result is binary", Kind: tool.Select, Choices: []string{"auto", "text", "hex"}, Default: "auto"},
 		},
 		Output: tool.PlainText,
 		Live:   true,
@@ -66,27 +66,27 @@ func (b Base64) Run(ctx context.Context, req tool.Request) (tool.Result, error) 
 	return tool.Result{
 		Text: out,
 		Meta: append([]tool.KV{
-			{Key: "Entrada", Value: fmt.Sprintf("%d B", len(in))},
-			{Key: "Salida", Value: fmt.Sprintf("%d B", len(out))},
+			{Key: "Input", Value: fmt.Sprintf("%d B", len(in))},
+			{Key: "Output", Value: fmt.Sprintf("%d B", len(out))},
 		}, meta...),
 	}, nil
 }
 
-// renderDecoded muestra los bytes como texto o, si son binarios (o se
-// pidió), en hex.
+// renderDecoded shows the bytes as text or, when they are binary (or hex
+// was requested), as hex.
 func renderDecoded(dec []byte, output string) (string, []tool.KV) {
 	binary := len(dec) > 0 && !isText(dec)
 	if output == "hex" || (output == "auto" && binary) {
-		meta := []tool.KV{{Key: "Formato", Value: "hex"}}
+		meta := []tool.KV{{Key: "Format", Value: "hex"}}
 		if binary {
-			meta = append(meta, tool.KV{Key: "Binario", Value: fmt.Sprintf("%d bytes", len(dec))})
+			meta = append(meta, tool.KV{Key: "Binary", Value: fmt.Sprintf("%d bytes", len(dec))})
 		}
 		return hex.EncodeToString(dec), meta
 	}
 	return string(dec), nil
 }
 
-// isText exige UTF-8 válido, ningún NUL y al menos 90 % de runas imprimibles.
+// isText requires valid UTF-8, no NUL and at least 90% printable runes.
 func isText(b []byte) bool {
 	for _, c := range b {
 		if c == 0 {
@@ -96,11 +96,11 @@ func isText(b []byte) bool {
 	return mostlyPrintable(b)
 }
 
-// decodeBase64 ignora los espacios y saltos de línea, acepta la entrada con
-// o sin padding y devuelve un *tool.InputError con la posición original.
+// decodeBase64 ignores spaces and line breaks, accepts input with or without
+// padding and returns a *tool.InputError with the original position.
 func decodeBase64(in string, urlSafe bool) ([]byte, error) {
 	clean := make([]byte, 0, len(in))
-	offsets := make([]int, 0, len(in)) // posición en clean → posición en in
+	offsets := make([]int, 0, len(in)) // position in clean → position in in
 	for i := 0; i < len(in); i++ {
 		switch in[i] {
 		case ' ', '\t', '\r', '\n':
@@ -127,10 +127,10 @@ func decodeBase64(in string, urlSafe bool) ([]byte, error) {
 		pos = offsets[corrupt]
 	}
 	line, col := tool.Position(in, pos)
-	return nil, &tool.InputError{Input: "input", Line: line, Col: col, Msg: "carácter Base64 inválido o longitud incorrecta"}
+	return nil, &tool.InputError{Input: "input", Line: line, Col: col, Msg: "invalid Base64 character or wrong length"}
 }
 
-// Detect reconoce Base64 válido cuya decodificación es mayormente texto.
+// Detect recognises valid Base64 whose decoding is mostly text.
 func (Base64) Detect(sample string) float64 {
 	s := strings.TrimSpace(sample)
 	if len(s) < 8 || len(s)%4 != 0 {

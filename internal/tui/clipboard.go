@@ -9,11 +9,11 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 )
 
-// Clipboard es lo que la TUI necesita del portapapeles.
+// Clipboard is what the TUI needs from the clipboard.
 type Clipboard interface {
 	Read() (string, error)
 	Write(text string) error
-	UseOSC52() bool // true: copiar con tea.SetClipboard (OSC 52)
+	UseOSC52() bool // true: copy with tea.SetClipboard (OSC 52)
 }
 
 type clipPurpose int
@@ -31,12 +31,12 @@ type clipReadMsg struct {
 
 type clipWroteMsg struct{ err error }
 
-// flashMsg muestra un aviso en la statusbar hasta la siguente tecla.
+// flashMsg shows a notice in the statusbar until the next key.
 type flashMsg string
 
 func (a *App) readClipboard(p clipPurpose) tea.Cmd {
 	if a.opts.Clipboard == nil {
-		return flash("no hay portapapeles disponible")
+		return flash("no clipboard available")
 	}
 	clip := a.opts.Clipboard
 	return func() tea.Msg {
@@ -48,30 +48,30 @@ func (a *App) readClipboard(p clipPurpose) tea.Cmd {
 func (a *App) copyOutput() tea.Cmd {
 	ws := a.workspace()
 	if ws == nil || ws.Output() == "" {
-		return flash("no hay salida para copiar")
+		return flash("no output to copy")
 	}
 	out := ws.Output()
 	clip := a.opts.Clipboard
 	if clip == nil || clip.UseOSC52() {
-		return tea.Batch(tea.SetClipboard(out), flash("salida copiada (OSC 52)"))
+		return tea.Batch(tea.SetClipboard(out), flash("output copied (OSC 52)"))
 	}
 	return func() tea.Msg { return clipWroteMsg{err: clip.Write(out)} }
 }
 
 func flash(s string) tea.Cmd { return func() tea.Msg { return flashMsg(s) } }
 
-// handleClipRead pega o detecta con lo leído del portapapeles.
+// handleClipRead pastes or detects with what was read from the clipboard.
 func (a *App) handleClipRead(msg clipReadMsg) tea.Cmd {
 	if msg.err != nil {
-		return flash("portapapeles: " + msg.err.Error())
+		return flash("clipboard: " + msg.err.Error())
 	}
 	if msg.text == "" {
-		return flash("el portapapeles está vacío")
+		return flash("the clipboard is empty")
 	}
 	if msg.purpose == clipPaste {
 		ws := a.workspace()
 		if ws == nil || !ws.HasInput() {
-			return flash("esta herramienta no tiene entrada")
+			return flash("this tool has no input")
 		}
 		focusCmd := a.setFocus(focusInput)
 		return tea.Batch(focusCmd, ws.Update(tea.PasteMsg{Content: msg.text}))
@@ -82,7 +82,7 @@ func (a *App) handleClipRead(msg clipReadMsg) tea.Cmd {
 	case out.Best != nil:
 		id := out.Best.Tool.Spec().ID
 		cmd := a.jumpTo(id, msg.text)
-		return tea.Batch(cmd, flash(fmt.Sprintf("detectado: %s (%.2f)", id, out.Best.Score)))
+		return tea.Batch(cmd, flash(fmt.Sprintf("detected: %s (%.2f)", id, out.Best.Score)))
 	case out.Ambiguous:
 		var ids []string
 		for _, c := range out.Candidates {
@@ -90,11 +90,11 @@ func (a *App) handleClipRead(msg clipReadMsg) tea.Cmd {
 		}
 		return a.openPicker(ids, msg.text)
 	default:
-		return flash("no se reconoció el formato del portapapeles")
+		return flash("the clipboard format was not recognised")
 	}
 }
 
-// jumpTo activa la herramienta id, carga text en su entrada y la enfoca.
+// jumpTo activates tool id, loads text into its input and focuses it.
 func (a *App) jumpTo(id, text string) tea.Cmd {
 	activate := a.activate(id)
 	a.sidebar.Select(id)
@@ -105,8 +105,8 @@ func (a *App) jumpTo(id, text string) tea.Cmd {
 	return tea.Batch(activate, ws.SetInput(text), a.setFocus(focusInput))
 }
 
-// openPicker abre la paleta solo con las candidatas empatadas; al elegir,
-// se salta a esa herramienta con text cargado.
+// openPicker opens the palette with only the tied candidates; choosing one
+// jumps to that tool with text loaded.
 func (a *App) openPicker(ids []string, text string) tea.Cmd {
 	var items []palette.Item
 	for _, id := range ids {
@@ -115,5 +115,5 @@ func (a *App) openPicker(ids []string, text string) tea.Cmd {
 		}
 	}
 	a.pendingText = text
-	return a.openPalette("Varias herramientas posibles: elige una", items)
+	return a.openPalette("Several tools match: pick one", items)
 }

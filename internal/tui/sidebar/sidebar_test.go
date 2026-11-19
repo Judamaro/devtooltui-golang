@@ -77,18 +77,18 @@ func TestFilter(t *testing.T) {
 		keys      []string
 		selected  string
 		filtering bool
-		view      []string // líneas que deben verse
-		hidden    []string // textos que no deben verse
+		view      []string // lines that must be visible
+		hidden    []string // texts that must not be visible
 	}{
-		{"navega", []string{"down", "down"}, "url", false, []string{"▾ Formateadores"}, nil},
-		{"filtra y oculta categorias", []string{"/", "b64"}, "base64", true, []string{"/ b64", "▾ Codificadores", "▸ Base64"}, []string{"Formateadores", "URL"}},
+		{"navigates", []string{"down", "down"}, "url", false, []string{"▾ Formatters"}, nil},
+		{"filters and hides categories", []string{"/", "b64"}, "base64", true, []string{"/ b64", "▾ Encoders", "▸ Base64"}, []string{"Formatters", "URL"}},
 		{"keywords", []string{"/", "pretty"}, "json-format", true, []string{"▸ JSON"}, []string{"Base64"}},
-		{"j y k son texto al filtrar", []string{"/", "json"}, "json-format", true, []string{"/ json"}, nil},
-		{"enter deja el filtro", []string{"/", "u", "enter"}, "url", false, []string{"/ u"}, []string{"▏"}},
-		{"esc lo borra", []string{"/", "b64", "esc"}, "base64", false, []string{"▾ Formateadores"}, []string{"/ "}},
+		{"j and k are text while filtering", []string{"/", "json"}, "json-format", true, []string{"/ json"}, nil},
+		{"enter keeps the filter", []string{"/", "u", "enter"}, "url", false, []string{"/ u"}, []string{"▏"}},
+		{"esc clears it", []string{"/", "b64", "esc"}, "base64", false, []string{"▾ Formatters"}, []string{"/ "}},
 		{"backspace", []string{"/", "zz", "backspace", "backspace"}, "json-format", true, []string{"▸ JSON", "Base64"}, nil},
-		{"sin resultados", []string{"/", "zzz"}, "json-format", true, []string{"(sin resultados)"}, nil},
-		{"navega dentro del filtro", []string{"/", "s", "down"}, "base64", true, []string{"▸ Base64"}, []string{"URL"}},
+		{"no results", []string{"/", "zzz"}, "json-format", true, []string{"(no results)"}, nil},
+		{"navigates within the filter", []string{"/", "s", "down"}, "base64", true, []string{"▸ Base64"}, []string{"URL"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -99,12 +99,12 @@ func TestFilter(t *testing.T) {
 			}
 			for _, w := range tt.view {
 				if !strings.Contains(view, w) {
-					t.Errorf("no se ve %q:\n%s", w, view)
+					t.Errorf("%q is not visible:\n%s", w, view)
 				}
 			}
 			for _, h := range tt.hidden {
 				if strings.Contains(view, h) {
-					t.Errorf("se ve %q:\n%s", h, view)
+					t.Errorf("%q is visible:\n%s", h, view)
 				}
 			}
 		})
@@ -115,6 +115,6 @@ func TestSelectClearsHidingFilter(t *testing.T) {
 	m := press(newSidebar(t), "/", "b64", "enter")
 	m.Select("url")
 	if m.Selected() != "url" || strings.Contains(ansi.Strip(m.View()), "/ b64") {
-		t.Errorf("Select no borró el filtro que ocultaba la herramienta")
+		t.Errorf("Select did not clear the filter hiding the tool")
 	}
 }

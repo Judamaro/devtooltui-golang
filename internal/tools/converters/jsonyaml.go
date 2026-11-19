@@ -18,7 +18,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// JSONYAML convierte JSON ↔ YAML conservando el orden de las claves.
+// JSONYAML converts JSON ↔ YAML keeping key order.
 type JSONYAML struct{}
 
 func (JSONYAML) Spec() tool.Spec {
@@ -26,12 +26,12 @@ func (JSONYAML) Spec() tool.Spec {
 		ID:          "json-yaml",
 		Name:        "JSON ↔ YAML",
 		Category:    tool.Converters,
-		Description: "Convierte entre JSON y YAML conservando el orden de las claves",
+		Description: "Convert between JSON and YAML keeping key order",
 		Keywords:    []string{"yaml", "yml", "json", "convert"},
-		Inputs:      []tool.InputSpec{{Key: "input", Label: "Entrada", Multiline: true}},
+		Inputs:      []tool.InputSpec{{Key: "input", Label: "Input", Multiline: true}},
 		Options: []tool.Option{
-			{Key: "mode", Label: "Modo", Kind: tool.Select, Choices: []string{"to-yaml", "to-json"}, Default: "to-yaml"},
-			{Key: "indent", Label: "Indentación", Help: "En JSON, 0 = minificar; YAML usa al menos 2", Kind: tool.Number, Min: 0, Max: 8, Default: 2},
+			{Key: "mode", Label: "Mode", Kind: tool.Select, Choices: []string{"to-yaml", "to-json"}, Default: "to-yaml"},
+			{Key: "indent", Label: "Indent", Help: "In JSON, 0 = minify; YAML uses at least 2", Kind: tool.Number, Min: 0, Max: 8, Default: 2},
 		},
 		Output: tool.Highlighted,
 		Live:   true,
@@ -62,8 +62,8 @@ func jsonToYAML(in string, indent int) (tool.Result, error) {
 	if dec.More() {
 		return tool.Result{}, jsonError(in, &json.SyntaxError{Offset: dec.InputOffset() + 1})
 	}
-	// JSON es YAML: se parsea a un Node (conserva el orden) y se le quita
-	// el estilo de flujo para que salga en bloque.
+	// JSON is YAML: parse it into a Node (keeps order) and drop the flow
+	// style so it comes out in block style.
 	var node yaml.Node
 	if err := yaml.Unmarshal([]byte(in), &node); err != nil {
 		return tool.Result{}, &tool.InputError{Input: "input", Msg: err.Error()}
@@ -73,21 +73,21 @@ func jsonToYAML(in string, indent int) (tool.Result, error) {
 	enc := yaml.NewEncoder(&buf)
 	enc.SetIndent(indent)
 	if err := enc.Encode(&node); err != nil {
-		return tool.Result{}, fmt.Errorf("codificando YAML: %w", err)
+		return tool.Result{}, fmt.Errorf("encoding YAML: %w", err)
 	}
-	// Sin recortar: si el último valor es un bloque "|", su salto de línea
-	// final es parte del valor.
+	// Not trimmed: if the last value is a "|" block, its final line break
+	// is part of the value.
 	out := buf.String()
 	return tool.Result{Text: out, Lang: "yaml", Meta: sizeMeta(in, out)}, nil
 }
 
-// clearStyle quita el estilo de flujo y las comillas; el encoder vuelve a
-// citar los strings que lo necesiten ("true", "1", "a: b").
+// clearStyle drops flow style and quotes; the encoder quotes again the
+// strings that need it ("true", "1", "a: b").
 func clearStyle(n *yaml.Node) {
 	n.Style = 0
 	if n.Kind == yaml.ScalarNode && n.Tag == "!!str" && needsQuotedBlock(n.Value) {
-		// El encoder emite un bloque "|" inválido si una línea empieza con
-		// espacio o tab (lo encontró el fuzz): se fuerza comillas dobles.
+		// The encoder emits an invalid "|" block when a line starts with a
+		// space or tab (found by the fuzzer): force double quotes.
 		n.Style = yaml.DoubleQuotedStyle
 	}
 	for _, c := range n.Content {
@@ -95,9 +95,9 @@ func clearStyle(n *yaml.Node) {
 	}
 }
 
-// needsQuotedBlock detecta strings que el encoder de yaml emite de forma
-// que no se releen igual (casos encontrados por el fuzz): espacios Unicode
-// al inicio o al final, caracteres no imprimibles, o líneas con sangría.
+// needsQuotedBlock detects strings the yaml encoder emits in a way that
+// does not read back the same (cases found by the fuzzer): Unicode spaces
+// at the start or end, non-printable characters, or indented lines.
 func needsQuotedBlock(s string) bool {
 	if s == "" {
 		return false
@@ -155,17 +155,17 @@ func yamlToJSON(in string, indent int) (tool.Result, error) {
 		enc.SetIndent("", strings.Repeat(" ", indent))
 	}
 	if err := enc.Encode(value); err != nil {
-		return tool.Result{}, fmt.Errorf("codificando JSON: %w", err)
+		return tool.Result{}, fmt.Errorf("encoding JSON: %w", err)
 	}
 	out := strings.TrimRight(buf.String(), "\n")
 	meta := sizeMeta(in, out)
 	if len(docs) > 1 {
-		meta = append(meta, tool.KV{Key: "Documentos", Value: strconv.Itoa(len(docs))})
+		meta = append(meta, tool.KV{Key: "Documents", Value: strconv.Itoa(len(docs))})
 	}
 	return tool.Result{Text: out, Lang: "json", Meta: meta}, nil
 }
 
-// orderedMap se serializa como objeto JSON conservando el orden.
+// orderedMap marshals as a JSON object keeping order.
 type orderedMap struct {
 	keys   []string
 	values map[string]any
@@ -211,13 +211,13 @@ func marshalNoEscape(v any) ([]byte, error) {
 	return bytes.TrimRight(b.Bytes(), "\n"), nil
 }
 
-const maxDepth = 1000 // corta los ciclos de aliases
+const maxDepth = 1000 // cuts alias cycles
 
 var jsonNumberRe = regexp.MustCompile(`^-?(0|[1-9]\d*)(\.\d+)?([eE][-+]?\d+)?$`)
 
 func nodeToJSON(n *yaml.Node, depth int) (any, error) {
 	if depth > maxDepth {
-		return nil, &tool.InputError{Input: "input", Line: n.Line, Col: n.Column, Msg: "anidamiento demasiado profundo (¿aliases cíclicos?)"}
+		return nil, &tool.InputError{Input: "input", Line: n.Line, Col: n.Column, Msg: "nesting too deep (cyclic aliases?)"}
 	}
 	switch n.Kind {
 	case yaml.DocumentNode:
@@ -242,7 +242,7 @@ func nodeToJSON(n *yaml.Node, depth int) (any, error) {
 	case yaml.ScalarNode:
 		return scalarToJSON(n)
 	}
-	return nil, &tool.InputError{Input: "input", Line: n.Line, Col: n.Column, Msg: "nodo YAML desconocido"}
+	return nil, &tool.InputError{Input: "input", Line: n.Line, Col: n.Column, Msg: "unknown YAML node"}
 }
 
 func mappingToJSON(n *yaml.Node, depth int) (any, error) {
@@ -255,7 +255,7 @@ func mappingToJSON(n *yaml.Node, depth int) (any, error) {
 			continue
 		}
 		if k.Kind != yaml.ScalarNode {
-			return nil, &tool.InputError{Input: "input", Line: k.Line, Col: k.Column, Msg: "JSON solo admite claves escalares"}
+			return nil, &tool.InputError{Input: "input", Line: k.Line, Col: k.Column, Msg: "JSON only supports scalar keys"}
 		}
 		val, err := nodeToJSON(v, depth+1)
 		if err != nil {
@@ -263,7 +263,7 @@ func mappingToJSON(n *yaml.Node, depth int) (any, error) {
 		}
 		obj.set(k.Value, val)
 	}
-	// Las claves de merge (<<) no pisan las claves explícitas.
+	// Merge keys (<<) do not override explicit keys.
 	for _, m := range merges {
 		srcs := []*yaml.Node{m}
 		if m.Kind == yaml.SequenceNode {
@@ -276,7 +276,7 @@ func mappingToJSON(n *yaml.Node, depth int) (any, error) {
 			}
 			sub, ok := v.(*orderedMap)
 			if !ok {
-				return nil, &tool.InputError{Input: "input", Line: src.Line, Col: src.Column, Msg: "<< necesita un mapa"}
+				return nil, &tool.InputError{Input: "input", Line: src.Line, Col: src.Column, Msg: "<< needs a map"}
 			}
 			for _, k := range sub.keys {
 				if _, exists := obj.values[k]; !exists {
@@ -300,17 +300,17 @@ func scalarToJSON(n *yaml.Node) (any, error) {
 		return b, nil
 	case "!!int", "!!float":
 		if jsonNumberRe.MatchString(n.Value) {
-			return json.Number(n.Value), nil // sin perder precisión
+			return json.Number(n.Value), nil // keeps precision
 		}
 		var v any
 		if err := n.Decode(&v); err != nil {
 			return n.Value, nil
 		}
 		if f, ok := v.(float64); ok && (f != f || f > 1e308 || f < -1e308) {
-			return nil, &tool.InputError{Input: "input", Line: n.Line, Col: n.Column, Msg: fmt.Sprintf("JSON no admite %s", n.Value)}
+			return nil, &tool.InputError{Input: "input", Line: n.Line, Col: n.Column, Msg: fmt.Sprintf("JSON does not support %s", n.Value)}
 		}
 		return v, nil
-	default: // !!str, !!timestamp, !!binary y tags propios: texto
+	default: // !!str, !!timestamp, !!binary and custom tags: text
 		return n.Value, nil
 	}
 }
@@ -333,13 +333,13 @@ func yamlError(err error) error {
 func jsonError(in string, err error) error {
 	offset := len(in)
 	var syn *json.SyntaxError
-	msg := "fin de entrada inesperado"
+	msg := "unexpected end of input"
 	if errors.As(err, &syn) {
 		offset = max(int(syn.Offset)-1, 0)
 		if syn.Error() != "" {
 			msg = syn.Error()
 		} else {
-			msg = "datos después del valor JSON"
+			msg = "data after the JSON value"
 		}
 	} else if !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
 		msg = err.Error()
@@ -349,13 +349,13 @@ func jsonError(in string, err error) error {
 }
 
 func sizeMeta(in, out string) []tool.KV {
-	return []tool.KV{{Key: "Tamaño", Value: fmt.Sprintf("%d B → %d B", len(in), len(out))}}
+	return []tool.KV{{Key: "Size", Value: fmt.Sprintf("%d B → %d B", len(in), len(out))}}
 }
 
 var yamlKeyRe = regexp.MustCompile(`(?m)^\s*(-\s+)?[\w"'.-][^:\n]*:(\s|$)`)
 
-// Detect es el respaldo: texto con "clave:" que YAML parsea como mapa o
-// lista (YAML acepta casi todo, por eso el puntaje es bajo).
+// Detect is the fallback: text with "key:" that YAML parses as a map or a
+// list (YAML accepts almost anything, hence the low score).
 func (JSONYAML) Detect(sample string) float64 {
 	s := strings.TrimSpace(sample)
 	if s == "" || s[0] == '{' || s[0] == '[' || !yamlKeyRe.MatchString(s) {

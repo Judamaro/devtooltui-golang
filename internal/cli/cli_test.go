@@ -29,8 +29,8 @@ func deps(t testing.TB, stdin string) (cli.Deps, *bytes.Buffer, *bytes.Buffer) {
 	}, &out, &errb
 }
 
-// TestMain registra el binario "devtooltui" para los scripts .txtar: corre
-// la CLI real con stdin y stdout que no son terminales.
+// TestMain registers the "devtooltui" binary for the .txtar scripts: it runs
+// the real CLI with a stdin and stdout that are not terminals.
 func TestMain(m *testing.M) {
 	testscript.Main(m, map[string]func(){
 		"devtooltui": func() {
@@ -64,29 +64,29 @@ func TestExitCodes(t *testing.T) {
 		stderr string
 	}{
 		{"ok stdin", []string{"json-format"}, `{"a":1}`, cli.ExitOK, ""},
-		{"ok archivo", []string{"json-format", file}, "", cli.ExitOK, ""},
-		{"entrada invalida", []string{"json-format"}, `{"a":}`, cli.ExitInput, "<stdin>:1:6:"},
-		{"error en opcion", []string{"regex", "--pattern", "("}, "x", cli.ExitInput, "--pattern:1:1:"},
-		{"zona invalida", []string{"timestamp", "--tz", "Marte/X"}, "0", cli.ExitInput, "--tz:"},
-		{"archivo inexistente", []string{"json-format", filepath.Join(dir, "nope")}, "", cli.ExitInput, "nope"},
-		{"comando desconocido", []string{"nope"}, "", cli.ExitUsage, "unknown command"},
-		{"flag desconocido", []string{"json-format", "--nope"}, "", cli.ExitUsage, "unknown flag"},
-		{"select invalido", []string{"base64", "--variant", "raro"}, "", cli.ExitUsage, "standard, url"},
-		{"number fuera de rango", []string{"uuid", "--count", "0"}, "", cli.ExitUsage, "entre 1 y 1000"},
-		{"demasiados archivos", []string{"json-format", file, file}, "", cli.ExitUsage, "como máximo 1"},
-		{"modo y --mode distintos", []string{"base64", "decode", "--mode", "encode"}, "", cli.ExitUsage, "no coinciden"},
-		{"stdin dos veces", []string{"diff", "-", "-"}, "a", cli.ExitUsage, "una vez"},
-		{"tui sin terminal", nil, "", cli.ExitUsage, "necesita una terminal"},
-		{"max-input", []string{"base64", "--max-input", "3"}, "hola", cli.ExitInput, "supera --max-input"},
+		{"ok file", []string{"json-format", file}, "", cli.ExitOK, ""},
+		{"invalid input", []string{"json-format"}, `{"a":}`, cli.ExitInput, "<stdin>:1:6:"},
+		{"error in an option", []string{"regex", "--pattern", "("}, "x", cli.ExitInput, "--pattern:1:1:"},
+		{"invalid zone", []string{"timestamp", "--tz", "Mars/X"}, "0", cli.ExitInput, "--tz:"},
+		{"missing file", []string{"json-format", filepath.Join(dir, "nope")}, "", cli.ExitInput, "nope"},
+		{"unknown command", []string{"nope"}, "", cli.ExitUsage, "unknown command"},
+		{"unknown flag", []string{"json-format", "--nope"}, "", cli.ExitUsage, "unknown flag"},
+		{"invalid select", []string{"base64", "--variant", "odd"}, "", cli.ExitUsage, "standard, url"},
+		{"number out of range", []string{"uuid", "--count", "0"}, "", cli.ExitUsage, "between 1 and 1000"},
+		{"too many files", []string{"json-format", file, file}, "", cli.ExitUsage, "at most 1"},
+		{"mode and --mode differ", []string{"base64", "decode", "--mode", "encode"}, "", cli.ExitUsage, "do not match"},
+		{"stdin twice", []string{"diff", "-", "-"}, "a", cli.ExitUsage, "only be used once"},
+		{"tui without a terminal", nil, "", cli.ExitUsage, "needs a terminal"},
+		{"max-input", []string{"base64", "--max-input", "3"}, "hola", cli.ExitInput, "exceeds --max-input"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			d, _, errb := deps(t, tt.stdin)
 			if code := cli.Execute(tt.args, d); code != tt.code {
-				t.Errorf("código = %d, want %d (stderr: %s)", code, tt.code, errb)
+				t.Errorf("code = %d, want %d (stderr: %s)", code, tt.code, errb)
 			}
 			if !strings.Contains(errb.String(), tt.stderr) {
-				t.Errorf("stderr = %q, want que contenga %q", errb, tt.stderr)
+				t.Errorf("stderr = %q, want it to contain %q", errb, tt.stderr)
 			}
 		})
 	}
@@ -100,8 +100,8 @@ func TestColor(t *testing.T) {
 		args    []string
 		want    bool
 	}{
-		{"terminal colorea", true, "", nil, true},
-		{"pipe no colorea", false, "", nil, false},
+		{"terminal is coloured", true, "", nil, true},
+		{"pipe is not coloured", false, "", nil, false},
 		{"NO_COLOR", true, "1", nil, false},
 		{"--no-color", true, "", []string{"--no-color"}, false},
 	}
@@ -116,7 +116,7 @@ func TestColor(t *testing.T) {
 				return ""
 			}
 			if code := cli.Execute(append([]string{"json-format"}, tt.args...), d); code != 0 {
-				t.Fatalf("código %d", code)
+				t.Fatalf("code %d", code)
 			}
 			if got := strings.Contains(out.String(), "\x1b["); got != tt.want {
 				t.Errorf("color = %v, want %v: %q", got, tt.want, out)
@@ -128,7 +128,7 @@ func TestColor(t *testing.T) {
 func TestListJSON(t *testing.T) {
 	d, out, _ := deps(t, "")
 	if code := cli.Execute([]string{"list", "--json"}, d); code != 0 {
-		t.Fatalf("código %d", code)
+		t.Fatalf("code %d", code)
 	}
 	var list []struct {
 		ID      string `json:"id"`
@@ -140,7 +140,7 @@ func TestListJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(list) != len(tools.All()) || list[0].ID != "json-format" || list[0].Options[1].Flag != "--sort-keys" {
-		t.Errorf("list --json inesperado: %+v", list[0])
+		t.Errorf("unexpected list --json: %+v", list[0])
 	}
 }
 
@@ -154,14 +154,14 @@ func TestCopyFlag(t *testing.T) {
 	clip := &fakeClip{}
 	d.Clipboard = clip
 	if code := cli.Execute([]string{"base64", "--copy"}, d); code != 0 {
-		t.Fatalf("código %d: %s", code, errb)
+		t.Fatalf("code %d: %s", code, errb)
 	}
 	if clip.data != "aG9sYQ==" || out.String() != "aG9sYQ==\n" {
-		t.Errorf("portapapeles = %q, stdout = %q", clip.data, out)
+		t.Errorf("clipboard = %q, stdout = %q", clip.data, out)
 	}
 
 	d, _, errb = deps(t, "hola")
-	if code := cli.Execute([]string{"base64", "--copy"}, d); code != 0 || !strings.Contains(errb.String(), "no hay portapapeles") {
-		t.Errorf("sin portapapeles: código %d, stderr %q", code, errb)
+	if code := cli.Execute([]string{"base64", "--copy"}, d); code != 0 || !strings.Contains(errb.String(), "no clipboard") {
+		t.Errorf("without a clipboard: code %d, stderr %q", code, errb)
 	}
 }

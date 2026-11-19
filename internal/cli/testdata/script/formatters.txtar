@@ -1,4 +1,4 @@
-# JSON por stdin y por archivo, con flags generados.
+# JSON from stdin and from a file, with generated flags.
 stdin in.json
 exec devtooltui json-format --sort-keys --indent 4
 cmp stdout sorted.json
@@ -10,7 +10,7 @@ stdin in.json
 exec devtooltui json-format -
 stdout '"b": 1'
 
-# Error con línea:col en stderr y código distinto de cero.
+# Error with line:col on stderr and a non-zero exit code.
 stdin bad.json
 ! exec devtooltui json-format
 stderr '<stdin>:2:11: invalid character'
@@ -26,7 +26,7 @@ stdout '"name": "web"'
 exec devtooltui xml-format doc.xml
 cmp stdout doc.golden
 
-# --json emite el Result completo.
+# --json prints the full Result.
 exec devtooltui json-format --json in.json
 stdout '"text": '
 stdout '"key": "JSON"'

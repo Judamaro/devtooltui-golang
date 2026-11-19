@@ -1,4 +1,4 @@
-# Deployment de ejemplo
+# Example deployment
 defaults: &defaults
   replicas: 2
   image: nginx:1.27
@@ -13,5 +13,5 @@ service:
   started: 2026-01-01
   empty:
   notes: |
-    línea uno
-    línea dos
+    line one
+    line two

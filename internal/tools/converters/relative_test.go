@@ -12,15 +12,15 @@ func TestRelative(t *testing.T) {
 		d    time.Duration
 		want string
 	}{
-		{0, "ahora"},
-		{500 * time.Millisecond, "ahora"},
-		{45 * time.Second, "en 45 s"},
-		{-90 * time.Second, "hace 1 min"},
-		{3 * time.Hour, "en 3 h"},
-		{-47 * time.Hour, "hace 47 h"},
-		{-50 * time.Hour, "hace 2 d"},
-		{400 * 24 * time.Hour, "en 400 d"},
-		{-3 * 366 * 24 * time.Hour, "hace 3 años"},
+		{0, "now"},
+		{500 * time.Millisecond, "now"},
+		{45 * time.Second, "in 45 s"},
+		{-90 * time.Second, "1 min ago"},
+		{3 * time.Hour, "in 3 h"},
+		{-47 * time.Hour, "47 h ago"},
+		{-50 * time.Hour, "2 d ago"},
+		{400 * 24 * time.Hour, "in 400 d"},
+		{-3 * 366 * 24 * time.Hour, "3 years ago"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.d.String(), func(t *testing.T) {

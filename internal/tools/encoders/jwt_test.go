@@ -20,7 +20,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
 )
 
-// 2026-01-01 12:00 UTC: el token hs256 se emitió 12 h antes y expira 12 h después.
+// 2026-01-01 12:00 UTC: the hs256 token was issued 12 h before and expires 12 h later.
 var jwtNow = func() time.Time { return time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC) }
 
 func runJWT(t *testing.T, in string, opts tool.Values) (tool.Result, error) {
@@ -36,9 +36,9 @@ func TestJWTGolden(t *testing.T) {
 		name, in string
 		opts     tool.Values
 	}{
-		{"hs256-sin-secreto", "hs256", nil},
-		{"hs256-secreto-ok", "hs256", tool.Values{"secret": "secreto"}},
-		{"hs256-secreto-malo", "hs256", tool.Values{"secret": "otro"}},
+		{"hs256-no-secret", "hs256", nil},
+		{"hs256-secret-ok", "hs256", tool.Values{"secret": "secreto"}},
+		{"hs256-secret-bad", "hs256", tool.Values{"secret": "otro"}},
 		{"rs256-bearer", "rs256", tool.Values{"secret": "x"}},
 	}
 	for _, tt := range tests {
@@ -60,9 +60,9 @@ func TestJWTMeta(t *testing.T) {
 		in    string
 		state string
 	}{
-		{"vigente", jwtNow(), hs, "vigente"},
-		{"expirado", time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC), hs, "expirado"},
-		{"todavia no valido", jwtNow(), testutil.ReadInput(t, "jwt", "rs256"), "todavía no válido"},
+		{"valid", jwtNow(), hs, "valid"},
+		{"expired", time.Date(2026, 1, 3, 0, 0, 0, 0, time.UTC), hs, "expired"},
+		{"not yet valid", jwtNow(), testutil.ReadInput(t, "jwt", "rs256"), "not yet valid"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -72,7 +72,7 @@ func TestJWTMeta(t *testing.T) {
 				t.Fatal(err)
 			}
 			if got := res.Meta[len(res.Meta)-1].Value; got != tt.state {
-				t.Errorf("Estado = %q, want %q", got, tt.state)
+				t.Errorf("Status = %q, want %q", got, tt.state)
 			}
 		})
 	}
@@ -86,9 +86,9 @@ func TestJWTSignature(t *testing.T) {
 		secret string
 		want   string
 	}{
-		{"valida", hs, "secreto", "✓ firma HS256 válida"},
-		{"invalida", hs, "nope", "✗ firma inválida"},
-		{"sin secreto", hs, "", "sin verificar"},
+		{"valid", hs, "secreto", "✓ valid HS256 signature"},
+		{"invalid", hs, "nope", "✗ invalid signature"},
+		{"no secret", hs, "", "not verified"},
 		{"alg none", "eyJhbGciOiJub25lIn0.eyJzdWIiOiJ4In0.", "s", `alg "none"`},
 	}
 	for _, tt := range tests {
@@ -98,7 +98,7 @@ func TestJWTSignature(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !strings.Contains(res.Text, tt.want) {
-				t.Errorf("la salida no contiene %q:\n%s", tt.want, res.Text)
+				t.Errorf("the output does not contain %q:\n%s", tt.want, res.Text)
 			}
 		})
 	}
@@ -110,12 +110,12 @@ func TestJWTErrors(t *testing.T) {
 		in        string
 		line, col int
 	}{
-		{"dos segmentos", "abc.def", 1, 1},
+		{"two segments", "abc.def", 1, 1},
 		{"jwe", "a.b.c.d.e", 1, 1},
-		{"header no json", "aG9sYQ.e30.c2ln", 1, 1},
-		{"payload invalido", "eyJhbGciOiJIUzI1NiJ9.@@@.c2ln", 1, 22},
-		{"firma invalida", "eyJhbGciOiJIUzI1NiJ9.e30.!!", 1, 26},
-		{"con bearer y espacios", "  Bearer abc", 1, 10},
+		{"header not json", "aG9sYQ.e30.c2ln", 1, 1},
+		{"invalid payload", "eyJhbGciOiJIUzI1NiJ9.@@@.c2ln", 1, 22},
+		{"invalid signature", "eyJhbGciOiJIUzI1NiJ9.e30.!!", 1, 26},
+		{"with bearer and spaces", "  Bearer abc", 1, 10},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -125,20 +125,20 @@ func TestJWTErrors(t *testing.T) {
 				t.Fatalf("error = %v, want *InputError", err)
 			}
 			if ie.Line != tt.line || ie.Col != tt.col {
-				t.Errorf("posición = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
+				t.Errorf("position = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
 			}
 		})
 	}
 }
 
 func TestJWTPayloadNoJSON(t *testing.T) {
-	// payload "hola" (no JSON): se muestra tal cual y no hay fechas.
+	// payload "hola" (not JSON): shown as is, with no dates section.
 	res, err := runJWT(t, "eyJhbGciOiJIUzI1NiJ9.aG9sYQ.c2ln", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(res.Text, "hola") || strings.Contains(res.Text, "Fechas") {
-		t.Errorf("salida inesperada:\n%s", res.Text)
+	if !strings.Contains(res.Text, "hola") || strings.Contains(res.Text, "Dates") {
+		t.Errorf("unexpected output:\n%s", res.Text)
 	}
 }
 
@@ -149,11 +149,11 @@ func TestJWTDetect(t *testing.T) {
 		want   float64
 	}{
 		{"token", testutil.ReadInput(t, "jwt", "hs256"), 0.98},
-		{"con bearer", testutil.ReadInput(t, "jwt", "rs256"), 0.98},
-		{"header sin alg", "eyJ0eXAiOiJKV1QifQ.e30.c2ln", 0},
+		{"with bearer", testutil.ReadInput(t, "jwt", "rs256"), 0.98},
+		{"header without alg", "eyJ0eXAiOiJKV1QifQ.e30.c2ln", 0},
 		{"no base64", "a.b.c", 0},
-		{"dos segmentos", "eyJhbGciOiJIUzI1NiJ9.e30", 0},
-		{"vacio", "", 0},
+		{"two segments", "eyJhbGciOiJIUzI1NiJ9.e30", 0},
+		{"empty", "", 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -164,7 +164,7 @@ func TestJWTDetect(t *testing.T) {
 	}
 }
 
-// FuzzJWT: ninguna entrada provoca pánico y todo error es *InputError.
+// FuzzJWT: no input panics and every error is an *InputError.
 func FuzzJWT(f *testing.F) {
 	f.Add("eyJhbGciOiJIUzI1NiJ9.e30.c2ln", "s")
 	f.Add("Bearer a.b.c", "")
@@ -174,14 +174,14 @@ func FuzzJWT(f *testing.F) {
 		_, err := runJWT(t, in, tool.Values{"secret": secret})
 		if err != nil {
 			if _, ok := tool.AsInputError(err); !ok {
-				t.Fatalf("error que no es *InputError: %v", err)
+				t.Fatalf("error that is not *InputError: %v", err)
 			}
 		}
 	})
 }
 
-// keys genera pares de claves y devuelve un token firmado y la clave
-// pública en PEM para cada algoritmo asimétrico.
+// signedWithPEM generates a key pair and returns a signed token and the PEM
+// public key for each asymmetric algorithm.
 func signedWithPEM(t *testing.T, alg string) (token, pubPEM string) {
 	t.Helper()
 	var priv, pub any
@@ -224,10 +224,10 @@ func TestJWTPublicKeys(t *testing.T) {
 			tests := []struct {
 				name, key, want string
 			}{
-				{"clave correcta", pub, "✓ firma " + alg + " válida"},
-				{"otra clave", otherPub, "✗ firma inválida para esa clave pública"},
-				{"sin clave", "", "pégala en la segunda entrada"},
-				{"pem roto", "-----BEGIN PUBLIC KEY-----\nxx\n-----END PUBLIC KEY-----", "✗ la clave no es una clave pública PEM válida"},
+				{"right key", pub, "✓ valid " + alg + " signature"},
+				{"other key", otherPub, "✗ invalid signature for that public key"},
+				{"no key", "", "paste it in the second input"},
+				{"broken pem", "-----BEGIN PUBLIC KEY-----\nxx\n-----END PUBLIC KEY-----", "✗ the key is not a valid PEM public key"},
 			}
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
@@ -238,7 +238,7 @@ func TestJWTPublicKeys(t *testing.T) {
 						t.Fatal(err)
 					}
 					if !strings.Contains(res.Text, tt.want) {
-						t.Errorf("la salida no contiene %q:\n%s", tt.want, res.Text)
+						t.Errorf("the output does not contain %q:\n%s", tt.want, res.Text)
 					}
 				})
 			}
@@ -255,7 +255,7 @@ func TestJWTKeyTypeMismatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(res.Text, "✗ la clave no es una clave pública PEM válida para RS256") {
-		t.Errorf("no avisa el tipo de clave equivocado:\n%s", res.Text)
+	if !strings.Contains(res.Text, "✗ the key is not a valid PEM public key for RS256") {
+		t.Errorf("does not report the wrong key type:\n%s", res.Text)
 	}
 }

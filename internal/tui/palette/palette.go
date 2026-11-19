@@ -1,5 +1,5 @@
-// Package palette es la paleta de comandos (Ctrl+P): búsqueda difusa sobre
-// herramientas y acciones, dibujada encima de la vista.
+// Package palette is the command palette (Ctrl+P): fuzzy search over tools
+// and actions, drawn over the view.
 package palette
 
 import (
@@ -13,7 +13,7 @@ import (
 	"github.com/sahilm/fuzzy"
 )
 
-// Kind distingue herramientas de acciones.
+// Kind tells tools from actions.
 type Kind int
 
 const (
@@ -21,35 +21,35 @@ const (
 	ActionItem
 )
 
-// Item es una entrada de la paleta.
+// Item is a palette entry.
 type Item struct {
 	Kind   Kind
-	ID     string // ID de la herramienta o de la acción
+	ID     string // tool or action ID
 	Title  string
-	Detail string // categoría o atajo
-	Search string // texto extra para la búsqueda (keywords)
+	Detail string // category or shortcut
+	Search string // extra text to search (keywords)
 }
 
-// ChosenMsg se emite al elegir un ítem con Enter.
+// ChosenMsg is sent when an item is chosen with Enter.
 type ChosenMsg struct{ Item Item }
 
-// ClosedMsg se emite al cerrar sin elegir (Esc).
+// ClosedMsg is sent when closing without choosing (Esc).
 type ClosedMsg struct{}
 
-// Styles los define tui/theme.go.
+// Styles are defined by tui/theme.go.
 type Styles struct {
 	Box, Title, Item, Selected, Detail lipgloss.Style
 	Input                              textinput.Styles
 }
 
-// KeyMap son las teclas de la paleta.
+// KeyMap holds the palette keys.
 type KeyMap struct {
 	Up, Down, Choose, Close key.Binding
 }
 
 const maxRows = 10
 
-// Model es la paleta abierta.
+// Model is the open palette.
 type Model struct {
 	title    string
 	items    []Item
@@ -60,11 +60,11 @@ type Model struct {
 	keys     KeyMap
 }
 
-// New abre la paleta con items; title la encabeza.
+// New opens the palette with items, headed by title.
 func New(title string, items []Item, styles Styles, keys KeyMap) *Model {
 	ti := textinput.New()
 	ti.Prompt = "› "
-	ti.Placeholder = "buscar herramienta o acción…"
+	ti.Placeholder = "search for a tool or action…"
 	ti.SetStyles(styles.Input)
 	ti.Focus()
 	m := &Model{title: title, items: items, input: ti, styles: styles, keys: keys}
@@ -72,10 +72,10 @@ func New(title string, items []Item, styles Styles, keys KeyMap) *Model {
 	return m
 }
 
-// Init enciende el cursor del campo de búsqueda.
+// Init starts the search field's cursor.
 func (m *Model) Init() tea.Cmd { return textinput.Blink }
 
-// Filtered devuelve los ítems visibles (para tests).
+// Filtered returns the visible items (for tests).
 func (m *Model) Filtered() []Item { return m.filtered }
 
 func (m *Model) filter() {
@@ -95,7 +95,7 @@ func (m *Model) filter() {
 	m.cursor = min(m.cursor, max(len(m.filtered)-1, 0))
 }
 
-// Update procesa teclas y escritura.
+// Update handles keys and typing.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	if k, ok := msg.(tea.KeyPressMsg); ok {
 		switch {
@@ -125,20 +125,20 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-// Overlay dibuja la paleta centrada en la parte superior de base.
+// Overlay draws the palette centred near the top of base.
 func (m *Model) Overlay(base string, width, height int) string {
 	boxW := min(64, width-4)
 	if boxW < 20 {
 		return base
 	}
-	inner := boxW - 4 // borde + padding
+	inner := boxW - 4 // border + padding
 	m.input.SetWidth(inner - 2)
 	var lines []string
 	lines = append(lines, m.styles.Title.Render(m.title), m.input.View(), "")
 	start := max(0, m.cursor-maxRows+1)
 	end := min(len(m.filtered), start+maxRows)
 	if len(m.filtered) == 0 {
-		lines = append(lines, m.styles.Detail.Render("sin resultados"))
+		lines = append(lines, m.styles.Detail.Render("no results"))
 	}
 	for i := start; i < end; i++ {
 		it := m.filtered[i]
@@ -153,14 +153,14 @@ func (m *Model) Overlay(base string, width, height int) string {
 		}
 	}
 	if len(m.filtered) > maxRows {
-		lines = append(lines, m.styles.Detail.Render(fmt.Sprintf("  %d de %d", end-start, len(m.filtered))))
+		lines = append(lines, m.styles.Detail.Render(fmt.Sprintf("  %d of %d", end-start, len(m.filtered))))
 	}
 	box := m.styles.Box.Width(boxW).Render(strings.Join(lines, "\n"))
 	return Place(base, box, width, height)
 }
 
-// Place dibuja box centrado horizontalmente cerca del borde superior de
-// base, sin cambiar su tamaño.
+// Place draws box horizontally centred near the top edge of base, without
+// changing its size.
 func Place(base, box string, width, height int) string {
 	x := max((width-lipgloss.Width(box))/2, 0)
 	y := min(2, max(height-lipgloss.Height(box), 0))

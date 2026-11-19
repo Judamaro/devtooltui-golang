@@ -1,4 +1,4 @@
-// Package converters agrupa las herramientas de conversión.
+// Package converters groups the conversion tools.
 package converters
 
 import (
@@ -7,13 +7,13 @@ import (
 	"time"
 )
 
-// Relative describe d en español: "en 3 h", "hace 2 d", "ahora".
+// Relative describes d in English: "in 3 h", "2 d ago", "now".
 func Relative(d time.Duration) string {
 	abs := d.Abs()
 	var amount string
 	switch {
 	case abs < time.Second:
-		return "ahora"
+		return "now"
 	case abs < time.Minute:
 		amount = fmt.Sprintf("%d s", int(abs.Seconds()))
 	case abs < time.Hour:
@@ -23,10 +23,10 @@ func Relative(d time.Duration) string {
 	case abs < 2*365*24*time.Hour:
 		amount = fmt.Sprintf("%d d", int(abs.Hours()/24))
 	default:
-		amount = fmt.Sprintf("%d años", int(math.Floor(abs.Hours()/24/365.25)))
+		amount = fmt.Sprintf("%d years", int(math.Floor(abs.Hours()/24/365.25)))
 	}
 	if d > 0 {
-		return "en " + amount
+		return "in " + amount
 	}
-	return "hace " + amount
+	return amount + " ago"
 }

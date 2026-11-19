@@ -45,17 +45,17 @@ func TestURL(t *testing.T) {
 		opts tool.Values
 		want string
 	}{
-		{"encode vacio", "", nil, ""},
-		{"encode query espacio", "a b", nil, "a+b"},
-		{"encode path espacio", "a b", tool.Values{"escape": "path"}, "a%20b"},
-		{"encode path barra", "a/b", tool.Values{"escape": "path"}, "a%2Fb"},
-		{"decode query mas", "a+b%21", tool.Values{"mode": "decode"}, "a b!"},
-		{"decode path mas literal", "a+b%20c", tool.Values{"mode": "decode", "escape": "path"}, "a+b c"},
-		{"decode minusculas", "%c3%b1", tool.Values{"mode": "decode"}, "ñ"},
-		{"parse vacio", "  ", tool.Values{"mode": "parse"}, ""},
-		{"parse sin esquema", "ejemplo.com/a", tool.Values{"mode": "parse"}, "Ruta:       ejemplo.com/a"},
-		{"parse opaco", "mailto:ana@ejemplo.com", tool.Values{"mode": "parse"}, "Esquema:    mailto\nOpaco:      ana@ejemplo.com"},
-		{"parse ipv6", "http://[::1]:80/", tool.Values{"mode": "parse"}, "Esquema:    http\nHost:       ::1\nPuerto:     80\nRuta:       /"},
+		{"encode empty", "", nil, ""},
+		{"encode query space", "a b", nil, "a+b"},
+		{"encode path space", "a b", tool.Values{"escape": "path"}, "a%20b"},
+		{"encode path slash", "a/b", tool.Values{"escape": "path"}, "a%2Fb"},
+		{"decode query plus", "a+b%21", tool.Values{"mode": "decode"}, "a b!"},
+		{"decode path literal plus", "a+b%20c", tool.Values{"mode": "decode", "escape": "path"}, "a+b c"},
+		{"decode lowercase", "%c3%b1", tool.Values{"mode": "decode"}, "ñ"},
+		{"parse empty", "  ", tool.Values{"mode": "parse"}, ""},
+		{"parse without scheme", "example.com/a", tool.Values{"mode": "parse"}, "Path:       example.com/a"},
+		{"parse opaque", "mailto:ana@example.com", tool.Values{"mode": "parse"}, "Scheme:     mailto\nOpaque:     ana@example.com"},
+		{"parse ipv6", "http://[::1]:80/", tool.Values{"mode": "parse"}, "Scheme:     http\nHost:       ::1\nPort:       80\nPath:       /"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -77,11 +77,11 @@ func TestURLErrors(t *testing.T) {
 		opts      tool.Values
 		line, col int
 	}{
-		{"escape no hex", "abc%zz", tool.Values{"mode": "decode"}, 1, 4},
-		{"escape cortado", "abc%4", tool.Values{"mode": "decode"}, 1, 4},
-		{"segunda linea", "ok\n%G1", tool.Values{"mode": "decode", "escape": "path"}, 2, 1},
-		{"parse host invalido", "http://[::1", tool.Values{"mode": "parse"}, 1, 0},
-		{"parse varias lineas", "http://a\nhttp://b", tool.Values{"mode": "parse"}, 0, 0},
+		{"non-hex escape", "abc%zz", tool.Values{"mode": "decode"}, 1, 4},
+		{"truncated escape", "abc%4", tool.Values{"mode": "decode"}, 1, 4},
+		{"second line", "ok\n%G1", tool.Values{"mode": "decode", "escape": "path"}, 2, 1},
+		{"parse invalid host", "http://[::1", tool.Values{"mode": "parse"}, 1, 0},
+		{"parse several lines", "http://a\nhttp://b", tool.Values{"mode": "parse"}, 0, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -91,7 +91,7 @@ func TestURLErrors(t *testing.T) {
 				t.Fatalf("error = %v, want *InputError", err)
 			}
 			if ie.Line != tt.line || ie.Col != tt.col {
-				t.Errorf("posición = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
+				t.Errorf("position = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
 			}
 		})
 	}
@@ -103,12 +103,12 @@ func TestURLDetect(t *testing.T) {
 		sample string
 		want   float64
 	}{
-		{"query codificada", "q%3Dhola%26x%3D1", 0.55},
-		{"url con escapes", "https://e.com/a%20b", 0.55},
-		{"con espacios", "a%20b c", 0},
-		{"sin escapes", "https://e.com/", 0},
-		{"escape invalido", "100%zz", 0},
-		{"vacio", "", 0},
+		{"encoded query", "q%3Dhola%26x%3D1", 0.55},
+		{"url with escapes", "https://e.com/a%20b", 0.55},
+		{"with spaces", "a%20b c", 0},
+		{"no escapes", "https://e.com/", 0},
+		{"invalid escape", "100%zz", 0},
+		{"empty", "", 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -137,7 +137,7 @@ func FuzzURLRoundTrip(f *testing.F) {
 			t.Fatal(err)
 		}
 		if dec.Text != s {
-			t.Errorf("ida y vuelta: %q → %q → %q", s, enc.Text, dec.Text)
+			t.Errorf("round trip: %q → %q → %q", s, enc.Text, dec.Text)
 		}
 	})
 }

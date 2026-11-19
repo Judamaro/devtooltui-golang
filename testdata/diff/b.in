@@ -6,11 +6,11 @@ import (
 )
 
 func main() {
-	nombre := "mundo"
-	fmt.Println("hola,", nombre)
+	name := "world"
+	fmt.Println("hello,", name)
 	for i := 0; i < 3; i++ {
 		fmt.Println(i)
 	}
-	// fin
+	// end
 	os.Exit(0)
 }

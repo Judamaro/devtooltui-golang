@@ -1,12 +1,12 @@
-Esquema:    https
-Usuario:    ana
-Contraseña: s3cr3t
-Host:       ejemplo.com
-Puerto:     8443
-Ruta:       /docs/a b/c
-Fragmento:  sec-2
+Scheme:     https
+User:       ana
+Password:   s3cr3t
+Host:       example.com
+Port:       8443
+Path:       /docs/a b/c
+Fragment:   sec-2
 Query:
-  q = hola mundo
+  q = hello world
   tag = a
   tag = b
   empty = 

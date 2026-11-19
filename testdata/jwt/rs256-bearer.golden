@@ -12,9 +12,9 @@
   "exp": 1767484800
 }
 
-── Fechas
-exp: 2026-01-04 00:00:00 UTC (en 2 d)
-nbf: 2026-01-03 00:00:00 UTC (en 36 h)
+── Dates
+exp: 2026-01-04 00:00:00 UTC (in 2 d)
+nbf: 2026-01-03 00:00:00 UTC (in 36 h)
 
-── Firma
-sin verificar: RS256 necesita la clave pública (pégala en la segunda entrada)
+── Signature
+not verified: RS256 needs the public key (paste it in the second input)

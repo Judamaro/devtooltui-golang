@@ -1,4 +1,4 @@
-// Package formatters agrupa las herramientas de formateo.
+// Package formatters groups the formatting tools.
 package formatters
 
 import (
@@ -13,7 +13,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// JSONFormat indenta, minifica y ordena JSON.
+// JSONFormat indents, minifies and sorts JSON.
 type JSONFormat struct{}
 
 func (JSONFormat) Spec() tool.Spec {
@@ -21,12 +21,12 @@ func (JSONFormat) Spec() tool.Spec {
 		ID:          "json-format",
 		Name:        "JSON",
 		Category:    tool.Formatters,
-		Description: "Indenta, minifica y ordena claves de JSON",
+		Description: "Indent, minify and sort the keys of JSON",
 		Keywords:    []string{"json", "pretty", "minify", "beautify", "format"},
-		Inputs:      []tool.InputSpec{{Key: "input", Label: "Entrada", Lang: "json", Multiline: true}},
+		Inputs:      []tool.InputSpec{{Key: "input", Label: "Input", Lang: "json", Multiline: true}},
 		Options: []tool.Option{
-			{Key: "indent", Label: "Indentación", Help: "Espacios por nivel; 0 = minificar", Kind: tool.Number, Min: 0, Max: 8, Default: 2},
-			{Key: "sort_keys", Label: "Ordenar claves", Kind: tool.Toggle, Default: false},
+			{Key: "indent", Label: "Indent", Help: "Spaces per level; 0 = minify", Kind: tool.Number, Min: 0, Max: 8, Default: 2},
+			{Key: "sort_keys", Label: "Sort keys", Kind: tool.Toggle, Default: false},
 		},
 		Output: tool.Highlighted,
 		Live:   true,
@@ -58,13 +58,13 @@ func (j JSONFormat) Run(ctx context.Context, req tool.Request) (tool.Result, err
 		Text: string(out),
 		Lang: "json",
 		Meta: []tool.KV{
-			{Key: "JSON", Value: "válido"},
-			{Key: "Tamaño", Value: fmt.Sprintf("%d B → %d B", len(in), len(out))},
+			{Key: "JSON", Value: "valid"},
+			{Key: "Size", Value: fmt.Sprintf("%d B → %d B", len(in), len(out))},
 		},
 	}, nil
 }
 
-// formatPreserving conserva el orden de las claves y el texto de los números.
+// formatPreserving keeps key order and the original text of numbers.
 func formatPreserving(in, indent string) ([]byte, error) {
 	var buf bytes.Buffer
 	buf.Grow(len(in) + len(in)/2)
@@ -77,8 +77,8 @@ func formatPreserving(in, indent string) ([]byte, error) {
 	return bytes.TrimSpace(buf.Bytes()), err
 }
 
-// formatSorted decodifica y vuelve a codificar: los objetos salen con las
-// claves ordenadas. UseNumber conserva la precisión de los números.
+// formatSorted decodes and re-encodes: objects come out with sorted keys.
+// UseNumber keeps the precision of numbers.
 func formatSorted(in, indent string) ([]byte, error) {
 	dec := json.NewDecoder(strings.NewReader(in))
 	dec.UseNumber()
@@ -87,12 +87,12 @@ func formatSorted(in, indent string) ([]byte, error) {
 		return nil, err
 	}
 	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		// Hay algo después del valor: lo valida Compact con su offset exacto.
+		// Something follows the value: Compact validates it with the exact offset.
 		var discard bytes.Buffer
 		if cerr := json.Compact(&discard, []byte(in)); cerr != nil {
 			return nil, cerr
 		}
-		return nil, fmt.Errorf("datos después del valor JSON")
+		return nil, fmt.Errorf("data after the JSON value")
 	}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
@@ -110,20 +110,20 @@ func jsonInputError(in string, err error) error {
 	var syn *json.SyntaxError
 	switch {
 	case errors.As(err, &syn):
-		// Offset es la cantidad de bytes leídos al fallar: el carácter
-		// culpable es el anterior, salvo en un fin de entrada inesperado.
+		// Offset is the number of bytes read when failing: the culprit is the
+		// previous character, except on an unexpected end of input.
 		offset = int(syn.Offset)
 		if offset > 0 && offset <= len(in) && !strings.Contains(msg, "end of JSON input") {
 			offset--
 		}
 	case errors.Is(err, io.ErrUnexpectedEOF), errors.Is(err, io.EOF):
-		msg = "fin de entrada inesperado"
+		msg = "unexpected end of input"
 	}
 	line, col := tool.Position(in, offset)
 	return &tool.InputError{Input: "input", Line: line, Col: col, Msg: msg}
 }
 
-// Detect reconoce un objeto o arreglo JSON válido.
+// Detect recognises a valid JSON object or array.
 func (JSONFormat) Detect(sample string) float64 {
 	s := strings.TrimSpace(sample)
 	if s == "" || (s[0] != '{' && s[0] != '[') {

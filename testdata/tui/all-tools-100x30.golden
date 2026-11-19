@@ -1,0 +1,30 @@
+▾ Formatters             │JSON Indent, minify and sort the keys of JSON
+  ▸ JSON                 │Indent: 2   Sort keys: [ ]
+    XML                  │── Input ─────────────────────────────────────────────────────────────────
+▾ Encoders               │┃  1 Type or paste here…
+    Base64               │┃
+    URL                  │┃
+    JWT                  │┃
+▾ Converters             │┃
+    Timestamp            │┃
+    Number bases         │┃
+    JSON ↔ YAML          │┃
+▾ Generators             │┃
+    Hash                 │┃
+    UUID / ULID          │┃
+▾ Testers                │┃
+    RegEx                │── Output ────────────────────────────────────────────────────────────────
+▾ Text                   │
+    Diff                 │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+✓ 0 µs

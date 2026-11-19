@@ -45,20 +45,20 @@ func TestBase64(t *testing.T) {
 		opts tool.Values
 		want string
 	}{
-		{"encode vacio", "", nil, ""},
+		{"encode empty", "", nil, ""},
 		{"encode hola", "hola", nil, "aG9sYQ=="},
-		{"encode sin padding", "hola", tool.Values{"padding": false}, "aG9sYQ"},
+		{"encode without padding", "hola", tool.Values{"padding": false}, "aG9sYQ"},
 		{"encode url", "\xfb\xff", tool.Values{"variant": "url"}, "-_8="},
 		{"encode standard", "\xfb\xff", nil, "+/8="},
-		{"decode con padding", "aG9sYQ==", tool.Values{"mode": "decode"}, "hola"},
-		{"decode sin padding", "aG9sYQ", tool.Values{"mode": "decode"}, "hola"},
-		{"decode con espacios", " aG9s\nYQ== \n", tool.Values{"mode": "decode"}, "hola"},
-		{"decode url como texto", "-_8", tool.Values{"mode": "decode", "variant": "url", "output": "text"}, "\xfb\xff"},
-		{"decode binario auto a hex", "-_8", tool.Values{"mode": "decode", "variant": "url"}, "fbff"},
-		{"decode con NUL auto a hex", "AGhvbGE=", tool.Values{"mode": "decode"}, "00686f6c61"},
-		{"decode texto forzado a hex", "aG9sYQ==", tool.Values{"mode": "decode", "output": "hex"}, "686f6c61"},
-		{"decode texto auto", "aG9sYQ==", tool.Values{"mode": "decode", "output": "auto"}, "hola"},
-		{"encode ignora output", "hola", tool.Values{"output": "hex"}, "aG9sYQ=="},
+		{"decode with padding", "aG9sYQ==", tool.Values{"mode": "decode"}, "hola"},
+		{"decode without padding", "aG9sYQ", tool.Values{"mode": "decode"}, "hola"},
+		{"decode with spaces", " aG9s\nYQ== \n", tool.Values{"mode": "decode"}, "hola"},
+		{"decode url as text", "-_8", tool.Values{"mode": "decode", "variant": "url", "output": "text"}, "\xfb\xff"},
+		{"decode binary auto to hex", "-_8", tool.Values{"mode": "decode", "variant": "url"}, "fbff"},
+		{"decode with NUL auto to hex", "AGhvbGE=", tool.Values{"mode": "decode"}, "00686f6c61"},
+		{"decode text forced to hex", "aG9sYQ==", tool.Values{"mode": "decode", "output": "hex"}, "686f6c61"},
+		{"decode text auto", "aG9sYQ==", tool.Values{"mode": "decode", "output": "auto"}, "hola"},
+		{"encode ignores output", "hola", tool.Values{"output": "hex"}, "aG9sYQ=="},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -80,10 +80,10 @@ func TestBase64Errors(t *testing.T) {
 		opts      tool.Values
 		line, col int
 	}{
-		{"caracter invalido", "aG9s*Q==", tool.Values{"mode": "decode"}, 1, 5},
-		{"segunda linea", "aG9s\nY!==", tool.Values{"mode": "decode"}, 2, 2},
-		{"url en alfabeto standard", "-_8", tool.Values{"mode": "decode"}, 1, 1},
-		{"longitud incorrecta", "aG9sY", tool.Values{"mode": "decode"}, 1, 5},
+		{"invalid character", "aG9s*Q==", tool.Values{"mode": "decode"}, 1, 5},
+		{"second line", "aG9s\nY!==", tool.Values{"mode": "decode"}, 2, 2},
+		{"url in standard alphabet", "-_8", tool.Values{"mode": "decode"}, 1, 1},
+		{"wrong length", "aG9sY", tool.Values{"mode": "decode"}, 1, 5},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -93,7 +93,7 @@ func TestBase64Errors(t *testing.T) {
 				t.Fatalf("error = %v, want *InputError", err)
 			}
 			if ie.Line != tt.line || ie.Col != tt.col {
-				t.Errorf("posición = %d:%d, want %d:%d", ie.Line, ie.Col, tt.line, tt.col)
+				t.Errorf("position = %d:%d, want %d:%d", ie.Line, ie.Col, tt.line, tt.col)
 			}
 		})
 	}
@@ -105,13 +105,13 @@ func TestBase64Detect(t *testing.T) {
 		sample string
 		want   float64
 	}{
-		{"texto codificado", "aG9sYSBtdW5kbw==", 0.6},
+		{"encoded text", "aG9sYSBtdW5kbw==", 0.6},
 		{"url-safe", "aG9sYT8_Pz8-", 0.6},
-		{"muy corto", "aG9s", 0},
-		{"no multiplo de 4", "aG9sYSBtdW5kbw=", 0},
-		{"binario", "+/8AAQIDBAU=", 0},
-		{"texto plano", "hola mundo!!", 0},
-		{"vacio", "", 0},
+		{"too short", "aG9s", 0},
+		{"not a multiple of 4", "aG9sYSBtdW5kbw=", 0},
+		{"binary", "+/8AAQIDBAU=", 0},
+		{"plain text", "hello world!", 0},
+		{"empty", "", 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -140,7 +140,7 @@ func FuzzBase64RoundTrip(f *testing.F) {
 			t.Fatal(err)
 		}
 		if dec.Text != s {
-			t.Errorf("ida y vuelta: %q → %q → %q", s, enc.Text, dec.Text)
+			t.Errorf("round trip: %q → %q → %q", s, enc.Text, dec.Text)
 		}
 	})
 }

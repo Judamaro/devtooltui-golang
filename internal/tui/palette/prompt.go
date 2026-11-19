@@ -6,13 +6,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-// PromptDoneMsg se emite al confirmar el prompt con Enter.
+// PromptDoneMsg is sent when the prompt is confirmed with Enter.
 type PromptDoneMsg struct {
 	ID, Value string
 }
 
-// Prompt pide un texto corto (p. ej. la ruta para Ctrl+S) en una caja
-// encima de la vista. Esc lo cierra con ClosedMsg.
+// Prompt asks for a short text (e.g. the path for Ctrl+S) in a box drawn
+// over the view. Esc closes it with ClosedMsg.
 type Prompt struct {
 	id, title string
 	input     textinput.Model
@@ -20,7 +20,7 @@ type Prompt struct {
 	keys      KeyMap
 }
 
-// NewPrompt abre un prompt con un valor inicial.
+// NewPrompt opens a prompt with an initial value.
 func NewPrompt(id, title, value string, styles Styles, keys KeyMap) *Prompt {
 	ti := textinput.New()
 	ti.Prompt = "› "
@@ -55,6 +55,6 @@ func (p *Prompt) Overlay(base string, width, height int) string {
 	}
 	p.input.SetWidth(boxW - 6)
 	body := p.styles.Title.Render(p.title) + "\n" + p.input.View() + "\n" +
-		p.styles.Detail.Render("enter confirmar · esc cancelar")
+		p.styles.Detail.Render("enter confirm · esc cancel")
 	return Place(base, p.styles.Box.Width(boxW).Render(body), width, height)
 }

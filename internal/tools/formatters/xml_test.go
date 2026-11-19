@@ -45,15 +45,15 @@ func TestXMLFormat(t *testing.T) {
 		opts     tool.Values
 		want     string
 	}{
-		{"vacio", " \n", nil, ""},
-		{"texto en una linea", "<a><b>hola</b></a>", nil, "<a>\n  <b>hola</b>\n</a>"},
-		{"elemento vacio en una linea", "<a><b></b></a>", nil, "<a>\n  <b></b>\n</a>"},
-		{"autocerrado", "<a><b/><c x='1' /></a>", nil, "<a>\n  <b/>\n  <c x='1' />\n</a>"},
-		{"cdata solo en una linea", "<a><![CDATA[ <x> & ]]></a>", nil, "<a><![CDATA[ <x> & ]]></a>"},
-		{"cdata entre hijos", "<a><b/><![CDATA[x]]></a>", nil, "<a>\n  <b/>\n  <![CDATA[x]]>\n</a>"},
-		{"comillas con >", `<a t="x>y"><b/></a>`, nil, "<a t=\"x>y\">\n  <b/>\n</a>"},
-		{"minifica", "<a>\n  <b> x </b>\n</a>", tool.Values{"indent": 0}, "<a><b> x </b></a>"},
-		{"contenido mixto", "<p>hola <b>mundo</b> fin</p>", nil, "<p>\n  hola\n  <b>mundo</b>\n  fin\n</p>"},
+		{"empty", " \n", nil, ""},
+		{"text on one line", "<a><b>hello</b></a>", nil, "<a>\n  <b>hello</b>\n</a>"},
+		{"empty element on one line", "<a><b></b></a>", nil, "<a>\n  <b></b>\n</a>"},
+		{"self-closing", "<a><b/><c x='1' /></a>", nil, "<a>\n  <b/>\n  <c x='1' />\n</a>"},
+		{"cdata only on one line", "<a><![CDATA[ <x> & ]]></a>", nil, "<a><![CDATA[ <x> & ]]></a>"},
+		{"cdata among children", "<a><b/><![CDATA[x]]></a>", nil, "<a>\n  <b/>\n  <![CDATA[x]]>\n</a>"},
+		{"quotes with >", `<a t="x>y"><b/></a>`, nil, "<a t=\"x>y\">\n  <b/>\n</a>"},
+		{"minifies", "<a>\n  <b> x </b>\n</a>", tool.Values{"indent": 0}, "<a><b> x </b></a>"},
+		{"mixed content", "<p>hello <b>world</b> end</p>", nil, "<p>\n  hello\n  <b>world</b>\n  end\n</p>"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -73,11 +73,11 @@ func TestXMLFormatErrors(t *testing.T) {
 		name, in string
 		line     int
 	}{
-		{"cierre distinto", "<a>\n<b></c>\n</a>", 2},
-		{"sin cerrar", "<a>\n<b>", 2},
-		{"atributo sin comillas", "<a x=1/>", 1},
-		{"solo texto", "hola", 1},
-		{"entidad desconocida", "<a>&nope;</a>", 1},
+		{"mismatched close", "<a>\n<b></c>\n</a>", 2},
+		{"unclosed", "<a>\n<b>", 2},
+		{"unquoted attribute", "<a x=1/>", 1},
+		{"text only", "hello", 1},
+		{"unknown entity", "<a>&nope;</a>", 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -87,7 +87,7 @@ func TestXMLFormatErrors(t *testing.T) {
 				t.Fatalf("error = %v, want *InputError", err)
 			}
 			if ie.Line != tt.line {
-				t.Errorf("línea = %d, want %d (%s)", ie.Line, tt.line, ie.Msg)
+				t.Errorf("line = %d, want %d (%s)", ie.Line, tt.line, ie.Msg)
 			}
 		})
 	}
@@ -100,9 +100,9 @@ func TestXMLFormatDetect(t *testing.T) {
 	}{
 		{"xml", `<?xml version="1.0"?><a/>`, 0.85},
 		{"svg", `<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>`, 0.85},
-		{"muestra cortada", "<a><b>uno</b><b>dos", 0.85},
+		{"truncated sample", "<a><b>one</b><b>two", 0.85},
 		{"no xml", "a < b", 0},
-		{"solo comentario", "<!-- x -->", 0},
+		{"comment only", "<!-- x -->", 0},
 		{"json", `{"a":1}`, 0},
 	}
 	for _, tt := range tests {
@@ -114,8 +114,8 @@ func TestXMLFormatDetect(t *testing.T) {
 	}
 }
 
-// FuzzXMLFormatIdempotent: formatear dos veces da lo mismo y el resultado
-// sigue bien formado.
+// FuzzXMLFormatIdempotent: formatting twice gives the same and the result
+// stays well-formed.
 func FuzzXMLFormatIdempotent(f *testing.F) {
 	for _, s := range []string{"<a><b>x</b><!--c--><![CDATA[d]]></a>", `<a x="1>"/>`, "<?xml version=\"1.0\"?><r>\n t <i/> </r>"} {
 		f.Add(s, 2)
@@ -134,17 +134,17 @@ func FuzzXMLFormatIdempotent(f *testing.F) {
 		for {
 			if _, err := dec.Token(); err != nil {
 				if err.Error() != "EOF" {
-					t.Fatalf("la salida no está bien formada: %v\n%s", err, once.Text)
+					t.Fatalf("the output is not well-formed: %v\n%s", err, once.Text)
 				}
 				break
 			}
 		}
 		twice, err := runXML(t, once.Text, opts)
 		if err != nil {
-			t.Fatalf("la salida no se puede reformatear: %v", err)
+			t.Fatalf("the output cannot be reformatted: %v", err)
 		}
 		if once.Text != twice.Text {
-			t.Errorf("no es idempotente:\n%s\n---\n%s", once.Text, twice.Text)
+			t.Errorf("not idempotent:\n%s\n---\n%s", once.Text, twice.Text)
 		}
 	})
 }

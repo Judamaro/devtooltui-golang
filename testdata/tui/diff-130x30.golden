@@ -1,10 +1,10 @@
-▾ Texto                  │Diff Compara dos textos por líneas o por palabras
-  ▸ Diff                 │Por: ◀ lines ▶   Ignorar espacios: [ ]   Vista: ◀ unified ▶
-                         │── Texto A (original) ───────────────────────────── ── Texto B (nuevo) ─────────────────────────────────
-                         │┃  1 uno                                           │┃  1 uno
-                         │┃  2 dos                                           │┃  2 DOS
-                         │┃  3 tres                                          │┃  3 tres
-                         │┃  4                                               │┃  4 cuatro
+▾ Text                   │Diff Compare two texts by lines or by words
+  ▸ Diff                 │By: ◀ lines ▶   Ignore spaces: [ ]   View: ◀ unified ▶
+                         │── Text A (original) ────────────────────────────── ── Text B (new) ────────────────────────────────────
+                         │┃  1 one                                           │┃  1 one
+                         │┃  2 two                                           │┃  2 TWO
+                         │┃  3 three                                         │┃  3 three
+                         │┃  4                                               │┃  4 four
                          │┃                                                  │┃  5
                          │┃                                                  │┃
                          │┃                                                  │┃
@@ -13,18 +13,18 @@
                          │┃                                                  │┃
                          │┃                                                  │┃
                          │┃                                                  │┃
-                         │── Salida ──────────────────────────────────────────────────────────────────────────────────────────────
+                         │── Output ──────────────────────────────────────────────────────────────────────────────────────────────
                          │--- A
                          │+++ B
                          │@@ -1,3 +1,4 @@
-                         │ uno
-                         │-dos
-                         │+DOS
-                         │ tres
-                         │+cuatro
+                         │ one
+                         │-two
+                         │+TWO
+                         │ three
+                         │+four
                          │
                          │
                          │
                          │
                          │
-✓ 0 µs · Cambios: +2 −1 líneas  tab foco • ctrl+p paleta • ctrl+y copiar salida • ? ayuda
+✓ 0 µs · Changes: +2 −1 lines  tab focus • ctrl+p palette • ctrl+y copy output • ? help

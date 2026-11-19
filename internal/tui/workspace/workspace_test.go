@@ -17,7 +17,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
-// counter cuenta las ejecuciones y devuelve la longitud de la entrada.
+// counter counts runs and returns the input length.
 type counter struct {
 	live bool
 	runs int
@@ -26,7 +26,7 @@ type counter struct {
 
 func (c *counter) Spec() tool.Spec {
 	return tool.Spec{ID: "count", Name: "Count", Category: tool.Text, Live: c.live,
-		Inputs: []tool.InputSpec{{Key: "in", Label: "Entrada"}}}
+		Inputs: []tool.InputSpec{{Key: "in", Label: "Input"}}}
 }
 
 func (c *counter) Run(_ context.Context, req tool.Request) (tool.Result, error) {
@@ -49,7 +49,7 @@ func newWS(c tool.Tool) *workspace.Model {
 	return m
 }
 
-// run ejecuta cmd y aplica los resultados al workspace.
+// run runs cmd and applies the results to the workspace.
 func run(m *workspace.Model, cmd tea.Cmd) {
 	testutil.RunCmds(cmd, func(msg tea.Msg) tea.Cmd {
 		switch msg := msg.(type) {
@@ -80,11 +80,11 @@ func TestLargeInput(t *testing.T) {
 		wantLarge bool
 		wantLen   int
 	}{
-		{"pegado chico se edita", []string{small}, false, 100},
-		{"pegado grande pasa a solo lectura", []string{big}, true, len(big)},
-		{"demasiadas líneas pasa a solo lectura", []string{manyLines}, true, len(manyLines)},
-		{"dos pegados que suman más del umbral", []string{big[:20000], big[:20000]}, true, 40000},
-		{"pegar en modo grande agrega", []string{big, "zz"}, true, len(big) + 2},
+		{"small paste is editable", []string{small}, false, 100},
+		{"large paste goes read-only", []string{big}, true, len(big)},
+		{"too many lines goes read-only", []string{manyLines}, true, len(manyLines)},
+		{"two pastes adding up over the threshold", []string{big[:20000], big[:20000]}, true, 40000},
+		{"pasting in large mode appends", []string{big, "zz"}, true, len(big) + 2},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -97,7 +97,7 @@ func TestLargeInput(t *testing.T) {
 				t.Errorf("Large() = %v, want %v", m.Large(), tt.wantLarge)
 			}
 			if len(c.last) != tt.wantLen {
-				t.Errorf("la herramienta recibió %d bytes, want %d", len(c.last), tt.wantLen)
+				t.Errorf("the tool received %d bytes, want %d", len(c.last), tt.wantLen)
 			}
 			if st := m.Status(); tt.wantLarge && st.LargeBytes != tt.wantLen {
 				t.Errorf("Status().LargeBytes = %d, want %d", st.LargeBytes, tt.wantLen)
@@ -112,21 +112,21 @@ func TestLargeInputKeys(t *testing.T) {
 	update(m, tea.PasteMsg{Content: strings.Repeat("a", 40000)})
 	runs := c.runs
 
-	typeText(m, "zzz") // en solo lectura se ignora la escritura
+	typeText(m, "zzz") // typing is ignored in read-only mode
 	if c.runs != runs || len(c.last) != 40000 {
-		t.Fatalf("escribir en modo grande re-ejecutó o cambió la entrada (runs %d→%d)", runs, c.runs)
+		t.Fatalf("typing in large mode reran or changed the input (runs %d→%d)", runs, c.runs)
 	}
 	run(m, m.Run()) // F5
 	if c.runs != runs+1 {
-		t.Errorf("Run() no ejecutó la herramienta")
+		t.Errorf("Run() did not run the tool")
 	}
 	run(m, m.ClearInput()) // ctrl+l
 	if m.Large() || c.last != "" {
-		t.Errorf("ClearInput() no salió del modo grande (Large=%v, last=%d bytes)", m.Large(), len(c.last))
+		t.Errorf("ClearInput() did not leave large mode (Large=%v, last=%d bytes)", m.Large(), len(c.last))
 	}
 	typeText(m, "ab")
 	if c.last != "ab" {
-		t.Errorf("después de limpiar no se edita en vivo: %q", c.last)
+		t.Errorf("after clearing it is not edited live: %q", c.last)
 	}
 }
 
@@ -136,23 +136,23 @@ func TestNotLive(t *testing.T) {
 	runs := c.runs
 	typeText(m, "abc")
 	if c.runs != runs {
-		t.Errorf("una herramienta no-live se ejecutó al escribir")
+		t.Errorf("a non-live tool ran while typing")
 	}
 	if !m.Status().Stale {
-		t.Error("el estado no indica que hay que presionar F5")
+		t.Error("the status does not say F5 must be pressed")
 	}
 	run(m, m.Run())
 	if c.last != "abc" {
-		t.Errorf("F5 ejecutó con %q", c.last)
+		t.Errorf("F5 ran with %q", c.last)
 	}
 }
 
-// blocker se bloquea con la entrada "slow" hasta que cancelan su ctx.
+// blocker blocks on the input "slow" until its ctx is cancelled.
 type blocker struct{}
 
 func (blocker) Spec() tool.Spec {
 	return tool.Spec{ID: "block", Name: "Block", Category: tool.Text, Live: true,
-		Inputs: []tool.InputSpec{{Key: "in", Label: "Entrada"}}}
+		Inputs: []tool.InputSpec{{Key: "in", Label: "Input"}}}
 }
 
 func (blocker) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
@@ -166,11 +166,11 @@ func (blocker) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 func TestCancelAndDiscardStale(t *testing.T) {
 	m := newWS(blocker{})
 	m.Update(tea.PasteMsg{Content: "slo"})
-	slowCmd := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"}) // entrada "slow": se bloquea
+	slowCmd := m.Update(tea.KeyPressMsg{Code: 'w', Text: "w"}) // input "slow": blocks
 	if !m.Running() {
-		t.Fatal("no se marcó la ejecución en curso")
+		t.Fatal("the run was not marked as in progress")
 	}
-	fastCmd := m.Update(tea.KeyPressMsg{Code: '!', Text: "!"}) // cancela la anterior
+	fastCmd := m.Update(tea.KeyPressMsg{Code: '!', Text: "!"}) // cancels the previous one
 
 	done := make(chan tea.Msg, 1)
 	go func() { done <- runBatch(slowCmd) }()
@@ -178,30 +178,30 @@ func TestCancelAndDiscardStale(t *testing.T) {
 	case msg := <-done:
 		r, ok := msg.(workspace.ResultMsg)
 		if !ok || !errors.Is(r.Err, context.Canceled) {
-			t.Fatalf("la ejecución vieja terminó con %#v, want context.Canceled", msg)
+			t.Fatalf("the old run ended with %#v, want context.Canceled", msg)
 		}
-		m.HandleResult(r) // debe descartarse
+		m.HandleResult(r) // must be dropped
 	case <-time.After(2 * time.Second):
-		t.Fatal("la ejecución vieja no se canceló")
+		t.Fatal("the old run was not cancelled")
 	}
 	if m.Err() != nil {
-		t.Errorf("un resultado cancelado se aplicó: %v", m.Err())
+		t.Errorf("a cancelled result was applied: %v", m.Err())
 	}
 
 	run(m, fastCmd)
 	if m.Output() != "out:slow!" || m.Running() {
-		t.Errorf("salida = %q, running = %v", m.Output(), m.Running())
+		t.Errorf("output = %q, running = %v", m.Output(), m.Running())
 	}
 
-	// Un resultado con una seq vieja que llega tarde tampoco se aplica.
+	// A result with an old seq that arrives late is not applied either.
 	m.HandleResult(workspace.ResultMsg{ToolID: "block", Seq: 1, Result: tool.Result{Text: "viejo"}})
 	if m.Output() != "out:slow!" {
-		t.Errorf("un resultado viejo pisó la salida: %q", m.Output())
+		t.Errorf("an old result overwrote the output: %q", m.Output())
 	}
 }
 
-// runBatch ejecuta un comando (expandiendo lotes) y devuelve el primer
-// ResultMsg, bloqueando hasta que llegue.
+// runBatch runs a command (expanding batches) and returns the first
+// ResultMsg, blocking until it arrives.
 func runBatch(cmd tea.Cmd) tea.Msg {
 	if cmd == nil {
 		return nil
@@ -233,7 +233,7 @@ func TestDebounce(t *testing.T) {
 	for _, r := range "abc" {
 		ticks = append(ticks, m.Update(tea.KeyPressMsg{Code: r, Text: string(r)}))
 	}
-	// Solo el último tick (seq vigente) lanza la ejecución.
+	// Only the last tick (current seq) starts the run.
 	var launched int
 	for _, cmd := range ticks {
 		for _, msg := range collect(cmd, workspace.DebounceMsg{}) {
@@ -244,11 +244,11 @@ func TestDebounce(t *testing.T) {
 		}
 	}
 	if launched != 1 || c.runs != runs+1 || c.last != "abc" {
-		t.Errorf("launched = %d, runs = %d, last = %q; want 1 ejecución con \"abc\"", launched, c.runs-runs, c.last)
+		t.Errorf("launched = %d, runs = %d, last = %q; want 1 run with \"abc\"", launched, c.runs-runs, c.last)
 	}
 }
 
-// collect ejecuta cmd (con lotes) y devuelve los mensajes del tipo de want.
+// collect runs cmd (with batches) and returns the messages of want's type.
 func collect(cmd tea.Cmd, want tea.Msg) []tea.Msg {
 	if cmd == nil {
 		return nil
@@ -281,9 +281,9 @@ func TestSetInput(t *testing.T) {
 		focused   bool
 		wantLarge bool
 	}{
-		{"sin foco", "hola", false, false},
-		{"con foco", "hola", true, false},
-		{"grande", strings.Repeat("a", workspace.DefaultLimits.MaxBytes+1), false, true},
+		{"unfocused", "hola", false, false},
+		{"focused", "hola", true, false},
+		{"large", strings.Repeat("a", workspace.DefaultLimits.MaxBytes+1), false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -296,7 +296,7 @@ func TestSetInput(t *testing.T) {
 			}
 			run(m, m.SetInput(tt.text))
 			if c.last != tt.text || m.Large() != tt.wantLarge {
-				t.Errorf("la herramienta recibió %d bytes (large=%v), want %d (large=%v)", len(c.last), m.Large(), len(tt.text), tt.wantLarge)
+				t.Errorf("the tool received %d bytes (large=%v), want %d (large=%v)", len(c.last), m.Large(), len(tt.text), tt.wantLarge)
 			}
 		})
 	}
@@ -304,11 +304,11 @@ func TestSetInput(t *testing.T) {
 
 func TestLiveDebounceIsNotStale(t *testing.T) {
 	c := &counter{live: true}
-	m := workspace.New(c, workspace.Styles{}, optKeys, time.Hour) // el tick nunca llega
+	m := workspace.New(c, workspace.Styles{}, optKeys, time.Hour) // the tick never arrives
 	m.SetSize(80, 24, false)
 	m.SetFocus(workspace.FocusInput)
 	m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	if m.Status().Stale {
-		t.Error("una herramienta live muestra \"f5 para ejecutar\" durante el debounce")
+		t.Error("a live tool shows \"press f5 to run\" during the debounce")
 	}
 }

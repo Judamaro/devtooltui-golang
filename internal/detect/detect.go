@@ -1,6 +1,6 @@
-// Package detect decide a qué herramienta saltar a partir de un texto: toma
-// una muestra, ejecuta los Detector del registro y aplica el umbral y la
-// regla de empate. Las heurísticas viven en el Detect de cada herramienta.
+// Package detect decides which tool to jump to for a piece of text: it takes
+// a sample, runs the registry's Detectors and applies the threshold and the
+// tie rule. The heuristics live in each tool's Detect.
 package detect
 
 import (
@@ -10,23 +10,23 @@ import (
 )
 
 const (
-	SampleBytes = 64 << 10 // tamaño de la muestra
-	Threshold   = 0.5      // puntaje mínimo para saltar
-	TieGap      = 0.1      // diferencia por debajo de la cual se pregunta
+	SampleBytes = 64 << 10 // sample size
+	Threshold   = 0.5      // minimum score to jump
+	TieGap      = 0.1      // gap below which the user is asked
 )
 
-// Outcome es el resultado de la detección.
+// Outcome is the detection result.
 type Outcome struct {
-	// Best es la herramienta elegida; nil si nadie supera Threshold o si
-	// hay empate.
+	// Best is the chosen tool; nil when nothing beats Threshold or when
+	// there is a tie.
 	Best *registry.Scored
-	// Candidates son las que superan Threshold, de mayor a menor. Con
-	// empate, solo las que están a menos de TieGap de la primera.
+	// Candidates are the tools above Threshold, highest first. On a tie,
+	// only those within TieGap of the first one.
 	Candidates []registry.Scored
 	Ambiguous  bool
 }
 
-// Sample recorta s a SampleBytes sin partir un carácter UTF-8.
+// Sample cuts s to SampleBytes without splitting a UTF-8 character.
 func Sample(s string) string {
 	if len(s) <= SampleBytes {
 		return s
@@ -38,7 +38,7 @@ func Sample(s string) string {
 	return s[:cut]
 }
 
-// Run detecta sobre una muestra de text.
+// Run detects on a sample of text.
 func Run(reg *registry.Registry, text string) Outcome {
 	var above []registry.Scored
 	for _, sc := range reg.Detect(Sample(text)) {

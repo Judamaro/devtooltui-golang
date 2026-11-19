@@ -1,4 +1,4 @@
-# GoReleaser v2: se publica al empujar un tag vX.Y.Z (ver .github/workflows/release.yml).
+# GoReleaser v2: publishes when a vX.Y.Z tag is pushed (see .github/workflows/release.yml).
 version: 2
 
 project_name: devtooltui
@@ -37,13 +37,13 @@ changelog:
   use: github
   sort: asc
   groups:
-    - title: Novedades
+    - title: Features
       regexp: '^.*?feat(\(.+\))??!?:.+$'
       order: 0
-    - title: Correcciones
+    - title: Fixes
       regexp: '^.*?fix(\(.+\))??!?:.+$'
       order: 1
-    - title: Otros
+    - title: Other
       order: 999
   filters:
     exclude:
@@ -58,14 +58,14 @@ nfpms:
     vendor: Judamaro
     homepage: https://github.com/Judamaro/devtooltui-golang
     maintainer: Judamaro <noreply@github.com>
-    description: Utilidades de desarrollo en la terminal (JSON, JWT, Base64, hashes, regex, diff…) como TUI y CLI.
+    description: Developer utilities in the terminal (JSON, JWT, Base64, hashes, regex, diff…) as a TUI and a CLI.
     license: MIT
     formats: [deb, rpm, apk]
 
 homebrew_casks:
   - name: devtooltui
     homepage: https://github.com/Judamaro/devtooltui-golang
-    description: Utilidades de desarrollo en la terminal como TUI y CLI
+    description: Developer utilities in the terminal as a TUI and a CLI
     repository:
       owner: Judamaro
       name: homebrew-tap
@@ -73,10 +73,10 @@ homebrew_casks:
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    # El binario no está firmado ni notarizado: no se quita la cuarentena de
-    # macOS automáticamente; se explica cómo hacerlo.
+    # The binary is neither signed nor notarized: the macOS quarantine is not
+    # removed automatically; the caveat explains how to do it.
     caveats: |
-      El binario no está firmado. Si macOS lo bloquea, ejecuta:
+      The binary is not signed. If macOS blocks it, run:
         xattr -dr com.apple.quarantine "$(brew --prefix)/bin/devtooltui"
 
 release:

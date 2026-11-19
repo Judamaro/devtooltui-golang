@@ -1,30 +1,30 @@
 # ADR 0001 · Bubble Tea v2
 
-- Estado: aceptada (fase 0, 2026-11-19)
+- Status: accepted (phase 0, 2026-11-19)
 
-## Contexto
+## Context
 
-El plan dejaba abierta la elección entre Bubble Tea v1 y v2. v2 cambia los
-imports, los mensajes de teclado y el render, y migrar después cuesta.
+The plan left open the choice between Bubble Tea v1 and v2. v2 changes the
+imports, the keyboard messages and rendering, and migrating later is costly.
 
-## Decisión
+## Decision
 
-Usar el stack v2 desde el inicio:
+Use the v2 stack from the start:
 
-| Módulo | Versión al decidir |
+| Module | Version at decision time |
 | --- | --- |
-| `charm.land/bubbletea/v2` | v2.1.2 (estable desde v2.0.0, feb 2026) |
+| `charm.land/bubbletea/v2` | v2.1.2 (stable since v2.0.0, Feb 2026) |
 | `charm.land/bubbles/v2` | v2.2.1 |
 | `charm.land/lipgloss/v2` | v2.1.1 |
-| `github.com/charmbracelet/x/exp/teatest/v2` | pseudo-versión (sin tags; es `x/exp`) |
+| `github.com/charmbracelet/x/exp/teatest/v2` | pseudo-version (no tags; it is `x/exp`) |
 
-## Consecuencias
+## Consequences
 
-- `View()` devuelve `tea.View`; las teclas llegan como `tea.KeyPressMsg` y el
-  pegado como un único `tea.PasteMsg` (bracketed paste nativo).
-- Los módulos de Charm v2 exigen **Go ≥ 1.26**, así que `go.mod` declara
-  `go 1.26` (el plan decía ≥ 1.25).
-- `teatest/v2` no tiene versiones etiquetadas: se fija por pseudo-versión y se
-  revisa al actualizar.
-- Pendiente de verificar en su fase: Glamour con Lip Gloss v2 (fase 3) y la
-  nueva firma de `lipgloss.HasDarkBackground` (fase 2).
+- `View()` returns `tea.View`; keys arrive as `tea.KeyPressMsg` and a paste as
+  a single `tea.PasteMsg` (native bracketed paste).
+- Charm's v2 modules require **Go ≥ 1.26**, so `go.mod` declares `go 1.26`
+  (the plan said ≥ 1.25).
+- `teatest/v2` has no tagged versions: it is pinned by pseudo-version and
+  reviewed on upgrades.
+- To verify in their phase: Glamour with Lip Gloss v2 (phase 3) and the new
+  signature of `lipgloss.HasDarkBackground` (phase 2).

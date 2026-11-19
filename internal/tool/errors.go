@@ -5,8 +5,8 @@ import (
 	"fmt"
 )
 
-// InputError es un error de entrada con posición, para subrayar la línea en
-// la TUI y reportarla en la CLI. Line y Col empiezan en 1; 0 = desconocido.
+// InputError is an input error with a position, so the TUI can underline the
+// line and the CLI can report it. Line and Col start at 1; 0 means unknown.
 type InputError struct {
 	Input     string
 	Line, Col int
@@ -24,7 +24,7 @@ func (e *InputError) Error() string {
 	}
 }
 
-// AsInputError extrae un *InputError de la cadena de err.
+// AsInputError extracts an *InputError from err's chain.
 func AsInputError(err error) (*InputError, bool) {
 	var ie *InputError
 	if errors.As(err, &ie) {
@@ -33,8 +33,8 @@ func AsInputError(err error) (*InputError, bool) {
 	return nil, false
 }
 
-// Position convierte un offset en bytes de s a línea y columna (en runas),
-// ambas empezando en 1. Útil para construir un InputError.
+// Position converts a byte offset in s into a line and column (in runes),
+// both starting at 1. Handy for building an InputError.
 func Position(s string, offset int) (line, col int) {
 	if offset > len(s) {
 		offset = len(s)

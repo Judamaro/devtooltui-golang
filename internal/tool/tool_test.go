@@ -14,9 +14,9 @@ func TestInputErrorError(t *testing.T) {
 		err  *tool.InputError
 		want string
 	}{
-		{"linea y columna", &tool.InputError{Line: 3, Col: 7, Msg: "coma inesperada"}, "3:7: coma inesperada"},
-		{"solo linea", &tool.InputError{Line: 2, Msg: "fin inesperado"}, "2: fin inesperado"},
-		{"sin posicion", &tool.InputError{Msg: "base64 inválido"}, "base64 inválido"},
+		{"line and column", &tool.InputError{Line: 3, Col: 7, Msg: "unexpected comma"}, "3:7: unexpected comma"},
+		{"line only", &tool.InputError{Line: 2, Msg: "unexpected end"}, "2: unexpected end"},
+		{"no position", &tool.InputError{Msg: "invalid base64"}, "invalid base64"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -34,9 +34,9 @@ func TestAsInputError(t *testing.T) {
 		err  error
 		ok   bool
 	}{
-		{"directo", ie, true},
-		{"envuelto", fmt.Errorf("ctx: %w", ie), true},
-		{"otro error", errors.New("bug"), false},
+		{"direct", ie, true},
+		{"wrapped", fmt.Errorf("ctx: %w", ie), true},
+		{"other error", errors.New("bug"), false},
 		{"nil", nil, false},
 	}
 	for _, tt := range tests {
@@ -56,12 +56,12 @@ func TestPosition(t *testing.T) {
 		offset    int
 		line, col int
 	}{
-		{"inicio", "abc", 0, 1, 1},
-		{"misma linea", "abc", 2, 1, 3},
-		{"segunda linea", "ab\ncd", 4, 2, 2},
-		{"runas multibyte", "ñé\nx", len("ñé"), 1, 3},
-		{"offset fuera de rango", "ab", 99, 1, 3},
-		{"offset negativo", "ab", -1, 1, 1},
+		{"start", "abc", 0, 1, 1},
+		{"same line", "abc", 2, 1, 3},
+		{"second line", "ab\ncd", 4, 2, 2},
+		{"multibyte runes", "ñé\nx", len("ñé"), 1, 3},
+		{"offset out of range", "ab", 99, 1, 3},
+		{"negative offset", "ab", -1, 1, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -81,12 +81,12 @@ func TestValues(t *testing.T) {
 		want any
 	}{
 		{"bool", v.Bool("b"), true},
-		{"bool faltante", v.Bool("nope"), false},
+		{"missing bool", v.Bool("nope"), false},
 		{"string", v.String("s"), "x"},
-		{"string tipo incorrecto", v.String("i"), ""},
+		{"string wrong type", v.String("i"), ""},
 		{"int", v.Int("i"), 4},
 		{"int64", v.Int("i64"), 9},
-		{"int tipo incorrecto", v.Int("wrong"), 0},
+		{"int wrong type", v.Int("wrong"), 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -108,6 +108,6 @@ func TestValuesWithDefaults(t *testing.T) {
 		t.Errorf("WithDefaults() = %v", got)
 	}
 	if _, ok := in["padding"]; ok {
-		t.Error("WithDefaults modificó el mapa original")
+		t.Error("WithDefaults modified the original map")
 	}
 }

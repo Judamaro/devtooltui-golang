@@ -15,7 +15,7 @@
     "hex": 31,
     "started": "2026-01-01",
     "empty": null,
-    "notes": "línea uno\nlínea dos\n",
+    "notes": "line one\nline two\n",
     "image": "nginx:1.27",
     "ports": [
       80,

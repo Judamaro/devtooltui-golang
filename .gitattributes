@@ -1,5 +1,5 @@
-# Finales de línea LF en todos los sistemas: los golden files y las
-# fixtures se comparan byte a byte, también en el runner de Windows.
+# LF line endings on every system: golden files and fixtures are compared
+# byte by byte, also on the Windows runner.
 * text=auto eol=lf
 *.golden -text
 *.in -text

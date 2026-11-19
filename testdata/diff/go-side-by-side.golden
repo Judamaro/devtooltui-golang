@@ -1,16 +1,16 @@
-  package main                    │ package main
-                                  │
-| import "fmt"                    │ import (
->                                 │     "fmt"
->                                 │     "os"
->                                 │ )
-                                  │
-  func main() {                   │ func main() {
-      nombre := "mundo"           │     nombre := "mundo"
-|     fmt.Println("hola", nombre) │     fmt.Println("hola,", nombre)
-      for i := 0; i < 3; i++ {    │     for i := 0; i < 3; i++ {
-          fmt.Println(i)          │         fmt.Println(i)
-      }                           │     }
-      // fin                      │     // fin
-|     return                      │     os.Exit(0)
-  }                               │ }
+  package main                   │ package main
+                                 │
+| import "fmt"                   │ import (
+>                                │     "fmt"
+>                                │     "os"
+>                                │ )
+                                 │
+  func main() {                  │ func main() {
+      name := "world"            │     name := "world"
+|     fmt.Println("hello", name) │     fmt.Println("hello,", name)
+      for i := 0; i < 3; i++ {   │     for i := 0; i < 3; i++ {
+          fmt.Println(i)         │         fmt.Println(i)
+      }                          │     }
+      // end                     │     // end
+|     return                     │     os.Exit(0)
+  }                              │ }

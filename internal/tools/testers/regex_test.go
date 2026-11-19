@@ -23,9 +23,9 @@ func TestRegexGolden(t *testing.T) {
 		name string
 		opts tool.Values
 	}{
-		{"fechas-con-grupos", tool.Values{"pattern": `(?P<year>\d{4})-(\d{2})-(\d{2})`}},
-		{"niveles-ignore-case", tool.Values{"pattern": `^\S+ \S+ (info|error)`, "ignore_case": true, "multiline": true}},
-		{"grupo-opcional", tool.Values{"pattern": `(\d+)(%)?`}},
+		{"dates-with-groups", tool.Values{"pattern": `(?P<year>\d{4})-(\d{2})-(\d{2})`}},
+		{"levels-ignore-case", tool.Values{"pattern": `^\S+ \S+ (info|error)`, "ignore_case": true, "multiline": true}},
+		{"optional-group", tool.Values{"pattern": `(\d+)(%)?`}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -61,16 +61,16 @@ func TestRegex(t *testing.T) {
 	tests := []struct {
 		name, text string
 		opts       tool.Values
-		want       string // primera línea o fragmento
+		want       string // first line or fragment
 	}{
-		{"sin patron", "abc", nil, "Escribe un patrón"},
-		{"sin coincidencias", "abc", tool.Values{"pattern": `\d`}, "0 coincidencias"},
-		{"una", "abc", tool.Values{"pattern": `b`}, "1 coincidencia\n#1  1:2–1:3  \"b\""},
-		{"ignore case", "ABC", tool.Values{"pattern": `b`, "ignore_case": true}, "1 coincidencia"},
+		{"no pattern", "abc", nil, "Type a pattern"},
+		{"no matches", "abc", tool.Values{"pattern": `\d`}, "0 matches"},
+		{"one", "abc", tool.Values{"pattern": `b`}, "1 match\n#1  1:2–1:3  \"b\""},
+		{"ignore case", "ABC", tool.Values{"pattern": `b`, "ignore_case": true}, "1 match"},
 		{"dotall", "a\nb", tool.Values{"pattern": `a.b`, "dotall": true}, "#1  1:1–2:2"},
-		{"sin dotall no cruza lineas", "a\nb", tool.Values{"pattern": `a.b`}, "0 coincidencias"},
-		{"columnas en runas", "ñandú x", tool.Values{"pattern": `x`}, "#1  1:7–1:8"},
-		{"recorta coincidencias largas", strings.Repeat("a", 100), tool.Values{"pattern": `a+`}, `"…`},
+		{"without dotall does not cross lines", "a\nb", tool.Values{"pattern": `a.b`}, "0 matches"},
+		{"columns in runes", "ñandú x", tool.Values{"pattern": `x`}, "#1  1:7–1:8"},
+		{"trims long matches", strings.Repeat("a", 100), tool.Values{"pattern": `a+`}, `"…`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -79,7 +79,7 @@ func TestRegex(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !strings.Contains(res.Text, tt.want) {
-				t.Errorf("la salida no contiene %q:\n%s", tt.want, res.Text)
+				t.Errorf("the output does not contain %q:\n%s", tt.want, res.Text)
 			}
 		})
 	}
@@ -90,8 +90,8 @@ func TestRegexLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(res.Text, "límite") || res.Meta[0].Value != "10000" {
-		t.Errorf("no se aplicó el límite: %s", res.Meta)
+	if !strings.Contains(res.Text, "limit") || res.Meta[0].Value != "10000" {
+		t.Errorf("the limit was not applied: %s", res.Meta)
 	}
 }
 
@@ -101,12 +101,12 @@ func TestRegexErrors(t *testing.T) {
 		col           int
 		hint          string
 	}{
-		{"parentesis sin cerrar", `ab(c`, 1, "missing closing )"},
-		{"lookbehind negativo", `(?<!a)b`, 1, "lookbehind"},
+		{"unclosed parenthesis", `ab(c`, 1, "missing closing )"},
+		{"negative lookbehind", `(?<!a)b`, 1, "lookbehind"},
 		{"lookbehind", `x(?<=a)b`, 2, "lookbehind"},
 		{"lookahead", `a(?=b)`, 2, "lookahead"},
 		{"backreference", `(a)\1`, 4, "backreferences"},
-		{"repeticion invalida", `a**`, 2, "invalid nested repetition"},
+		{"invalid repetition", `a**`, 2, "invalid nested repetition"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -116,7 +116,7 @@ func TestRegexErrors(t *testing.T) {
 				t.Fatalf("error = %v, want *InputError", err)
 			}
 			if ie.Input != "pattern" || ie.Col != tt.col || !strings.Contains(ie.Msg, tt.hint) {
-				t.Errorf("= %q col %d (%s), want col %d con %q", ie.Input, ie.Col, ie.Msg, tt.col, tt.hint)
+				t.Errorf("= %q col %d (%s), want col %d with %q", ie.Input, ie.Col, ie.Msg, tt.col, tt.hint)
 			}
 		})
 	}
@@ -129,7 +129,7 @@ func FuzzRegex(f *testing.F) {
 		_, err := runRegex(t, text, tool.Values{"pattern": pattern, "multiline": true})
 		if err != nil {
 			if _, ok := tool.AsInputError(err); !ok {
-				t.Fatalf("error que no es *InputError: %v", err)
+				t.Fatalf("error that is not *InputError: %v", err)
 			}
 		}
 	})

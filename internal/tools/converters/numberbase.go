@@ -10,21 +10,21 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// NumberBase convierte enteros de cualquier tamaño entre bases 2, 8, 10 y 16.
+// NumberBase converts integers of any size between bases 2, 8, 10 and 16.
 type NumberBase struct{}
 
 func (NumberBase) Spec() tool.Spec {
 	return tool.Spec{
 		ID:          "number-base",
-		Name:        "Bases numéricas",
+		Name:        "Number bases",
 		Category:    tool.Converters,
-		Description: "Convierte enteros entre binario, octal, decimal y hexadecimal",
-		Keywords:    []string{"binario", "hex", "octal", "decimal", "radix", "base"},
-		Inputs:      []tool.InputSpec{{Key: "input", Label: "Número"}},
+		Description: "Convert integers between binary, octal, decimal and hexadecimal",
+		Keywords:    []string{"binary", "hex", "octal", "decimal", "radix", "base"},
+		Inputs:      []tool.InputSpec{{Key: "input", Label: "Number"}},
 		Options: []tool.Option{
-			{Key: "from", Label: "Base de entrada", Help: "auto: por prefijo 0x, 0b, 0o; si no, decimal", Kind: tool.Select,
+			{Key: "from", Label: "Input base", Help: "auto: by 0x, 0b, 0o prefix; otherwise decimal", Kind: tool.Select,
 				Choices: []string{"auto", "2", "8", "10", "16"}, Default: "auto"},
-			{Key: "group", Label: "Agrupar", Help: "Separa dígitos con '_'", Kind: tool.Toggle, Default: true},
+			{Key: "group", Label: "Group", Help: "Separate digits with '_'", Kind: tool.Toggle, Default: true},
 		},
 		Output: tool.PlainText,
 		Live:   true,
@@ -50,35 +50,35 @@ func (nb NumberBase) Run(ctx context.Context, req tool.Request) (tool.Result, er
 	rows := []struct {
 		label string
 		base  int
-	}{{"Binario", 2}, {"Octal", 8}, {"Decimal", 10}, {"Hexadecimal", 16}}
+	}{{"Binary", 2}, {"Octal", 8}, {"Decimal", 10}, {"Hexadecimal", 16}}
 	var b strings.Builder
 	for _, r := range rows {
 		fmt.Fprintf(&b, "%-12s %s\n", r.label+":", formatInt(n, r.base, group))
 	}
 
-	fits := "no cabe en 64 bits"
+	fits := "does not fit in 64 bits"
 	switch {
 	case n.IsInt64():
-		fits = "cabe en int64"
+		fits = "fits in int64"
 	case n.IsUint64():
-		fits = "cabe en uint64"
+		fits = "fits in uint64"
 	}
 	return tool.Result{
 		Text: strings.TrimRight(b.String(), "\n"),
 		Meta: []tool.KV{
-			{Key: "Base de entrada", Value: strconv.Itoa(base)},
+			{Key: "Input base", Value: strconv.Itoa(base)},
 			{Key: "Bits", Value: strconv.Itoa(n.BitLen())},
-			{Key: "Rango", Value: fits},
+			{Key: "Range", Value: fits},
 		},
 	}, nil
 }
 
-// parseInt acepta signo, prefijo (en auto) y separadores '_' o espacio, y
-// señala la columna del primer dígito inválido.
+// parseInt accepts a sign, a prefix (in auto) and '_' or space separators,
+// and points at the column of the first invalid digit.
 func parseInt(in, from string) (*big.Int, int, error) {
 	start := len(in) - len(strings.TrimLeft(in, " \t\r\n"))
 	s := strings.TrimSpace(in)
-	pos := start // offset en in del carácter actual de s
+	pos := start // offset in `in` of the current character of s
 
 	neg := false
 	if s != "" && (s[0] == '-' || s[0] == '+') {
@@ -105,15 +105,15 @@ func parseInt(in, from string) (*big.Int, int, error) {
 		if v := digitValue(c); v < 0 || v >= base {
 			line, col := tool.Position(in, pos+i)
 			return nil, base, &tool.InputError{Input: "input", Line: line, Col: col,
-				Msg: fmt.Sprintf("%q no es un dígito válido en base %d", c, base)}
+				Msg: fmt.Sprintf("%q is not a valid digit in base %d", c, base)}
 		}
 		digits.WriteByte(c)
 	}
 	if digits.Len() == 0 {
 		line, col := tool.Position(in, pos)
-		return nil, base, &tool.InputError{Input: "input", Line: line, Col: col, Msg: "faltan dígitos"}
+		return nil, base, &tool.InputError{Input: "input", Line: line, Col: col, Msg: "missing digits"}
 	}
-	n, _ := new(big.Int).SetString(digits.String(), base) // ya validado
+	n, _ := new(big.Int).SetString(digits.String(), base) // already validated
 	if neg {
 		n.Neg(n)
 	}
@@ -148,7 +148,7 @@ func formatInt(n *big.Int, base int, group bool) string {
 	return sign + basePrefixes[base] + digits
 }
 
-// groupDigits separa con '_' cada size dígitos desde la derecha.
+// groupDigits separates every size digits from the right with '_'.
 func groupDigits(s string, size int) string {
 	if len(s) <= size {
 		return s

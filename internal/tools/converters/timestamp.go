@@ -8,13 +8,13 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	_ "time/tzdata" // zonas IANA embebidas: no depende del sistema (Windows, binario estático)
+	_ "time/tzdata" // embedded IANA zones: no dependency on the system (Windows, static binary)
 
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// Timestamp convierte entre timestamps Unix y fechas. Now permite fijar el
-// reloj en los tests; si es nil se usa time.Now.
+// Timestamp converts between Unix timestamps and dates. Now pins the clock in
+// tests; nil uses time.Now.
 type Timestamp struct {
 	Now func() time.Time
 }
@@ -24,13 +24,13 @@ func (Timestamp) Spec() tool.Spec {
 		ID:          "timestamp",
 		Name:        "Timestamp",
 		Category:    tool.Converters,
-		Description: "Convierte timestamps Unix ↔ fechas (ISO 8601, RFC 1123)",
-		Keywords:    []string{"unix", "epoch", "fecha", "date", "time", "iso8601", "rfc3339"},
-		Inputs:      []tool.InputSpec{{Key: "input", Label: "Timestamp o fecha (vacío = ahora)"}},
+		Description: "Convert Unix timestamps ↔ dates (ISO 8601, RFC 1123)",
+		Keywords:    []string{"unix", "epoch", "date", "time", "iso8601", "rfc3339"},
+		Inputs:      []tool.InputSpec{{Key: "input", Label: "Timestamp or date (empty = now)"}},
 		Options: []tool.Option{
-			{Key: "unit", Label: "Unidad", Help: "auto: según la cantidad de dígitos", Kind: tool.Select,
+			{Key: "unit", Label: "Unit", Help: "auto: by number of digits", Kind: tool.Select,
 				Choices: []string{"auto", "s", "ms", "us", "ns"}, Default: "auto"},
-			{Key: "tz", Label: "Zona", Help: "Local, UTC o un nombre IANA (America/Bogota)", Kind: tool.String, Default: "Local"},
+			{Key: "tz", Label: "Zone", Help: "Local, UTC or an IANA name (America/Bogota)", Kind: tool.String, Default: "Local"},
 		},
 		Output: tool.PlainText,
 		Live:   true,
@@ -45,9 +45,9 @@ var dateLayouts = []string{
 	time.RFC850, time.ANSIC, time.UnixDate,
 }
 
-var weekdays = [...]string{"domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"}
+var weekdays = [...]string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 
-var unitNames = map[string]string{"s": "segundos", "ms": "milisegundos", "us": "microsegundos", "ns": "nanosegundos"}
+var unitNames = map[string]string{"s": "seconds", "ms": "milliseconds", "us": "microseconds", "ns": "nanoseconds"}
 
 func (ts Timestamp) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 	if err := ctx.Err(); err != nil {
@@ -56,7 +56,7 @@ func (ts Timestamp) Run(ctx context.Context, req tool.Request) (tool.Result, err
 	opts := req.Opts.WithDefaults(ts.Spec())
 	loc, err := loadZone(opts.String("tz"))
 	if err != nil {
-		return tool.Result{}, &tool.InputError{Input: "tz", Msg: fmt.Sprintf("zona desconocida %q", opts.String("tz"))}
+		return tool.Result{}, &tool.InputError{Input: "tz", Msg: fmt.Sprintf("unknown zone %q", opts.String("tz"))}
 	}
 	now := time.Now
 	if ts.Now != nil {
@@ -68,7 +68,7 @@ func (ts Timestamp) Run(ctx context.Context, req tool.Request) (tool.Result, err
 	var source string
 	switch {
 	case in == "":
-		t, source = now(), "ahora"
+		t, source = now(), "now"
 	case numberRe.MatchString(in):
 		unit := opts.String("unit")
 		if unit == "auto" {
@@ -78,13 +78,13 @@ func (ts Timestamp) Run(ctx context.Context, req tool.Request) (tool.Result, err
 		if err != nil {
 			return tool.Result{}, &tool.InputError{Input: "input", Line: 1, Col: 1, Msg: err.Error()}
 		}
-		source = "Unix en " + unitNames[unit]
+		source = "Unix in " + unitNames[unit]
 	default:
 		t, err = parseDate(in, loc)
 		if err != nil {
-			return tool.Result{}, &tool.InputError{Input: "input", Line: 1, Col: 1, Msg: "no es un número ni una fecha reconocida (ISO 8601, RFC 1123…)"}
+			return tool.Result{}, &tool.InputError{Input: "input", Line: 1, Col: 1, Msg: "not a number nor a known date format (ISO 8601, RFC 1123…)"}
 		}
-		source = "fecha"
+		source = "date"
 	}
 
 	lt := t.In(loc)
@@ -103,9 +103,9 @@ func (ts Timestamp) Run(ctx context.Context, req tool.Request) (tool.Result, err
 		{"ISO 8601", lt.Format(iso)},
 		{"RFC 1123", lt.Format(time.RFC1123)},
 		{"UTC", t.UTC().Format("2006-01-02 15:04:05")},
-		{"Hora local", lt.Format("2006-01-02 15:04:05 -07:00") + " (" + zone + ")"},
-		{"Relativo", Relative(t.Sub(now()))},
-		{"Día", fmt.Sprintf("%s, semana %d-W%02d, día %d del año", weekdays[lt.Weekday()], isoYear, week, lt.YearDay())},
+		{"Local time", lt.Format("2006-01-02 15:04:05 -07:00") + " (" + zone + ")"},
+		{"Relative", Relative(t.Sub(now()))},
+		{"Day", fmt.Sprintf("%s, week %d-W%02d, day %d of the year", weekdays[lt.Weekday()], isoYear, week, lt.YearDay())},
 	}
 	var b strings.Builder
 	for _, r := range rows {
@@ -113,7 +113,7 @@ func (ts Timestamp) Run(ctx context.Context, req tool.Request) (tool.Result, err
 	}
 	return tool.Result{
 		Text: strings.TrimRight(b.String(), "\n"),
-		Meta: []tool.KV{{Key: "Entrada", Value: source}, {Key: "Zona", Value: loc.String()}},
+		Meta: []tool.KV{{Key: "Input", Value: source}, {Key: "Zone", Value: loc.String()}},
 	}, nil
 }
 
@@ -127,7 +127,7 @@ func loadZone(name string) (*time.Location, error) {
 	return time.LoadLocation(strings.TrimSpace(name))
 }
 
-// guessUnit elige la unidad por la cantidad de dígitos de la parte entera.
+// guessUnit picks the unit from the number of digits in the integer part.
 func guessUnit(s string) string {
 	digits := len(strings.TrimPrefix(strings.SplitN(s, ".", 2)[0], "-"))
 	switch {
@@ -142,7 +142,7 @@ func guessUnit(s string) string {
 	}
 }
 
-// fromUnix usa big.Float para no perder precisión ni desbordar.
+// fromUnix uses big.Float so it neither loses precision nor overflows.
 func fromUnix(s, unit string) (time.Time, error) {
 	f, _, err := big.ParseFloat(s, 10, 128, big.ToNearestEven)
 	if err != nil {
@@ -152,11 +152,11 @@ func fromUnix(s, unit string) (time.Time, error) {
 	ns := new(big.Float).Mul(f, big.NewFloat(1e9/perSecond))
 	n, _ := ns.Int(nil)
 	if !n.IsInt64() {
-		return time.Time{}, fmt.Errorf("fuera de rango para %s", unitNames[unit])
+		return time.Time{}, fmt.Errorf("out of range for %s", unitNames[unit])
 	}
 	sec := n.Int64() / 1e9
-	if math.Abs(float64(sec)) > 1e11 { // ±3000 años aprox.
-		return time.Time{}, fmt.Errorf("fuera de rango para %s", unitNames[unit])
+	if math.Abs(float64(sec)) > 1e11 { // about ±3000 years
+		return time.Time{}, fmt.Errorf("out of range for %s", unitNames[unit])
 	}
 	return time.Unix(sec, n.Int64()%1e9), nil
 }
@@ -167,10 +167,10 @@ func parseDate(s string, loc *time.Location) (time.Time, error) {
 			return t, nil
 		}
 	}
-	return time.Time{}, fmt.Errorf("formato desconocido")
+	return time.Time{}, fmt.Errorf("unknown format")
 }
 
-// Detect reconoce 10 o 13 dígitos que caen entre los años 2000 y 2100.
+// Detect recognises 10 or 13 digits falling between the years 2000 and 2100.
 func (Timestamp) Detect(sample string) float64 {
 	s := strings.TrimSpace(sample)
 	if (len(s) != 10 && len(s) != 13) || !numberRe.MatchString(s) || strings.ContainsAny(s, "-.") {

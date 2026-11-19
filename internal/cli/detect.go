@@ -24,9 +24,9 @@ type detectJSON struct {
 
 func newDetect(d Deps, g *globalFlags) *cobra.Command {
 	return &cobra.Command{
-		Use:     "detect [archivo|-]",
-		Short:   "Detecta qué herramienta corresponde a la entrada",
-		Long:    "Analiza una muestra de hasta 64 KB y elige la herramienta con mayor\npuntaje si supera 0.5; si dos quedan a menos de 0.1, las muestra todas.",
+		Use:     "detect [file|-]",
+		Short:   "Detect which tool matches the input",
+		Long:    "Analyses a sample of up to 64 KB and picks the tool with the highest\nscore above 0.5; when two are less than 0.1 apart, it lists them all.",
 		GroupID: "general",
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -53,12 +53,12 @@ func newDetect(d Deps, g *globalFlags) *cobra.Command {
 			case out.Best != nil:
 				fmt.Fprintf(w, "%s (%.2f)\n", out.Best.Tool.Spec().ID, out.Best.Score)
 			case out.Ambiguous:
-				fmt.Fprintln(cmd.ErrOrStderr(), "devtooltui: varias herramientas posibles:")
+				fmt.Fprintln(cmd.ErrOrStderr(), "devtooltui: several tools match:")
 				for _, c := range out.Candidates {
 					fmt.Fprintf(w, "%s (%.2f)\n", c.Tool.Spec().ID, c.Score)
 				}
 			default:
-				return &exitError{ExitInput, errors.New("no se reconoció el formato de la entrada")}
+				return &exitError{ExitInput, errors.New("the input format was not recognised")}
 			}
 			return nil
 		},

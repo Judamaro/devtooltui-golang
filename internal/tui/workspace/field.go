@@ -10,8 +10,8 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// field es una entrada de la herramienta: un textarea editable o, en modo
-// de entrada grande (ADR 0002), un viewport de solo lectura.
+// field is one tool input: an editable textarea or, in large input mode
+// (ADR 0002), a read-only viewport.
 type field struct {
 	spec      tool.InputSpec
 	ta        textarea.Model
@@ -22,7 +22,7 @@ type field struct {
 
 func newField(spec tool.InputSpec, styles textarea.Styles) *field {
 	ta := textarea.New()
-	ta.Placeholder = "Escribe o pega aquí…"
+	ta.Placeholder = "Type or paste here…"
 	ta.CharLimit = 0
 	ta.MaxHeight = 0
 	ta.MaxWidth = 0
@@ -51,8 +51,8 @@ func (f *field) setLarge(s string) {
 	f.ta.Reset()
 }
 
-// setValue reemplaza el contenido sin pasar por el textarea (que ignora
-// los mensajes si no tiene el foco).
+// setValue replaces the content without going through the textarea (which
+// ignores messages when unfocused).
 func (f *field) setValue(s string, lim Limits) {
 	f.clear()
 	if exceeds(s, lim) {
@@ -78,8 +78,8 @@ func (f *field) view() string {
 	return f.ta.View()
 }
 
-// update procesa un mensaje y devuelve si cambió el valor y si hay que
-// ejecutar enseguida (pegado que entra en modo grande).
+// update handles a message and reports whether the value changed and whether
+// it must run right away (a paste that switches to large mode).
 func (f *field) update(msg tea.Msg, lim Limits) (changed, now bool, cmd tea.Cmd) {
 	if f.large {
 		if p, ok := msg.(tea.PasteMsg); ok {
@@ -91,7 +91,7 @@ func (f *field) update(msg tea.Msg, lim Limits) (changed, now bool, cmd tea.Cmd)
 	}
 	before := f.ta.Value()
 	if p, ok := msg.(tea.PasteMsg); ok && exceeds(before+p.Content, lim) {
-		// Se agrega al final: el textarea truncaría o se congelaría.
+		// Appended at the end: the textarea would truncate or freeze.
 		f.setLarge(before + p.Content)
 		return true, true, nil
 	}

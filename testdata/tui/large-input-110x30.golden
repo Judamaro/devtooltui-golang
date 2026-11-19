@@ -1,0 +1,30 @@
+▾ Encoders               │Base64 Encode and decode standard or URL-safe Base64
+  ▸ Base64               │Mode: ◀ encode ▶   Alphabet: ◀ standard ▶   Padding: [x]   Output: ◀ auto ▶
+                         │── Input ───────────────────────────────────────────────────────────────────────────
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │hello world
+                         │── Output ──────────────────────────────────────────────────────────────────────────
+                         │aGVsbG8gd29ybGQKaGVsbG8gd29ybGQKaGVsbG8gd29ybGQKaGVsbG8gd29ybGQKaGVsbG8gd29ybGQKaGVs
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+                         │
+⚠ 41.0 KB · 3501 lines · read-only (f5 run, ctrl+l clear) · ✓ 0 µs · Input: 42000 B · Output: 56000 B

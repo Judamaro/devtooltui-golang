@@ -1,17 +1,17 @@
-// Package tool define el contrato que implementan todas las herramientas.
+// Package tool defines the contract every tool implements.
 //
-// Una herramienta es una Spec declarativa más una función pura
-// Run(ctx, Request) → Result. La TUI y la CLI construyen su interfaz
-// leyendo la Spec; ninguna herramienta escribe código de UI.
+// A tool is a declarative Spec plus a pure function
+// Run(ctx, Request) → Result. The TUI and the CLI build their interface by
+// reading the Spec; no tool writes UI code.
 //
-// Reglas del contrato:
-//  1. Run no hace I/O ni guarda estado global, y respeta ctx.
-//  2. Las herramientas reversibles usan una opción "mode" (Select) con
-//     los valores "encode" y "decode".
-//  3. Los errores de entrada devuelven *InputError; cualquier otro error
-//     se considera un bug.
-//  4. Las salidas binarias se representan en Base64 o hex según la
-//     opción "output".
+// Contract rules:
+//  1. Run does no I/O, keeps no global state and honours ctx.
+//  2. Reversible tools use a "mode" option (Select) with the values
+//     "encode" and "decode".
+//  3. Input errors are returned as *InputError; any other error is
+//     considered a bug.
+//  4. Binary outputs are shown as Base64 or hex depending on the
+//     "output" option.
 package tool
 
 import "context"
@@ -19,15 +19,15 @@ import "context"
 type Category string
 
 const (
-	Converters Category = "Conversores"
-	Encoders   Category = "Codificadores"
-	Formatters Category = "Formateadores"
-	Generators Category = "Generadores"
+	Converters Category = "Converters"
+	Encoders   Category = "Encoders"
+	Formatters Category = "Formatters"
+	Generators Category = "Generators"
 	Testers    Category = "Testers"
-	Text       Category = "Texto"
+	Text       Category = "Text"
 )
 
-// Categories devuelve las categorías en el orden en que se muestran.
+// Categories returns the categories in display order.
 func Categories() []Category {
 	return []Category{Formatters, Encoders, Converters, Generators, Testers, Text}
 }
@@ -36,9 +36,9 @@ type OptionKind int
 
 const (
 	Toggle OptionKind = iota // bool
-	Select                   // una de Choices
-	Number                   // int con Min/Max
-	String                   // texto corto (secreto JWT, separador…)
+	Select                   // one of Choices
+	Number                   // int within Min/Max
+	String                   // short text (JWT secret, separator…)
 )
 
 type Option struct {
@@ -51,7 +51,7 @@ type Option struct {
 
 type InputSpec struct {
 	Key, Label string
-	Lang       string // resaltado: "json", "xml", ""…
+	Lang       string // highlighting: "json", "xml", ""…
 	Multiline  bool
 }
 
@@ -59,22 +59,22 @@ type OutputKind int
 
 const (
 	PlainText   OutputKind = iota
-	Highlighted            // usa Result.Lang
-	DiffView               // usa Result.Diff
-	Matches                // usa Result.Spans (regex, JSONPath)
-	Image                  // bloques Unicode (QR)
+	Highlighted            // uses Result.Lang
+	DiffView               // uses Result.Diff
+	Matches                // uses Result.Spans (regex, JSONPath)
+	Image                  // Unicode blocks (QR)
 )
 
 type Spec struct {
-	ID          string // "base64", "json-format"… (nombre del subcomando CLI)
+	ID          string // "base64", "json-format"… (CLI subcommand name)
 	Name        string
 	Category    Category
 	Description string
 	Keywords    []string
-	Inputs      []InputSpec // 0 (generadores), 1 o 2 (diff, regex)
+	Inputs      []InputSpec // 0 (generators), 1 or 2 (diff, jwt)
 	Options     []Option
 	Output      OutputKind
-	Live        bool // false = recalcular solo con F5 (operaciones costosas)
+	Live        bool // false = recompute only on F5 (expensive operations)
 }
 
 type Request struct {
@@ -86,11 +86,11 @@ type Result struct {
 	Text  string
 	Lang  string
 	Diff  []DiffOp
-	Spans []Span // rangos resaltados en la entrada
-	Meta  []KV   // "Tamaño: 1.2 KB", "exp: 2026-12-01"… para la statusbar
+	Spans []Span // highlighted ranges in the input
+	Meta  []KV   // "Size: 1.2 KB", "exp: 2026-12-01"… for the statusbar
 }
 
-// DiffKind indica el tipo de un fragmento de diff.
+// DiffKind is the kind of a diff fragment.
 type DiffKind int
 
 const (
@@ -99,20 +99,20 @@ const (
 	Delete
 )
 
-// DiffOp es un fragmento de un diff.
+// DiffOp is a fragment of a diff.
 type DiffOp struct {
 	Kind DiffKind
 	Text string
 }
 
-// Span es un rango resaltado en una entrada, con offsets en bytes [Start, End).
+// Span is a highlighted range in an input, as byte offsets [Start, End).
 type Span struct {
-	Input      string // clave de InputSpec
+	Input      string // InputSpec key
 	Start, End int
-	Group      int // 0 = coincidencia completa, n = grupo de captura
+	Group      int // 0 = whole match, n = capture group
 }
 
-// KV es un par clave/valor de metadatos para la statusbar.
+// KV is a key/value metadata pair for the statusbar.
 type KV struct {
 	Key, Value string
 }
@@ -122,7 +122,7 @@ type Tool interface {
 	Run(ctx context.Context, req Request) (Result, error)
 }
 
-// Detector es opcional: participa en la detección inteligente.
+// Detector is optional: it takes part in smart detection.
 type Detector interface {
 	Detect(sample string) float64 // 0..1
 }

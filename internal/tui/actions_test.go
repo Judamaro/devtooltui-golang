@@ -19,9 +19,9 @@ func TestUseOutput(t *testing.T) {
 	send(a, keyCtrl('r'))
 	ws := a.workspace()
 	if ws.ActiveValue() != "aG9sYQ==" || ws.Output() != "YUc5c1lRPT0=" {
-		t.Errorf("entrada = %q, salida = %q", ws.ActiveValue(), ws.Output())
+		t.Errorf("input = %q, output = %q", ws.ActiveValue(), ws.Output())
 	}
-	if a.flash != "salida usada como entrada" {
+	if a.flash != "output used as input" {
 		t.Errorf("flash = %q", a.flash)
 	}
 }
@@ -29,16 +29,16 @@ func TestUseOutput(t *testing.T) {
 func TestEditorDone(t *testing.T) {
 	a := newApp(t, 100, 30)
 	path := filepath.Join(t.TempDir(), "edit.txt")
-	if err := os.WriteFile(path, []byte("desde el editor\n"), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte("from the editor\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	send(a, editorDoneMsg{path: path})
 	ws := a.workspace()
-	if ws.ActiveValue() != "desde el editor" || a.focus != focusInput {
-		t.Errorf("entrada = %q, focus = %d", ws.ActiveValue(), a.focus)
+	if ws.ActiveValue() != "from the editor" || a.focus != focusInput {
+		t.Errorf("input = %q, focus = %d", ws.ActiveValue(), a.focus)
 	}
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Error("no se borró el archivo temporal")
+		t.Error("the temporary file was not removed")
 	}
 }
 
@@ -62,7 +62,7 @@ func TestEditorCommand(t *testing.T) {
 func TestEditInputStartsEditor(t *testing.T) {
 	a := newApp(t, 100, 30)
 	if cmd := a.editInput(); cmd == nil {
-		t.Error("ctrl+e no lanzó el editor")
+		t.Error("ctrl+e did not start the editor")
 	}
 }
 
@@ -70,35 +70,35 @@ func TestSaveOutput(t *testing.T) {
 	a := newAppWith(t, 100, 30, formatters.JSONFormat{})
 	press(a, "tab", "tab", "[1]")
 	send(a, keyCtrl('s'))
-	if a.prompt == nil || !strings.Contains(ansi.Strip(a.View().Content), "salida.json") {
-		t.Fatal("ctrl+s no abrió el prompt con salida.json")
+	if a.prompt == nil || !strings.Contains(ansi.Strip(a.View().Content), "output.json") {
+		t.Fatal("ctrl+s did not open the prompt with output.json")
 	}
 	path := filepath.Join(t.TempDir(), "out.json")
-	send(a, keyCtrl('u')) // borra el valor sugerido
+	send(a, keyCtrl('u')) // clears the suggested value
 	press(a, path)
 	send(a, keyEnter())
 	data, err := os.ReadFile(path)
 	if err != nil || string(data) != "[\n  1\n]\n" {
-		t.Fatalf("archivo = %q, %v", data, err)
+		t.Fatalf("file = %q, %v", data, err)
 	}
-	if a.prompt != nil || !strings.HasPrefix(a.flash, "guardado ") {
-		t.Errorf("prompt abierto = %v, flash = %q", a.prompt != nil, a.flash)
+	if a.prompt != nil || !strings.HasPrefix(a.flash, "saved ") {
+		t.Errorf("prompt open = %v, flash = %q", a.prompt != nil, a.flash)
 	}
 }
 
 func TestHelpOverlay(t *testing.T) {
 	a := newApp(t, 100, 30)
 	press(a, "?")
-	if !a.showHelp || !strings.Contains(ansi.Strip(a.View().Content), "Atajos") {
-		t.Fatal("? no mostró la ayuda")
+	if !a.showHelp || !strings.Contains(ansi.Strip(a.View().Content), "Shortcuts") {
+		t.Fatal("? did not show the help")
 	}
 	press(a, "x")
 	if a.showHelp {
-		t.Error("una tecla no cerró la ayuda")
+		t.Error("a key did not close the help")
 	}
-	press(a, "tab", "tab", "?") // dentro de la entrada, "?" es texto
+	press(a, "tab", "tab", "?") // inside the input, "?" is text
 	if a.showHelp || a.workspace().ActiveValue() != "?" {
-		t.Errorf("en la entrada '?' abrió la ayuda o no se escribió")
+		t.Errorf("in the input '?' opened the help or was not typed")
 	}
 }
 
@@ -108,8 +108,8 @@ func TestSidebarFilterInApp(t *testing.T) {
 	if a.active != "base64" {
 		t.Errorf("active = %q, want base64", a.active)
 	}
-	press(a, "x") // "q" se escribió en el filtro: la app sigue viva
+	press(a, "x") // "q" was typed into the filter: the app is still alive
 	if _, cmd := a.Update(tea.KeyPressMsg{Code: 'q', Text: "q"}); cmd != nil && isQuit(cmd()) {
-		t.Error("q salió mientras se filtraba")
+		t.Error("q quit while filtering")
 	}
 }

@@ -1,5 +1,5 @@
-// Package statusbar dibuja la última fila de la TUI: el estado de la
-// herramienta activa a la izquierda y la ayuda contextual a la derecha.
+// Package statusbar draws the TUI's last row: the active tool's status on
+// the left and the contextual help on the right.
 package statusbar
 
 import (
@@ -12,54 +12,54 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// Styles los define tui/theme.go.
+// Styles are defined by tui/theme.go.
 type Styles struct {
 	OK, Error, Warning, Running, Help lipgloss.Style
 }
 
-// Status es lo que muestra la barra sobre la herramienta activa.
+// Status is what the bar shows about the active tool.
 type Status struct {
 	Running    bool
-	Stale      bool // la entrada cambió y hay que presionar F5
+	Stale      bool // the input changed and F5 must be pressed
 	Err        error
 	Elapsed    time.Duration
 	Meta       []tool.KV
-	LargeBytes int // > 0: la entrada está en modo de solo lectura
+	LargeBytes int // > 0: the input is in read-only mode
 	LargeLines int
-	Note       string // aviso secundario (p. ej. salida sin color)
+	Note       string // secondary notice (e.g. output without colour)
 }
 
-// View devuelve una fila de exactamente width columnas.
+// View returns a row exactly width columns wide.
 func View(st Status, help string, width int, s Styles) string {
 	left := Text(st, s)
 	right := s.Help.Render(help)
 	rw := lipgloss.Width(right)
-	if rw+1 > width/2 { // la ayuda no puede comerse el estado
+	if rw+1 > width/2 { // the help must not eat the status
 		right, rw = "", 0
 	}
 	avail := width - rw
 	if rw > 0 {
-		avail-- // separación mínima
+		avail-- // minimum gap
 	}
 	left = lipgloss.NewStyle().MaxWidth(avail).Render(left)
 	gap := max(width-lipgloss.Width(left)-rw, 0)
 	return left + strings.Repeat(" ", gap) + right
 }
 
-// Text es la parte de estado, sin la ayuda.
+// Text is the status part, without the help.
 func Text(st Status, s Styles) string {
 	var parts []string
 	if st.LargeBytes > 0 {
-		parts = append(parts, s.Warning.Render(fmt.Sprintf("⚠ %s · %d líneas · solo lectura (f5 ejecutar, ctrl+l limpiar)",
+		parts = append(parts, s.Warning.Render(fmt.Sprintf("⚠ %s · %d lines · read-only (f5 run, ctrl+l clear)",
 			HumanBytes(st.LargeBytes), st.LargeLines)))
 	}
 	switch {
 	case st.Running:
-		parts = append(parts, s.Running.Render("⋯ ejecutando"))
+		parts = append(parts, s.Running.Render("⋯ running"))
 	case st.Err != nil:
 		parts = append(parts, s.Error.Render("✗ "+st.Err.Error()))
 	case st.Stale:
-		parts = append(parts, s.Warning.Render("● f5 para ejecutar"))
+		parts = append(parts, s.Warning.Render("● press f5 to run"))
 	default:
 		ok := []string{"✓ " + FormatDuration(st.Elapsed)}
 		for _, kv := range st.Meta {
@@ -73,7 +73,7 @@ func Text(st Status, s Styles) string {
 	return strings.Join(parts, " · ")
 }
 
-// FormatDuration muestra µs por debajo de 1 ms y ms con un decimal arriba.
+// FormatDuration shows µs below 1 ms and ms with one decimal above.
 func FormatDuration(d time.Duration) string {
 	switch {
 	case d < time.Millisecond:
@@ -85,7 +85,7 @@ func FormatDuration(d time.Duration) string {
 	}
 }
 
-// HumanBytes formatea un tamaño en B, KB o MB.
+// HumanBytes formats a size in B, KB or MB.
 func HumanBytes(n int) string {
 	switch {
 	case n < 1<<10:

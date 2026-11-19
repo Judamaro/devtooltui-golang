@@ -18,7 +18,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// flagName convierte la clave de una opción en flag: sort_keys → sort-keys.
+// flagName turns an option key into a flag: sort_keys → sort-keys.
 func flagName(key string) string { return strings.ReplaceAll(key, "_", "-") }
 
 func newToolCmd(t tool.Tool, d Deps, g *globalFlags) *cobra.Command {
@@ -29,9 +29,9 @@ func newToolCmd(t tool.Tool, d Deps, g *globalFlags) *cobra.Command {
 	}
 	switch len(s.Inputs) {
 	case 1:
-		use += " [archivo|-]"
+		use += " [file|-]"
 	case 2:
-		use += " [archivo-A|-] [archivo-B|-]"
+		use += " [file-A|-] [file-B|-]"
 	}
 	cmd := &cobra.Command{
 		Use:     use,
@@ -115,20 +115,20 @@ func longHelp(s tool.Spec) string {
 	switch len(s.Inputs) {
 	case 0:
 	case 1:
-		b.WriteString("\n\nLee " + strings.ToLower(s.Inputs[0].Label) + " del archivo indicado, de \"-\" o de stdin.")
+		b.WriteString("\n\nReads " + strings.ToLower(s.Inputs[0].Label) + " from the given file, from \"-\" or from stdin.")
 	default:
-		b.WriteString("\n\nEntradas, en orden: ")
+		b.WriteString("\n\nInputs, in order: ")
 		var labels []string
 		for _, in := range s.Inputs {
 			labels = append(labels, in.Label)
 		}
-		b.WriteString(strings.Join(labels, "; ") + ". Si falta alguna y stdin no es una terminal, se lee de stdin.")
+		b.WriteString(strings.Join(labels, "; ") + ". A missing one is read from stdin when stdin is not a terminal.")
 	}
 	return b.String()
 }
 
-// collectOptions arma tool.Values desde los flags; "mode" también se acepta
-// como primer argumento (devtooltui base64 decode).
+// collectOptions builds tool.Values from the flags; "mode" is also accepted
+// as the first argument (devtooltui base64 decode).
 func collectOptions(s tool.Spec, fs *pflag.FlagSet, vals map[string]any, args []string) (tool.Values, []string, error) {
 	opts := tool.Values{}
 	for _, o := range s.Options {
@@ -137,19 +137,19 @@ func collectOptions(s tool.Spec, fs *pflag.FlagSet, vals map[string]any, args []
 			opts[o.Key] = *v
 		case *int:
 			if *v < o.Min || *v > o.Max {
-				return nil, nil, usageErr("--%s debe estar entre %d y %d", flagName(o.Key), o.Min, o.Max)
+				return nil, nil, usageErr("--%s must be between %d and %d", flagName(o.Key), o.Min, o.Max)
 			}
 			opts[o.Key] = *v
 		case *string:
 			if o.Kind == tool.Select && !slices.Contains(o.Choices, *v) {
-				return nil, nil, usageErr("--%s debe ser uno de: %s", flagName(o.Key), strings.Join(o.Choices, ", "))
+				return nil, nil, usageErr("--%s must be one of: %s", flagName(o.Key), strings.Join(o.Choices, ", "))
 			}
 			opts[o.Key] = *v
 		}
 	}
 	if choices := modeChoices(s); len(args) > 0 && slices.Contains(choices, args[0]) {
 		if fs.Changed("mode") && opts.String("mode") != args[0] {
-			return nil, nil, usageErr("modo %q y --mode %q no coinciden", args[0], opts.String("mode"))
+			return nil, nil, usageErr("mode %q and --mode %q do not match", args[0], opts.String("mode"))
 		}
 		opts["mode"] = args[0]
 		args = args[1:]
@@ -157,11 +157,11 @@ func collectOptions(s tool.Spec, fs *pflag.FlagSet, vals map[string]any, args []
 	return opts, args, nil
 }
 
-// readInputs asigna los argumentos a las entradas en orden ("-" = stdin).
-// La primera entrada que quede sin argumento lee stdin si no es una terminal.
+// readInputs assigns the arguments to the inputs in order ("-" = stdin).
+// The first input left without an argument reads stdin when it is not a terminal.
 func readInputs(s tool.Spec, args []string, d Deps, maxInput int64) (map[string]string, map[string]string, error) {
 	if len(args) > len(s.Inputs) {
-		return nil, nil, usageErr("%s acepta como máximo %d archivo(s), recibió %d", s.ID, len(s.Inputs), len(args))
+		return nil, nil, usageErr("%s accepts at most %d file(s), got %d", s.ID, len(s.Inputs), len(args))
 	}
 	inputs := map[string]string{}
 	sources := map[string]string{}
@@ -172,7 +172,7 @@ func readInputs(s tool.Spec, args []string, d Deps, maxInput int64) (map[string]
 			return &exitError{ExitInput, fmt.Errorf("%s: %w", name, err)}
 		}
 		if int64(len(b)) > maxInput {
-			return &exitError{ExitInput, fmt.Errorf("%s: la entrada supera --max-input (%d bytes)", name, maxInput)}
+			return &exitError{ExitInput, fmt.Errorf("%s: the input exceeds --max-input (%d bytes)", name, maxInput)}
 		}
 		inputs[key], sources[key] = string(b), name
 		return nil
@@ -181,7 +181,7 @@ func readInputs(s tool.Spec, args []string, d Deps, maxInput int64) (map[string]
 		switch {
 		case i < len(args) && args[i] == "-":
 			if stdinUsed {
-				return nil, nil, usageErr("stdin (\"-\") solo se puede usar una vez")
+				return nil, nil, usageErr("stdin (\"-\") can only be used once")
 			}
 			stdinUsed = true
 			if err := read(in.Key, "<stdin>", d.Stdin); err != nil {
@@ -213,13 +213,13 @@ func runError(err error, sources map[string]string) error {
 	ie, ok := tool.AsInputError(err)
 	if !ok {
 		if errors.Is(err, context.Canceled) {
-			return &exitError{ExitInternal, errors.New("cancelado")}
+			return &exitError{ExitInternal, errors.New("cancelled")}
 		}
-		return &exitError{ExitInternal, fmt.Errorf("error interno: %w", err)}
+		return &exitError{ExitInternal, fmt.Errorf("internal error: %w", err)}
 	}
 	src := sources[ie.Input]
 	if src == "" {
-		src = "--" + flagName(ie.Input) // error en una opción (p. ej. --pattern)
+		src = "--" + flagName(ie.Input) // error in an option (e.g. --pattern)
 	}
 	return &exitError{ExitInput, fmt.Errorf("%s:%s", src, ie.Error())}
 }
@@ -281,23 +281,23 @@ func writeResult(w io.Writer, res tool.Result, kind tool.OutputKind, inputs map[
 	return err
 }
 
-// copyOutput copia al portapapeles; si falla solo avisa por stderr (la
-// salida ya se escribió).
+// copyOutput copies to the clipboard; on failure it only warns on stderr
+// (the output was already written).
 func copyOutput(stderr io.Writer, text string, d Deps) {
 	if d.Clipboard == nil {
-		fmt.Fprintln(stderr, "devtooltui: no hay portapapeles disponible")
+		fmt.Fprintln(stderr, "devtooltui: no clipboard available")
 		return
 	}
 	if err := d.Clipboard.Write(text); err != nil {
-		fmt.Fprintln(stderr, "devtooltui: no se pudo copiar:", err)
+		fmt.Fprintln(stderr, "devtooltui: could not copy:", err)
 		return
 	}
 	if sys, ok := d.Clipboard.(*clipboard.System); ok && !sys.SSH() && sys.UseOSC52() {
-		fmt.Fprintln(stderr, "devtooltui: copiado con OSC 52; para el portapapeles del sistema,", sys.InstallHint())
+		fmt.Fprintln(stderr, "devtooltui: copied with OSC 52; for the system clipboard,", sys.InstallHint())
 	}
 }
 
-// useColor: solo si stdout es una terminal, sin --no-color ni NO_COLOR.
+// useColor: only when stdout is a terminal, without --no-color or NO_COLOR.
 func useColor(d Deps, g *globalFlags) bool {
 	return d.StdoutTTY && !g.noColor && d.Getenv("NO_COLOR") == ""
 }

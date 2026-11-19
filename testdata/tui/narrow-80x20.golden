@@ -1,0 +1,20 @@
+Base64 Encode and decode standard or URL-safe Base64
+Mode: ◀ encode ▶   Alphabet: ◀ standard ▶   Padding: [x]   Output: ◀ auto ▶
+── Input ───────────────────────────────────────────────────────────────────────
+┃  1 hola
+┃
+┃
+┃
+┃
+┃
+┃
+── Output ──────────────────────────────────────────────────────────────────────
+aG9sYQ==
+
+
+
+
+
+
+
+✓ 0 µs · Input: 4 B · Output: 8 B

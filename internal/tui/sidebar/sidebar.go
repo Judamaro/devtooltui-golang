@@ -1,5 +1,5 @@
-// Package sidebar muestra las categorías y herramientas del registro, con
-// un filtro difuso que se abre con "/".
+// Package sidebar shows the registry's categories and tools, with a fuzzy
+// filter opened with "/".
 package sidebar
 
 import (
@@ -13,36 +13,36 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 )
 
-// Styles los define tui/theme.go.
+// Styles are defined by tui/theme.go.
 type Styles struct {
 	Category, Item, Selected, SelectedBlurred, Filter lipgloss.Style
 }
 
-// KeyMap son las teclas del sidebar.
+// KeyMap holds the sidebar keys.
 type KeyMap struct {
 	Up, Down    key.Binding
-	Filter      key.Binding // empieza a filtrar ("/")
-	EndFilter   key.Binding // termina de filtrar y deja el filtro (Enter)
-	ClearFilter key.Binding // borra el filtro (Esc)
+	Filter      key.Binding // starts filtering ("/")
+	EndFilter   key.Binding // stops filtering and keeps the filter (Enter)
+	ClearFilter key.Binding // clears the filter (Esc)
 }
 
-// SelectedMsg se emite cuando cambia la herramienta seleccionada.
+// SelectedMsg is sent when the selected tool changes.
 type SelectedMsg struct{ ID string }
 
 type entry struct {
-	header string // no vacío = encabezado de categoría
+	header string // non-empty = category header
 	id     string
 	name   string
-	search string // nombre, ID y keywords
+	search string // name, ID and keywords
 }
 
-// Model es el sidebar. El cursor solo se posa sobre herramientas visibles.
+// Model is the sidebar. The cursor only rests on visible tools.
 type Model struct {
 	entries   []entry
 	visible   []bool
-	cursor    int // índice en entries
+	cursor    int // index into entries
 	focused   bool
-	filtering bool // escribiendo el filtro
+	filtering bool // typing the filter
 	filter    string
 	width     int
 	height    int
@@ -67,7 +67,7 @@ func New(groups []registry.Group, styles Styles, keys KeyMap) Model {
 	return m
 }
 
-// Selected devuelve el ID de la herramienta bajo el cursor.
+// Selected returns the ID of the tool under the cursor.
 func (m Model) Selected() string {
 	if m.cursor < 0 {
 		return ""
@@ -75,10 +75,10 @@ func (m Model) Selected() string {
 	return m.entries[m.cursor].id
 }
 
-// Filtering indica si se está escribiendo el filtro (las teclas son texto).
+// Filtering reports whether the filter is being typed (keys are text).
 func (m Model) Filtering() bool { return m.filtering }
 
-// Select mueve el cursor a la herramienta id (borra el filtro si la oculta).
+// Select moves the cursor to tool id (clearing the filter if it hides it).
 func (m *Model) Select(id string) {
 	for i, e := range m.entries {
 		if e.header == "" && e.id == id {
@@ -113,7 +113,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			m.filter = string(r[:len(r)-1])
 			m.applyFilter()
 		}
-	case m.filtering && k.Text != "": // al filtrar, "j" y "k" son texto
+	case m.filtering && k.Text != "": // while filtering, "j" and "k" are text
 		m.filter += k.Text
 		m.applyFilter()
 	case key.Matches(k, m.keys.Up):
@@ -130,8 +130,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	return m, func() tea.Msg { return SelectedMsg{ID: id} }
 }
 
-// applyFilter recalcula qué entradas se ven y deja el cursor en una
-// herramienta visible (la actual si sigue visible).
+// applyFilter recomputes which entries are visible and leaves the cursor on
+// a visible tool (the current one if it is still visible).
 func (m *Model) applyFilter() {
 	m.visible = make([]bool, len(m.entries))
 	q := strings.TrimSpace(m.filter)
@@ -197,9 +197,9 @@ func (m Model) View() string {
 		}
 	}
 	if len(lines) == bodyStart {
-		lines = append(lines, m.styles.Item.Render("  (sin resultados)"))
+		lines = append(lines, m.styles.Item.Render("  (no results)"))
 	}
-	// Mantener el cursor visible si la lista no cabe (el filtro queda fijo).
+	// Keep the cursor visible when the list does not fit (the filter stays put).
 	if start := cursorLine - m.height + 1; m.height > 0 && start > bodyStart {
 		lines = append(lines[:bodyStart], lines[start:]...)
 	}

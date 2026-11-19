@@ -11,7 +11,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// pair es una herramienta de prueba con dos entradas.
+// pair is a test tool with two inputs.
 type pair struct{}
 
 func (pair) Spec() tool.Spec {
@@ -28,20 +28,20 @@ func TestTwoInputsGolden(t *testing.T) {
 		name string
 		w, h int
 	}{
-		{"dos-entradas-lado-a-lado-130x30", 130, 30},
-		{"dos-entradas-apiladas-100x30", 100, 30},
+		{"two-inputs-side-by-side-130x30", 130, 30},
+		{"two-inputs-stacked-100x30", 100, 30},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := newAppWith(t, tt.w, tt.h, pair{})
-			press(a, "tab", "uno", "tab", "dos")
+			press(a, "tab", "one", "tab", "two")
 			raw := ansi.Strip(a.View().Content)
 			if n := strings.Count(raw, "\n") + 1; n != tt.h {
-				t.Errorf("la vista tiene %d líneas, want %d", n, tt.h)
+				t.Errorf("the view has %d lines, want %d", n, tt.h)
 			}
 			for i, line := range strings.Split(raw, "\n") {
 				if w := ansi.StringWidth(line); w > tt.w {
-					t.Errorf("línea %d mide %d columnas, máximo %d", i+1, w, tt.w)
+					t.Errorf("line %d is %d columns wide, maximum %d", i+1, w, tt.w)
 				}
 			}
 			testutil.Golden(t, "tui", tt.name, plainView(a))
@@ -56,12 +56,12 @@ func TestTwoInputsFocus(t *testing.T) {
 		wantFocus  focus
 		wantActive int
 	}{
-		{"tab entra en A", []string{"tab"}, focusInput, 0},
-		{"tab pasa a B", []string{"tab", "tab"}, focusInput, 1},
-		{"tercer tab a salida", []string{"tab", "tab", "tab"}, focusOutput, 1},
-		{"shift+tab desde salida vuelve a B", []string{"tab", "tab", "tab", "shift+tab"}, focusInput, 1},
-		{"shift+tab desde B a A", []string{"tab", "tab", "shift+tab"}, focusInput, 0},
-		{"shift+tab desde sidebar entra por B", []string{"shift+tab", "shift+tab"}, focusInput, 1},
+		{"tab enters A", []string{"tab"}, focusInput, 0},
+		{"tab moves to B", []string{"tab", "tab"}, focusInput, 1},
+		{"third tab to output", []string{"tab", "tab", "tab"}, focusOutput, 1},
+		{"shift+tab from output back to B", []string{"tab", "tab", "tab", "shift+tab"}, focusInput, 1},
+		{"shift+tab from B to A", []string{"tab", "tab", "shift+tab"}, focusInput, 0},
+		{"shift+tab from the sidebar enters through B", []string{"shift+tab", "shift+tab"}, focusInput, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -76,13 +76,13 @@ func TestTwoInputsFocus(t *testing.T) {
 
 func TestTwoInputsRouting(t *testing.T) {
 	a := newAppWith(t, 100, 30, pair{})
-	press(a, "tab", "uno", "tab", "dos", "shift+tab", "!")
-	if got := a.workspace().Output(); got != "uno!|dos" {
-		t.Errorf("salida = %q, want %q", got, "uno!|dos")
+	press(a, "tab", "one", "tab", "two", "shift+tab", "!")
+	if got := a.workspace().Output(); got != "one!|two" {
+		t.Errorf("output = %q, want %q", got, "one!|two")
 	}
-	press(a, "tab") // a B
+	press(a, "tab") // to B
 	send(a, keyCtrl('l'))
-	if got := a.workspace().Output(); got != "uno!|" {
-		t.Errorf("ctrl+l debe limpiar solo la entrada con foco: %q", got)
+	if got := a.workspace().Output(); got != "one!|" {
+		t.Errorf("ctrl+l must clear only the focused input: %q", got)
 	}
 }

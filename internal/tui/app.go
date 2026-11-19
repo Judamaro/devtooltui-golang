@@ -1,4 +1,4 @@
-// Package tui es el frontend de terminal construido con Bubble Tea v2.
+// Package tui is the terminal frontend built with Bubble Tea v2.
 package tui
 
 import (
@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	sidebarWidth    = 26  // incluye la columna del separador
-	sidebarMinWidth = 90  // por debajo, el sidebar se colapsa
-	splitMinWidth   = 120 // desde aquí, dos entradas van lado a lado
+	sidebarWidth    = 26  // includes the separator column
+	sidebarMinWidth = 90  // below this, the sidebar collapses
+	splitMinWidth   = 120 // from here on, two inputs sit side by side
 )
 
 type focus int
@@ -34,20 +34,20 @@ const (
 	focusCount
 )
 
-// Options configura la App.
+// Options configures the App.
 type Options struct {
-	Debounce      time.Duration // espera entre la última tecla y la ejecución
-	Clipboard     Clipboard     // nil: sin portapapeles
-	DetectOnStart bool          // --clipboard: detectar el portapapeles al abrir
-	// Editor arma el comando del editor externo (Ctrl+E); nil usa
-	// $VISUAL/$EDITOR. Los tests lo reemplazan.
+	Debounce      time.Duration // wait between the last key and the run
+	Clipboard     Clipboard     // nil: no clipboard
+	DetectOnStart bool          // --clipboard: detect the clipboard on start
+	// Editor builds the external editor command (Ctrl+E); nil uses
+	// $VISUAL/$EDITOR. Tests replace it.
 	Editor func(path string) *exec.Cmd
 }
 
-// DefaultOptions son los valores del plan (debounce de 120 ms).
+// DefaultOptions are the plan's values (120 ms debounce).
 func DefaultOptions() Options { return Options{Debounce: 120 * time.Millisecond} }
 
-// App es el modelo raíz.
+// App is the root model.
 type App struct {
 	opts    Options
 	initCmd tea.Cmd
@@ -60,18 +60,18 @@ type App struct {
 	active  string
 	focus   focus
 
-	flash       string          // aviso transitorio en la statusbar
-	palette     *palette.Model  // nil: cerrada
-	prompt      *palette.Prompt // nil: cerrado
+	flash       string          // transient notice in the statusbar
+	palette     *palette.Model  // nil: closed
+	prompt      *palette.Prompt // nil: closed
 	showHelp    bool
-	pendingText string // texto a cargar al elegir en el selector de detección
+	pendingText string // text to load when choosing in the detection picker
 
 	width, height int
-	wide          bool // ancho ≥ sidebarMinWidth en el último resize
+	wide          bool // width ≥ sidebarMinWidth on the last resize
 	showSidebar   bool
 }
 
-// New crea la App con la primera herramienta del sidebar activa.
+// New builds the App with the sidebar's first tool active.
 func New(reg *registry.Registry, opts Options) *App {
 	theme := DarkTheme()
 	keys := DefaultKeyMap()
@@ -141,9 +141,9 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case clipWroteMsg:
 		if msg.err != nil {
-			a.flash = "no se pudo copiar: " + msg.err.Error()
+			a.flash = "could not copy: " + msg.err.Error()
 		} else {
-			a.flash = "salida copiada al portapapeles"
+			a.flash = "output copied to the clipboard"
 		}
 		return a, nil
 
@@ -163,7 +163,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.flash = ""
 		switch {
 		case a.showHelp:
-			a.showHelp = false // cualquier tecla cierra la ayuda
+			a.showHelp = false // any key closes the help
 			return a, nil
 		case a.prompt != nil:
 			return a, a.prompt.Update(msg)
@@ -181,7 +181,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, a.keys.SaveOutput):
 			return a, a.askSave()
 		case key.Matches(msg, a.keys.OpenPalette):
-			return a, a.openPalette("Paleta de comandos", a.paletteItems())
+			return a, a.openPalette("Command palette", a.paletteItems())
 		case key.Matches(msg, a.keys.CopyOutput):
 			return a, a.copyOutput()
 		case key.Matches(msg, a.keys.PasteInput):
@@ -216,7 +216,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	switch { // parpadeo del cursor de la paleta o del prompt
+	switch { // cursor blink of the palette or the prompt
 	case a.prompt != nil:
 		return a, a.prompt.Update(msg)
 	case a.palette != nil:
@@ -293,7 +293,7 @@ func (a *App) activate(id string) tea.Cmd {
 }
 
 func (a *App) layout() {
-	h := max(a.height-1, 1) // última línea: statusbar
+	h := max(a.height-1, 1) // last line: statusbar
 	w := a.width
 	if a.showSidebar {
 		a.sidebar.SetSize(sidebarWidth-1, h)
@@ -306,7 +306,7 @@ func (a *App) layout() {
 }
 
 func (a *App) rotateFocus(delta int) tea.Cmd {
-	// Con varias entradas, Tab recorre primero las del workspace.
+	// With several inputs, Tab walks the workspace's inputs first.
 	if ws := a.workspace(); ws != nil && a.focus == focusInput {
 		if moved, cmd := ws.MoveInput(delta); moved {
 			return cmd
@@ -356,7 +356,7 @@ func (a *App) setFocus(f focus) tea.Cmd {
 	}
 }
 
-// Run arranca el programa de Bubble Tea.
+// Run starts the Bubble Tea program.
 func Run(reg *registry.Registry, opts Options) error {
 	_, err := tea.NewProgram(New(reg, opts)).Run()
 	return err

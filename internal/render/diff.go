@@ -8,14 +8,14 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// DiffStyles define los colores de un diff.
+// DiffStyles defines the colours of a diff.
 type DiffStyles struct {
 	Insert, Delete, Change, Hunk lipgloss.Style
 }
 
-// Diff colorea una salida DiffView. Result.Lang dice el formato:
-// "diff" (unificado: prefijo +/-/@@), "diff-side" (marcador </>/| al inicio)
-// o vacío (por palabras: se pintan las operaciones de Result.Diff).
+// Diff colours a DiffView output. Result.Lang tells the format:
+// "diff" (unified: +/-/@@ prefix), "diff-side" (</>/| marker at line start)
+// or empty (by words: Result.Diff operations are painted).
 func Diff(res tool.Result, s DiffStyles) string {
 	switch res.Lang {
 	case "diff", "diff-side":

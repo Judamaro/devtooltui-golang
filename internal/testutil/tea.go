@@ -6,14 +6,13 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
-// CmdTimeout es lo que RunCmds espera a cada comando. Los resultados de las
-// herramientas llegan en microsegundos; los ticks lentos (parpadeo del
-// cursor, debounce) se descartan.
+// CmdTimeout is how long RunCmds waits for each command. Tool results arrive
+// in microseconds; slow ticks (cursor blink, debounce) are dropped.
 const CmdTimeout = 30 * time.Millisecond
 
-// RunCmds ejecuta cmd y entrega cada mensaje a update, que puede devolver
-// más comandos. Expande tea.BatchMsg. Los comandos que tardan más de
-// CmdTimeout se abandonan.
+// RunCmds runs cmd and hands every message to update, which may return more
+// commands. It expands tea.BatchMsg. Commands that take longer than
+// CmdTimeout are abandoned.
 func RunCmds(cmd tea.Cmd, update func(tea.Msg) tea.Cmd) {
 	queue := []tea.Cmd{cmd}
 	for len(queue) > 0 {

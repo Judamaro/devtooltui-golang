@@ -10,7 +10,7 @@ stdout '"id": "timestamp"'
 stdout '"ambiguous": false'
 
 ! exec devtooltui detect plano.txt
-stderr 'no se reconoció el formato'
+stderr 'format was not recognised'
 
 -- token.txt --
 eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.c2ln
@@ -19,4 +19,4 @@ eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.c2ln
 -- ts.txt --
 1767225600
 -- plano.txt --
-hola, esto es texto normal
+hello, this is plain text

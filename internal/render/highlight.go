@@ -1,5 +1,5 @@
-// Package render colorea las salidas de las herramientas para la terminal.
-// Lo usan la TUI y la CLI; las herramientas no saben nada de colores.
+// Package render colours tool outputs for the terminal. The TUI and the CLI
+// both use it; tools know nothing about colours.
 package render
 
 import (
@@ -10,13 +10,13 @@ import (
 	"github.com/alecthomas/chroma/v2/lexers"
 )
 
-// MaxBytes: por encima de este tamaño la salida no se colorea.
+// MaxBytes: above this size the output is not coloured.
 // BenchmarkHighlight (Ryzen 7 7700): 64 KB ≈ 35 ms, 256 KB ≈ 127 ms,
-// 1 MB ≈ 446 ms; 64 KB es lo que cabe en el presupuesto de 50 ms.
+// 1 MB ≈ 446 ms; 64 KB is what fits the 50 ms budget.
 const MaxBytes = 64 << 10
 
-// Highlight colorea text con el lexer de lang usando 16 colores ANSI.
-// Devuelve ok=false si no hay lexer o falla el coloreado.
+// Highlight colours text with lang's lexer using 16 ANSI colours.
+// It returns ok=false when there is no lexer or colouring fails.
 func Highlight(text, lang string, style *chroma.Style) (string, bool) {
 	if style == nil || lang == "" {
 		return "", false

@@ -35,7 +35,7 @@ func TestHashGolden(t *testing.T) {
 	testutil.Golden(t, "hash", "text-all", strings.Join(all, "\n"))
 }
 
-// Vectores de FIPS 180 y RFC 4231 (HMAC-SHA256, caso 2).
+// FIPS 180 and RFC 4231 (HMAC-SHA256, test case 2) vectors.
 func TestHashVectors(t *testing.T) {
 	tests := []struct {
 		name string
@@ -43,7 +43,7 @@ func TestHashVectors(t *testing.T) {
 		opts tool.Values
 		want string
 	}{
-		{"sha256 vacio", "", nil, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+		{"sha256 empty", "", nil, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
 		{"md5 abc", "abc", tool.Values{"algo": "md5"}, "900150983cd24fb0d6963f7d28e17f72"},
 		{"sha1 abc", "abc", tool.Values{"algo": "sha1"}, "a9993e364706816aba3e25717850c26c9cd0d89d"},
 		{"sha256 abc", "abc", nil, "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"},
@@ -51,9 +51,9 @@ func TestHashVectors(t *testing.T) {
 			"ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"},
 		{"hmac rfc4231", "what do ya want for nothing?", tool.Values{"key": "Jefe"},
 			"5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"},
-		{"mayusculas", "abc", tool.Values{"algo": "md5", "uppercase": true}, "900150983CD24FB0D6963F7D28E17F72"},
+		{"uppercase", "abc", tool.Values{"algo": "md5", "uppercase": true}, "900150983CD24FB0D6963F7D28E17F72"},
 		{"base64", "abc", tool.Values{"algo": "md5", "encoding": "base64"}, "kAFQmDzST7DWlj99KOF/cg=="},
-		{"base64 ignora mayusculas", "abc", tool.Values{"algo": "md5", "encoding": "base64", "uppercase": true}, "kAFQmDzST7DWlj99KOF/cg=="},
+		{"base64 ignores uppercase", "abc", tool.Values{"algo": "md5", "encoding": "base64", "uppercase": true}, "kAFQmDzST7DWlj99KOF/cg=="},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -92,7 +92,7 @@ func TestHashMeta(t *testing.T) {
 
 func TestHashUnknownAlgo(t *testing.T) {
 	if _, err := runHash(t, "x", tool.Values{"algo": "crc32"}); err == nil {
-		t.Error("un algoritmo fuera de Choices no devolvió error")
+		t.Error("an algorithm outside Choices returned no error")
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// URL codifica, decodifica y desglosa URLs.
+// URL encodes, decodes and breaks down URLs.
 type URL struct{}
 
 func (URL) Spec() tool.Spec {
@@ -18,12 +18,12 @@ func (URL) Spec() tool.Spec {
 		ID:          "url",
 		Name:        "URL",
 		Category:    tool.Encoders,
-		Description: "Codifica, decodifica y desglosa URLs (percent-encoding)",
+		Description: "Encode, decode and break down URLs (percent-encoding)",
 		Keywords:    []string{"percent", "encode", "decode", "query", "parse", "uri"},
-		Inputs:      []tool.InputSpec{{Key: "input", Label: "Entrada", Multiline: true}},
+		Inputs:      []tool.InputSpec{{Key: "input", Label: "Input", Multiline: true}},
 		Options: []tool.Option{
-			{Key: "mode", Label: "Modo", Kind: tool.Select, Choices: []string{"encode", "decode", "parse"}, Default: "encode"},
-			{Key: "escape", Label: "Escape", Help: "query: espacio → '+'; path: espacio → '%20'", Kind: tool.Select, Choices: []string{"query", "path"}, Default: "query"},
+			{Key: "mode", Label: "Mode", Kind: tool.Select, Choices: []string{"encode", "decode", "parse"}, Default: "encode"},
+			{Key: "escape", Label: "Escape", Help: "query: space → '+'; path: space → '%20'", Kind: tool.Select, Choices: []string{"query", "path"}, Default: "query"},
 		},
 		Output: tool.PlainText,
 		Live:   true,
@@ -44,7 +44,7 @@ func (u URL) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 		if pos := invalidEscape(in); pos >= 0 {
 			line, col := tool.Position(in, pos)
 			return tool.Result{}, &tool.InputError{Input: "input", Line: line, Col: col,
-				Msg: fmt.Sprintf("escape inválido %q", in[pos:min(pos+3, len(in))])}
+				Msg: fmt.Sprintf("invalid escape %q", in[pos:min(pos+3, len(in))])}
 		}
 		var err error
 		if query {
@@ -52,7 +52,7 @@ func (u URL) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 		} else {
 			out, err = url.PathUnescape(in)
 		}
-		if err != nil { // no debería pasar después de invalidEscape
+		if err != nil { // cannot happen after invalidEscape
 			return tool.Result{}, &tool.InputError{Input: "input", Msg: err.Error()}
 		}
 	case "parse":
@@ -66,12 +66,12 @@ func (u URL) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 	}
 	return tool.Result{
 		Text: out,
-		Meta: []tool.KV{{Key: "Tamaño", Value: fmt.Sprintf("%d B → %d B", len(in), len(out))}},
+		Meta: []tool.KV{{Key: "Size", Value: fmt.Sprintf("%d B → %d B", len(in), len(out))}},
 	}, nil
 }
 
-// invalidEscape devuelve el offset del primer '%' que no va seguido de dos
-// dígitos hex, o -1.
+// invalidEscape returns the offset of the first '%' not followed by two hex
+// digits, or -1.
 func invalidEscape(s string) int {
 	for i := 0; i < len(s); i++ {
 		if s[i] != '%' {
@@ -95,7 +95,7 @@ func parseURL(in string) (tool.Result, error) {
 		return tool.Result{}, nil
 	}
 	if strings.ContainsAny(raw, "\n\r") {
-		return tool.Result{}, &tool.InputError{Input: "input", Msg: "parse espera una sola URL"}
+		return tool.Result{}, &tool.InputError{Input: "input", Msg: "parse expects a single URL"}
 	}
 	u, err := url.Parse(raw)
 	if err != nil {
@@ -112,18 +112,18 @@ func parseURL(in string) (tool.Result, error) {
 			fmt.Fprintf(&b, "%-11s %s\n", label+":", value)
 		}
 	}
-	field("Esquema", u.Scheme)
-	field("Opaco", u.Opaque)
+	field("Scheme", u.Scheme)
+	field("Opaque", u.Opaque)
 	if u.User != nil {
-		field("Usuario", u.User.Username())
+		field("User", u.User.Username())
 		if p, ok := u.User.Password(); ok {
-			field("Contraseña", p)
+			field("Password", p)
 		}
 	}
 	field("Host", u.Hostname())
-	field("Puerto", u.Port())
-	field("Ruta", u.Path)
-	field("Fragmento", u.Fragment)
+	field("Port", u.Port())
+	field("Path", u.Path)
+	field("Fragment", u.Fragment)
 
 	params := queryParams(u.RawQuery)
 	if len(params) > 0 {
@@ -134,11 +134,11 @@ func parseURL(in string) (tool.Result, error) {
 	}
 	return tool.Result{
 		Text: strings.TrimRight(b.String(), "\n"),
-		Meta: []tool.KV{{Key: "Parámetros", Value: fmt.Sprint(len(params))}},
+		Meta: []tool.KV{{Key: "Parameters", Value: fmt.Sprint(len(params))}},
 	}, nil
 }
 
-// queryParams desglosa la query conservando el orden y los repetidos.
+// queryParams breaks the query down keeping order and repeated keys.
 func queryParams(raw string) [][2]string {
 	var out [][2]string
 	for part := range strings.SplitSeq(raw, "&") {
@@ -160,7 +160,7 @@ func unescapeOrRaw(s string) string {
 
 var escapeRe = regexp.MustCompile(`%[0-9A-Fa-f]{2}`)
 
-// Detect reconoce texto con escapes %XX válidos y sin espacios.
+// Detect recognises text with valid %XX escapes and no spaces.
 func (URL) Detect(sample string) float64 {
 	s := strings.TrimSpace(sample)
 	if s == "" || strings.ContainsAny(s, " \t\n\r") || !escapeRe.MatchString(s) || invalidEscape(s) >= 0 {

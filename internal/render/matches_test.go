@@ -16,11 +16,11 @@ func TestRenderMatches(t *testing.T) {
 		spans []tool.Span
 		want  string
 	}{
-		{"sin spans", "abc", nil, "abc"},
-		{"dos coincidencias", "a1 b22", []tool.Span{{Start: 0, End: 2}, {Start: 3, End: 6}}, "[a1] [b22]"},
-		{"ignora grupos", "a1", []tool.Span{{Start: 0, End: 2}, {Start: 1, End: 2, Group: 1}}, "[a1]"},
-		{"multilinea por linea", "x\ny", []tool.Span{{Start: 0, End: 3}}, "[x]\n[y]"},
-		{"ignora vacias y fuera de rango", "ab", []tool.Span{{Start: 1, End: 1}, {Start: 1, End: 9}}, "ab"},
+		{"no spans", "abc", nil, "abc"},
+		{"two matches", "a1 b22", []tool.Span{{Start: 0, End: 2}, {Start: 3, End: 6}}, "[a1] [b22]"},
+		{"ignores groups", "a1", []tool.Span{{Start: 0, End: 2}, {Start: 1, End: 2, Group: 1}}, "[a1]"},
+		{"multi-line per line", "x\ny", []tool.Span{{Start: 0, End: 3}}, "[x]\n[y]"},
+		{"ignores empty and out of range", "ab", []tool.Span{{Start: 1, End: 1}, {Start: 1, End: 9}}, "ab"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

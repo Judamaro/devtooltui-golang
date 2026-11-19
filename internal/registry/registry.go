@@ -1,5 +1,5 @@
-// Package registry guarda las herramientas disponibles y ofrece búsqueda
-// difusa y detección inteligente sobre ellas.
+// Package registry holds the available tools and offers fuzzy search and
+// smart detection over them.
 package registry
 
 import (
@@ -16,36 +16,36 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// DetectTimeout es el tiempo máximo que puede tardar cada Detector.
+// DetectTimeout is the most time each Detector may take.
 const DetectTimeout = 20 * time.Millisecond
 
 var idPattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
-// Registry es inmutable después de New y seguro para uso concurrente.
+// Registry is immutable after New and safe for concurrent use.
 type Registry struct {
 	tools []tool.Tool
 	byID  map[string]tool.Tool
 }
 
-// Group agrupa las herramientas de una categoría.
+// Group groups the tools of one category.
 type Group struct {
 	Category tool.Category
 	Tools    []tool.Tool
 }
 
-// Match es un resultado de Search.
+// Match is a Search result.
 type Match struct {
 	Tool  tool.Tool
 	Score int
 }
 
-// Scored es un resultado de Detect.
+// Scored is a Detect result.
 type Scored struct {
 	Tool  tool.Tool
 	Score float64
 }
 
-// New crea un registro validando cada Spec. El orden de registro se conserva.
+// New builds a registry, validating every Spec. Registration order is kept.
 func New(tools ...tool.Tool) (*Registry, error) {
 	r := &Registry{byID: make(map[string]tool.Tool, len(tools))}
 	var errs []error
@@ -56,7 +56,7 @@ func New(tools ...tool.Tool) (*Registry, error) {
 			continue
 		}
 		if _, dup := r.byID[s.ID]; dup {
-			errs = append(errs, fmt.Errorf("%s: ID duplicado", s.ID))
+			errs = append(errs, fmt.Errorf("%s: duplicate ID", s.ID))
 			continue
 		}
 		r.byID[s.ID] = t
@@ -68,19 +68,19 @@ func New(tools ...tool.Tool) (*Registry, error) {
 	return r, nil
 }
 
-// Get devuelve la herramienta con ese ID.
+// Get returns the tool with that ID.
 func (r *Registry) Get(id string) (tool.Tool, bool) {
 	t, ok := r.byID[id]
 	return t, ok
 }
 
-// All devuelve las herramientas en orden de registro.
+// All returns the tools in registration order.
 func (r *Registry) All() []tool.Tool {
 	return slices.Clone(r.tools)
 }
 
-// ByCategory agrupa por categoría en el orden de tool.Categories(),
-// omitiendo las categorías vacías.
+// ByCategory groups tools by category in tool.Categories() order,
+// skipping empty categories.
 func (r *Registry) ByCategory() []Group {
 	var groups []Group
 	for _, c := range tool.Categories() {
@@ -97,8 +97,8 @@ func (r *Registry) ByCategory() []Group {
 	return groups
 }
 
-// Search hace búsqueda difusa sobre Name, ID y Keywords. Con q vacío
-// devuelve todas las herramientas en orden de registro.
+// Search fuzzy-searches Name, ID and Keywords. An empty q returns every
+// tool in registration order.
 func (r *Registry) Search(q string) []Match {
 	q = strings.TrimSpace(q)
 	if q == "" {
@@ -108,7 +108,7 @@ func (r *Registry) Search(q string) []Match {
 		}
 		return out
 	}
-	best := make(map[int]int) // índice de tool → mejor puntaje
+	best := make(map[int]int) // tool index → best score
 	for i, t := range r.tools {
 		s := t.Spec()
 		cands := append([]string{s.Name, s.ID}, s.Keywords...)
@@ -131,9 +131,9 @@ func (r *Registry) Search(q string) []Match {
 	return out
 }
 
-// Detect ejecuta los Detector sobre sample y devuelve los puntajes mayores
-// que cero, ordenados de mayor a menor. Un detector que entra en pánico o
-// supera DetectTimeout cuenta como 0.
+// Detect runs the Detectors on sample and returns the scores above zero,
+// highest first. A detector that panics or exceeds DetectTimeout counts
+// as 0.
 func (r *Registry) Detect(sample string) []Scored {
 	var out []Scored
 	for _, t := range r.tools {
@@ -149,9 +149,9 @@ func (r *Registry) Detect(sample string) []Scored {
 	return out
 }
 
-// runDetector da a cada Detect DetectTimeout desde que empieza a correr: la
-// espera hasta que la goroutine arranca no cuenta (en runners lentos, con
-// -race, esa latencia sola llegaba a consumir los 20 ms).
+// runDetector gives each Detect DetectTimeout from the moment it starts
+// running: waiting for the goroutine to be scheduled does not count (on
+// slow runners with -race, that latency alone used up the 20 ms).
 func runDetector(d tool.Detector, sample string) float64 {
 	ch := make(chan float64, 1)
 	started := make(chan struct{})
@@ -184,32 +184,32 @@ func validateSpec(s tool.Spec) error {
 	add := func(format string, a ...any) { errs = append(errs, fmt.Errorf(format, a...)) }
 
 	if !idPattern.MatchString(s.ID) {
-		add("ID %q inválido: usa kebab-case en minúsculas", s.ID)
+		add("invalid ID %q: use lowercase kebab-case", s.ID)
 	}
 	if s.Name == "" {
-		add("Name vacío")
+		add("empty Name")
 	}
 	if !slices.Contains(tool.Categories(), s.Category) {
-		add("categoría %q desconocida", s.Category)
+		add("unknown category %q", s.Category)
 	}
 	if len(s.Inputs) > 2 {
-		add("%d entradas; el máximo es 2", len(s.Inputs))
+		add("%d inputs; the maximum is 2", len(s.Inputs))
 	}
 	inputKeys := map[string]bool{}
 	for _, in := range s.Inputs {
 		if in.Key == "" || inputKeys[in.Key] {
-			add("entrada con clave vacía o repetida %q", in.Key)
+			add("input with empty or repeated key %q", in.Key)
 		}
 		inputKeys[in.Key] = true
 	}
 	optKeys := map[string]bool{}
 	for _, o := range s.Options {
 		if o.Key == "" || optKeys[o.Key] {
-			add("opción con clave vacía o repetida %q", o.Key)
+			add("option with empty or repeated key %q", o.Key)
 		}
 		optKeys[o.Key] = true
 		if err := validateOption(o); err != nil {
-			add("opción %q: %w", o.Key, err)
+			add("option %q: %w", o.Key, err)
 		}
 	}
 	if err := errors.Join(errs...); err != nil {
@@ -222,27 +222,27 @@ func validateOption(o tool.Option) error {
 	switch o.Kind {
 	case tool.Toggle:
 		if _, ok := o.Default.(bool); !ok {
-			return fmt.Errorf("default %v no es bool", o.Default)
+			return fmt.Errorf("default %v is not a bool", o.Default)
 		}
 	case tool.Select:
 		d, ok := o.Default.(string)
 		if !ok || !slices.Contains(o.Choices, d) {
-			return fmt.Errorf("default %v no está en %v", o.Default, o.Choices)
+			return fmt.Errorf("default %v is not in %v", o.Default, o.Choices)
 		}
 	case tool.Number:
 		d, ok := o.Default.(int)
 		if !ok {
-			return fmt.Errorf("default %v no es int", o.Default)
+			return fmt.Errorf("default %v is not an int", o.Default)
 		}
 		if o.Min > o.Max || d < o.Min || d > o.Max {
-			return fmt.Errorf("default %d fuera de [%d, %d]", d, o.Min, o.Max)
+			return fmt.Errorf("default %d outside [%d, %d]", d, o.Min, o.Max)
 		}
 	case tool.String:
 		if _, ok := o.Default.(string); !ok {
-			return fmt.Errorf("default %v no es string", o.Default)
+			return fmt.Errorf("default %v is not a string", o.Default)
 		}
 	default:
-		return fmt.Errorf("kind %d desconocido", o.Kind)
+		return fmt.Errorf("unknown kind %d", o.Kind)
 	}
 	return nil
 }

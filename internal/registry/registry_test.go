@@ -42,33 +42,33 @@ func TestNewValidation(t *testing.T) {
 		tools   []tool.Tool
 		wantErr string
 	}{
-		{"valido", []tool.Tool{fake{spec: spec("ok")}}, ""},
-		{"id duplicado", []tool.Tool{fake{spec: spec("a")}, fake{spec: spec("a")}}, "ID duplicado"},
-		{"id vacio", []tool.Tool{fake{spec: spec("")}}, "inválido"},
-		{"id con mayusculas", []tool.Tool{fake{spec: spec("Base64")}}, "inválido"},
-		{"sin nombre", []tool.Tool{fake{spec: spec("a", func(s *tool.Spec) { s.Name = "" })}}, "Name vacío"},
-		{"categoria desconocida", []tool.Tool{fake{spec: spec("a", func(s *tool.Spec) { s.Category = "X" })}}, "categoría"},
-		{"tres entradas", []tool.Tool{fake{spec: spec("a", func(s *tool.Spec) {
+		{"valid", []tool.Tool{fake{spec: spec("ok")}}, ""},
+		{"duplicate id", []tool.Tool{fake{spec: spec("a")}, fake{spec: spec("a")}}, "duplicate ID"},
+		{"empty id", []tool.Tool{fake{spec: spec("")}}, "invalid ID"},
+		{"uppercase id", []tool.Tool{fake{spec: spec("Base64")}}, "invalid ID"},
+		{"no name", []tool.Tool{fake{spec: spec("a", func(s *tool.Spec) { s.Name = "" })}}, "empty Name"},
+		{"unknown category", []tool.Tool{fake{spec: spec("a", func(s *tool.Spec) { s.Category = "X" })}}, "unknown category"},
+		{"three inputs", []tool.Tool{fake{spec: spec("a", func(s *tool.Spec) {
 			s.Inputs = []tool.InputSpec{{Key: "a"}, {Key: "b"}, {Key: "c"}}
-		})}}, "máximo es 2"},
-		{"entrada repetida", []tool.Tool{fake{spec: spec("a", func(s *tool.Spec) {
+		})}}, "maximum is 2"},
+		{"repeated input", []tool.Tool{fake{spec: spec("a", func(s *tool.Spec) {
 			s.Inputs = []tool.InputSpec{{Key: "a"}, {Key: "a"}}
-		})}}, "repetida"},
-		{"opcion repetida", []tool.Tool{fake{spec: spec("a",
+		})}}, "repeated"},
+		{"repeated option", []tool.Tool{fake{spec: spec("a",
 			withOpt(tool.Option{Key: "x", Kind: tool.Toggle, Default: true}),
-			withOpt(tool.Option{Key: "x", Kind: tool.Toggle, Default: true}))}}, "repetida"},
-		{"toggle sin bool", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{Key: "x", Kind: tool.Toggle, Default: "si"}))}}, "no es bool"},
-		{"select fuera de choices", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{
+			withOpt(tool.Option{Key: "x", Kind: tool.Toggle, Default: true}))}}, "repeated"},
+		{"toggle without bool", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{Key: "x", Kind: tool.Toggle, Default: "yes"}))}}, "is not a bool"},
+		{"select outside choices", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{
 			Key: "mode", Kind: tool.Select, Choices: []string{"encode", "decode"}, Default: "parse",
-		}))}}, "no está en"},
-		{"number fuera de rango", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{
+		}))}}, "is not in"},
+		{"number out of range", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{
 			Key: "n", Kind: tool.Number, Min: 1, Max: 10, Default: 11,
-		}))}}, "fuera de"},
+		}))}}, "outside"},
 		{"number no int", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{
 			Key: "n", Kind: tool.Number, Min: 1, Max: 10, Default: 2.5,
-		}))}}, "no es int"},
-		{"string sin string", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{Key: "s", Kind: tool.String, Default: 1}))}}, "no es string"},
-		{"kind desconocido", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{Key: "s", Kind: 99}))}}, "desconocido"},
+		}))}}, "is not an int"},
+		{"string without string", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{Key: "s", Kind: tool.String, Default: 1}))}}, "is not a string"},
+		{"unknown kind", []tool.Tool{fake{spec: spec("a", withOpt(tool.Option{Key: "s", Kind: 99}))}}, "unknown kind"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -93,10 +93,10 @@ func TestGetAllByCategory(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, ok := r.Get("json"); !ok {
-		t.Error("Get(json) no encontrado")
+		t.Error("Get(json) not found")
 	}
 	if _, ok := r.Get("nope"); ok {
-		t.Error("Get(nope) encontrado")
+		t.Error("Get(nope) found")
 	}
 	if got := ids(r.All()); got != "b64,json,url" {
 		t.Errorf("All() = %s", got)
@@ -131,7 +131,7 @@ func TestSearch(t *testing.T) {
 		t.Run(tt.q, func(t *testing.T) {
 			got := r.Search(tt.q)
 			if len(got) != tt.n {
-				t.Fatalf("Search(%q) = %d resultados, want %d", tt.q, len(got), tt.n)
+				t.Fatalf("Search(%q) = %d results, want %d", tt.q, len(got), tt.n)
 			}
 			if tt.n > 0 && got[0].Tool.Spec().ID != tt.first {
 				t.Errorf("Search(%q)[0] = %s, want %s", tt.q, got[0].Tool.Spec().ID, tt.first)
@@ -165,7 +165,7 @@ func TestDetect(t *testing.T) {
 		t.Errorf("Detect() = %v", parts)
 	}
 	if got[0].Score != 1 {
-		t.Errorf("puntaje no acotado a 1: %v", got[0].Score)
+		t.Errorf("score not capped at 1: %v", got[0].Score)
 	}
 }
 

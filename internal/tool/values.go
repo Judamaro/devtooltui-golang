@@ -1,8 +1,8 @@
 package tool
 
-// Values son los valores de las opciones de una Request, indexados por
-// Option.Key. Los getters devuelven el valor cero si falta la clave o el
-// tipo no coincide.
+// Values holds the option values of a Request, keyed by Option.Key. The
+// getters return the zero value when the key is missing or the type does
+// not match.
 type Values map[string]any
 
 func (v Values) Bool(key string) bool {
@@ -26,8 +26,8 @@ func (v Values) Int(key string) int {
 	}
 }
 
-// WithDefaults devuelve una copia de v completada con los Default de spec
-// para las claves que falten.
+// WithDefaults returns a copy of v filled in with spec's Default values for
+// the missing keys.
 func (v Values) WithDefaults(spec Spec) Values {
 	out := make(Values, len(spec.Options)+len(v))
 	for _, o := range spec.Options {

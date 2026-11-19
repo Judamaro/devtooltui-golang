@@ -1,4 +1,4 @@
-// Package tools registra explícitamente todas las herramientas.
+// Package tools registers every tool explicitly.
 package tools
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tools/text"
 )
 
-// All devuelve todas las herramientas en el orden en que se registran.
+// All returns every tool in registration order.
 func All() []tool.Tool {
 	return []tool.Tool{
 		formatters.JSONFormat{},

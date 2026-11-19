@@ -5,8 +5,6 @@ diff…) in **a single binary**: a keyboard-driven TUI and a CLI that composes
 with pipes. Works offline, with no telemetry. Inspired by
 [DevToys](https://github.com/DevToys-app/DevToys), built for the terminal.
 
-> The interface (TUI labels, help and messages) is currently in Spanish.
-
 ![demo](docs/demo.gif)
 
 ## Installation

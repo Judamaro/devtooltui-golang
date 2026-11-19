@@ -23,8 +23,8 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
-// newApp arma una App solo con base64, para que los tests de
-// comportamiento no dependan del orden del registro completo.
+// newApp builds an App with base64 only, so behaviour tests do not depend
+// on the order of the full registry.
 func newApp(t *testing.T, w, h int) *App {
 	t.Helper()
 	return newAppWith(t, w, h, encoders.Base64{})
@@ -42,8 +42,8 @@ func newAppWith(t *testing.T, w, h int, ts ...tool.Tool) *App {
 	return a
 }
 
-// send entrega msg a la App y ejecuta los comandos que devuelva, de modo
-// que los resultados asíncronos ya estén aplicados al volver.
+// send hands msg to the App and runs the commands it returns, so async
+// results are already applied on return.
 func send(a *App, msg tea.Msg) {
 	_, cmd := a.Update(msg)
 	testutil.RunCmds(cmd, func(m tea.Msg) tea.Cmd {
@@ -87,14 +87,14 @@ func press(a *App, keys ...string) {
 
 var elapsedRe = regexp.MustCompile(`✓ [0-9.]+ (µs|ms|s)`)
 
-// plainView quita los códigos ANSI y enmascara el tiempo de ejecución para
-// que los golden sean deterministas.
+// plainView strips ANSI codes and masks the run time so the goldens are
+// deterministic.
 func plainView(a *App) string {
 	lines := strings.Split(ansi.Strip(a.View().Content), "\n")
 	for i, l := range lines {
 		lines[i] = strings.TrimRight(elapsedRe.ReplaceAllString(l, "✓ 0 µs"), " ")
 	}
-	// El relleno de la statusbar depende del ancho del tiempo enmascarado.
+	// The statusbar padding depends on the width of the masked time.
 	last := len(lines) - 1
 	lines[last] = spacesRe.ReplaceAllString(lines[last], "  ")
 	return strings.Join(lines, "\n")
@@ -108,15 +108,15 @@ func TestViewGolden(t *testing.T) {
 		w, h int
 		do   func(a *App)
 	}{
-		{"inicio-100x30", 100, 30, func(*App) {}},
-		{"todas-las-herramientas-100x30", 100, 30, nil},
-		{"base64-hola-100x30", 100, 30, func(a *App) { press(a, "tab", "tab", "hola") }},
-		{"opciones-enfocadas-100x30", 100, 30, func(a *App) { press(a, "tab", "right") }},
-		{"entrada-grande-100x30", 100, 30, func(a *App) {
+		{"start-100x30", 100, 30, func(*App) {}},
+		{"all-tools-100x30", 100, 30, nil},
+		{"base64-typed-100x30", 100, 30, func(a *App) { press(a, "tab", "tab", "hola") }},
+		{"options-focused-100x30", 100, 30, func(a *App) { press(a, "tab", "right") }},
+		{"large-input-110x30", 110, 30, func(a *App) {
 			press(a, "tab", "tab")
-			send(a, tea.PasteMsg{Content: strings.Repeat("hola mundo\n", 3500)})
+			send(a, tea.PasteMsg{Content: strings.Repeat("hello world\n", 3500)})
 		}},
-		{"angosto-80x20", 80, 20, func(a *App) { press(a, "hola") }},
+		{"narrow-80x20", 80, 20, func(a *App) { press(a, "hola") }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -130,11 +130,11 @@ func TestViewGolden(t *testing.T) {
 			got := plainView(a)
 			raw := ansi.Strip(a.View().Content)
 			if n := strings.Count(raw, "\n") + 1; n != tt.h {
-				t.Errorf("la vista tiene %d líneas, want %d", n, tt.h)
+				t.Errorf("the view has %d lines, want %d", n, tt.h)
 			}
 			for i, line := range strings.Split(raw, "\n") {
 				if w := ansi.StringWidth(line); w > tt.w {
-					t.Errorf("línea %d mide %d columnas, máximo %d", i+1, w, tt.w)
+					t.Errorf("line %d is %d columns wide, maximum %d", i+1, w, tt.w)
 				}
 			}
 			testutil.Golden(t, "tui", tt.name, got)
@@ -149,14 +149,14 @@ func TestFocusRotation(t *testing.T) {
 		keys []string
 		want focus
 	}{
-		{"inicio en sidebar", 100, nil, focusSidebar},
-		{"tab a opciones", 100, []string{"tab"}, focusOptions},
-		{"tab tab a entrada", 100, []string{"tab", "tab"}, focusInput},
-		{"tres tabs a salida", 100, []string{"tab", "tab", "tab"}, focusOutput},
-		{"vuelta completa", 100, []string{"tab", "tab", "tab", "tab"}, focusSidebar},
-		{"shift+tab hacia atrás", 100, []string{"shift+tab"}, focusOutput},
-		{"angosto salta sidebar", 80, []string{"tab", "tab", "tab"}, focusInput},
-		{"ctrl+b oculta y mueve foco", 100, []string{"ctrl+b"}, focusInput},
+		{"starts in the sidebar", 100, nil, focusSidebar},
+		{"tab to options", 100, []string{"tab"}, focusOptions},
+		{"tab tab to input", 100, []string{"tab", "tab"}, focusInput},
+		{"three tabs to output", 100, []string{"tab", "tab", "tab"}, focusOutput},
+		{"full round", 100, []string{"tab", "tab", "tab", "tab"}, focusSidebar},
+		{"shift+tab backwards", 100, []string{"shift+tab"}, focusOutput},
+		{"narrow skips the sidebar", 80, []string{"tab", "tab", "tab"}, focusInput},
+		{"ctrl+b hides and moves focus", 100, []string{"ctrl+b"}, focusInput},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -172,19 +172,19 @@ func TestFocusRotation(t *testing.T) {
 func TestSidebarCollapse(t *testing.T) {
 	a := newApp(t, 100, 30)
 	if !a.showSidebar {
-		t.Fatal("sidebar oculto a 100 columnas")
+		t.Fatal("sidebar hidden at 100 columns")
 	}
 	send(a, tea.WindowSizeMsg{Width: 89, Height: 30})
 	if a.showSidebar {
-		t.Error("sidebar visible a 89 columnas")
+		t.Error("sidebar visible at 89 columns")
 	}
 	press(a, "ctrl+b")
 	if !a.showSidebar {
-		t.Error("ctrl+b no muestra el sidebar")
+		t.Error("ctrl+b does not show the sidebar")
 	}
 	send(a, tea.WindowSizeMsg{Width: 85, Height: 30})
 	if !a.showSidebar {
-		t.Error("un resize sin cruzar el umbral pisó la elección del usuario")
+		t.Error("a resize that did not cross the threshold overrode the user's choice")
 	}
 }
 
@@ -195,10 +195,10 @@ func TestQuitKeys(t *testing.T) {
 		msg      tea.KeyPressMsg
 		wantQuit bool
 	}{
-		{"q en sidebar sale", nil, tea.KeyPressMsg{Code: 'q', Text: "q"}, true},
-		{"q en opciones select sale", []string{"tab"}, tea.KeyPressMsg{Code: 'q', Text: "q"}, true},
-		{"q en la entrada escribe", []string{"tab", "tab"}, tea.KeyPressMsg{Code: 'q', Text: "q"}, false},
-		{"ctrl+c en la entrada sale", []string{"tab", "tab"}, tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}, true},
+		{"q in the sidebar quits", nil, tea.KeyPressMsg{Code: 'q', Text: "q"}, true},
+		{"q on a select option quits", []string{"tab"}, tea.KeyPressMsg{Code: 'q', Text: "q"}, true},
+		{"q in the input types", []string{"tab", "tab"}, tea.KeyPressMsg{Code: 'q', Text: "q"}, false},
+		{"ctrl+c in the input quits", []string{"tab", "tab"}, tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -219,7 +219,7 @@ func TestRunAndClearKeys(t *testing.T) {
 	send(a, tea.PasteMsg{Content: strings.Repeat("a", 40000)})
 	ws := a.workspace()
 	if !ws.Large() {
-		t.Fatal("no entró en modo grande")
+		t.Fatal("did not enter large mode")
 	}
 	send(a, tea.KeyPressMsg{Code: tea.KeyF5})
 	if ws.Err() != nil {
@@ -227,7 +227,7 @@ func TestRunAndClearKeys(t *testing.T) {
 	}
 	send(a, tea.KeyPressMsg{Code: 'l', Mod: tea.ModCtrl})
 	if ws.Large() || ws.Output() != "" {
-		t.Errorf("ctrl+l no limpió la entrada (Large=%v, salida=%d bytes)", ws.Large(), len(ws.Output()))
+		t.Errorf("ctrl+l did not clear the input (Large=%v, output=%d bytes)", ws.Large(), len(ws.Output()))
 	}
 }
 
@@ -245,10 +245,10 @@ func TestOptionsRerun(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{"encode por defecto", []string{"tab", "tab", "hola"}, "aG9sYQ==", false},
-		{"cambiar a decode re-ejecuta", []string{"tab", "tab", "aG9sYQ==", "shift+tab", "right"}, "hola", false},
-		{"sin padding", []string{"tab", "down", "down", "space", "tab", "hola"}, "aG9sYQ", false},
-		{"error mantiene la salida anterior", []string{"tab", "right", "tab", "aG9sYQ==", "*"}, "hola", true},
+		{"encode by default", []string{"tab", "tab", "hola"}, "aG9sYQ==", false},
+		{"switching to decode reruns", []string{"tab", "tab", "aG9sYQ==", "shift+tab", "right"}, "hola", false},
+		{"without padding", []string{"tab", "down", "down", "space", "tab", "hola"}, "aG9sYQ", false},
+		{"error keeps the previous output", []string{"tab", "right", "tab", "aG9sYQ==", "*"}, "hola", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -256,7 +256,7 @@ func TestOptionsRerun(t *testing.T) {
 			press(a, tt.keys...)
 			ws := a.workspace()
 			if ws.Output() != tt.want {
-				t.Errorf("salida = %q, want %q", ws.Output(), tt.want)
+				t.Errorf("output = %q, want %q", ws.Output(), tt.want)
 			}
 			if (ws.Err() != nil) != tt.wantErr {
 				t.Errorf("err = %v, wantErr %v", ws.Err(), tt.wantErr)
@@ -265,16 +265,16 @@ func TestOptionsRerun(t *testing.T) {
 	}
 }
 
-// TestProgram recorre el flujo real con teatest: arrancar, escribir y salir.
-// El renderer de v2 solo reescribe las celdas que cambian, así que se
-// comprueba el modelo final en lugar de buscar texto en la salida cruda.
+// TestProgram walks the real flow with teatest: start, type and quit. The
+// v2 renderer only rewrites the cells that change, so the final model is
+// checked instead of searching the raw output.
 func TestProgram(t *testing.T) {
 	reg, err := registry.New(encoders.Base64{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	// El filtro avisa cuando llega el resultado de "hola", porque la
-	// ejecución es asíncrona y no se puede salir antes.
+	// The filter signals when the result for "hola" arrives, because runs
+	// are async and the test cannot quit before that.
 	done := make(chan struct{})
 	var once sync.Once
 	filter := func(_ tea.Model, msg tea.Msg) tea.Msg {
@@ -287,7 +287,7 @@ func TestProgram(t *testing.T) {
 		teatest.WithInitialTermSize(100, 30),
 		teatest.WithProgramOptions(tea.WithFilter(filter)))
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
-		return strings.Contains(string(b), "Codificadores")
+		return strings.Contains(string(b), "Encoders")
 	}, teatest.WithDuration(3*time.Second))
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyTab})
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyTab})
@@ -295,15 +295,15 @@ func TestProgram(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(3 * time.Second):
-		t.Fatal("no llegó el resultado de la ejecución asíncrona")
+		t.Fatal("the async run result never arrived")
 	}
 	tm.Send(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	final, ok := tm.FinalModel(t, teatest.WithFinalTimeout(3*time.Second)).(*App)
 	if !ok {
-		t.Fatal("el modelo final no es *App")
+		t.Fatal("the final model is not *App")
 	}
 	if got := final.workspace().Output(); got != "aG9sYQ==" {
-		t.Errorf("salida = %q, want %q", got, "aG9sYQ==")
+		t.Errorf("output = %q, want %q", got, "aG9sYQ==")
 	}
 }
 
@@ -314,23 +314,23 @@ func TestHighlightedOutput(t *testing.T) {
 		wantColor bool
 		wantNote  bool
 	}{
-		{"json chico se colorea", `{"a":[1,true,null]}`, true, false},
-		{"json grande sin color", "[" + strings.Repeat(`"xxxxxxxxxxxxxxxxxxxx",`, 3500) + "1]", false, true},
+		{"small json is coloured", `{"a":[1,true,null]}`, true, false},
+		{"large json without colour", "[" + strings.Repeat(`"xxxxxxxxxxxxxxxxxxxx",`, 3500) + "1]", false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			a := newAppWith(t, 100, 30, formatters.JSONFormat{})
 			press(a, "tab", "tab")
 			send(a, tea.PasteMsg{Content: tt.paste})
-			// Solo las líneas del panel de salida: entre su encabezado y la statusbar.
+			// Only the output panel lines: between its header and the statusbar.
 			lines := strings.Split(a.View().Content, "\n")
-			head := slices.IndexFunc(lines, func(l string) bool { return strings.Contains(l, "Salida ") })
+			head := slices.IndexFunc(lines, func(l string) bool { return strings.Contains(l, "Output ") })
 			out := strings.Join(lines[head+1:len(lines)-1], "\n")
-			if got := strings.Contains(out, "\x1b[3"); got != tt.wantColor { // colores de primer plano 30-37
-				t.Errorf("salida coloreada = %v, want %v", got, tt.wantColor)
+			if got := strings.Contains(out, "\x1b[3"); got != tt.wantColor { // foreground colours 30-37
+				t.Errorf("coloured output = %v, want %v", got, tt.wantColor)
 			}
 			if got := a.workspace().Status().Note != ""; got != tt.wantNote {
-				t.Errorf("aviso sin color = %v, want %v", got, tt.wantNote)
+				t.Errorf("no-colour notice = %v, want %v", got, tt.wantNote)
 			}
 		})
 	}
@@ -341,25 +341,25 @@ func TestRegexMatchesView(t *testing.T) {
 	press(a, "tab", `\d+`, "tab", "a1 b22\nc333")
 	content := a.View().Content
 	if !strings.Contains(content, "\x1b[7m") {
-		t.Error("las coincidencias no se ven resaltadas")
+		t.Error("matches are not highlighted")
 	}
 	if got := a.workspace().Status().Meta[0].Value; got != "3" {
-		t.Errorf("Coincidencias = %s, want 3", got)
+		t.Errorf("Matches = %s, want 3", got)
 	}
-	testutil.Golden(t, "tui", "regex-coincidencias-100x30", plainView(a))
+	testutil.Golden(t, "tui", "regex-matches-100x30", plainView(a))
 }
 
 func TestDiffView(t *testing.T) {
 	a := newAppWith(t, 130, 30, text.Diff{})
 	press(a, "tab", "tab")
-	send(a, tea.PasteMsg{Content: "uno\ndos\ntres\n"})
+	send(a, tea.PasteMsg{Content: "one\ntwo\nthree\n"})
 	press(a, "tab")
-	send(a, tea.PasteMsg{Content: "uno\nDOS\ntres\ncuatro\n"})
-	if got := a.workspace().Status().Meta[0].Value; got != "+2 −1 líneas" {
-		t.Errorf("Cambios = %q", got)
+	send(a, tea.PasteMsg{Content: "one\nTWO\nthree\nfour\n"})
+	if got := a.workspace().Status().Meta[0].Value; got != "+2 −1 lines" {
+		t.Errorf("Changes = %q", got)
 	}
 	if !strings.Contains(a.View().Content, "\x1b[") {
-		t.Error("el diff no está coloreado")
+		t.Error("the diff is not coloured")
 	}
 	testutil.Golden(t, "tui", "diff-130x30", plainView(a))
 }

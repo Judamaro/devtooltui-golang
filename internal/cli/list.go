@@ -35,7 +35,7 @@ var kindNames = []string{"toggle", "select", "number", "string"}
 func newList(d Deps, g *globalFlags) *cobra.Command {
 	return &cobra.Command{
 		Use:     "list",
-		Short:   "Lista las herramientas disponibles",
+		Short:   "List the available tools",
 		GroupID: "general",
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {

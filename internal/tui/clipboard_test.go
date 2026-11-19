@@ -41,14 +41,14 @@ func TestCopyOutput(t *testing.T) {
 		wantData  string
 		wantFlash string
 	}{
-		{"local", false, "{}", "salida copiada al portapapeles"},
-		{"osc52", true, "", "salida copiada (OSC 52)"},
+		{"local", false, "{}", "output copied to the clipboard"},
+		{"osc52", true, "", "output copied (OSC 52)"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			clip := &fakeClip{osc52: tt.osc52}
 			a := newClipApp(t, clip, false)
-			press(a, "tab", "tab", "{}") // json-format es la primera herramienta
+			press(a, "tab", "tab", "{}") // json-format is the first tool
 			send(a, keyCtrl('y'))
 			if clip.data != tt.wantData || a.flash != tt.wantFlash {
 				t.Errorf("data = %q, flash = %q; want %q, %q", clip.data, a.flash, tt.wantData, tt.wantFlash)
@@ -59,20 +59,20 @@ func TestCopyOutput(t *testing.T) {
 
 func TestPasteFromClipboard(t *testing.T) {
 	clip := &fakeClip{data: `{"b":1}`}
-	a := newClipApp(t, clip, false) // foco en el sidebar
+	a := newClipApp(t, clip, false) // focus on the sidebar
 	send(a, keyCtrl('o'))
 	if a.focus != focusInput || !strings.Contains(a.workspace().Output(), `"b": 1`) {
-		t.Errorf("focus = %d, salida = %q", a.focus, a.workspace().Output())
+		t.Errorf("focus = %d, output = %q", a.focus, a.workspace().Output())
 	}
 
-	clip.readErr = errors.New("no hay portapapeles del sistema: instala wl-clipboard")
+	clip.readErr = errors.New("no system clipboard: install wl-clipboard")
 	send(a, keyCtrl('o'))
 	if !strings.Contains(a.flash, "wl-clipboard") {
 		t.Errorf("flash = %q", a.flash)
 	}
-	press(a, "x") // cualquier tecla borra el aviso
+	press(a, "x") // any key clears the notice
 	if a.flash != "" {
-		t.Errorf("el aviso no se borró: %q", a.flash)
+		t.Errorf("the notice was not cleared: %q", a.flash)
 	}
 }
 
@@ -85,10 +85,10 @@ func TestDetectClipboard(t *testing.T) {
 		wantTool  string
 		wantFlash string
 	}{
-		{"jwt", jwt, false, "jwt", "detectado: jwt (0.98)"},
-		{"al arrancar con --clipboard", "f47ac10b-58cc-4372-a567-0e02b2c3d479", true, "uuid", "detectado: uuid (0.90)"},
-		{"sin formato", "hola mundo", false, "json-format", "no se reconoció"},
-		{"vacio", "", false, "json-format", "vacío"},
+		{"jwt", jwt, false, "jwt", "detected: jwt (0.98)"},
+		{"on start with --clipboard", "f47ac10b-58cc-4372-a567-0e02b2c3d479", true, "uuid", "detected: uuid (0.90)"},
+		{"unknown format", "hello world", false, "json-format", "was not recognised"},
+		{"empty", "", false, "json-format", "empty"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestDetectClipboard(t *testing.T) {
 				t.Errorf("active = %q, flash = %q; want %q, %q", a.active, a.flash, tt.wantTool, tt.wantFlash)
 			}
 			if tt.wantTool == "jwt" && a.sidebar.Selected() != "jwt" {
-				t.Errorf("el sidebar no siguió el salto: %s", a.sidebar.Selected())
+				t.Errorf("the sidebar did not follow the jump: %s", a.sidebar.Selected())
 			}
 		})
 	}

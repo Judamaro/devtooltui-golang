@@ -1,6 +1,6 @@
-// Package options genera el panel de opciones de una herramienta a partir
-// de Spec.Options: Toggle es un checkbox, Select un selector ◀ ▶ y Number o
-// String un textinput validado.
+// Package options builds a tool's options panel from Spec.Options: Toggle is
+// a checkbox, Select a ◀ ▶ selector and Number or String a validated
+// textinput.
 package options
 
 import (
@@ -16,16 +16,16 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
 
-// Styles los define tui/theme.go.
+// Styles are defined by tui/theme.go.
 type Styles struct {
 	Label, Value, Focused, Invalid lipgloss.Style
 	Input                          textinput.Styles
 }
 
-// KeyMap son las teclas del panel.
+// KeyMap holds the panel keys.
 type KeyMap struct {
-	Prev, Next         key.Binding // opción anterior / siguiente
-	Decrease, Increase key.Binding // valor anterior / siguiente
+	Prev, Next         key.Binding // previous / next option
+	Decrease, Increase key.Binding // previous / next value
 	Toggle             key.Binding
 }
 
@@ -36,11 +36,11 @@ const (
 
 type item struct {
 	opt     tool.Option
-	input   *textinput.Model // solo Number y String
+	input   *textinput.Model // Number and String only
 	invalid bool
 }
 
-// Model es el panel de opciones.
+// Model is the options panel.
 type Model struct {
 	items   []item
 	values  tool.Values
@@ -50,7 +50,7 @@ type Model struct {
 	keys    KeyMap
 }
 
-// New crea el panel con los valores iniciales de values.
+// New builds the panel with the initial values from values.
 func New(spec tool.Spec, values tool.Values, styles Styles, keys KeyMap) Model {
 	m := Model{values: values, styles: styles, keys: keys}
 	for _, o := range spec.Options {
@@ -68,14 +68,14 @@ func New(spec tool.Spec, values tool.Values, styles Styles, keys KeyMap) Model {
 	return m
 }
 
-// Empty indica si la herramienta no tiene opciones.
+// Empty reports whether the tool has no options.
 func (m Model) Empty() bool { return len(m.items) == 0 }
 
-// Values devuelve los valores actuales.
+// Values returns the current values.
 func (m Model) Values() tool.Values { return m.values }
 
-// CapturesText indica si la opción enfocada es un campo de texto, en cuyo
-// caso teclas como "q" se escriben en lugar de ejecutar atajos.
+// CapturesText reports whether the focused option is a text field, in which
+// case keys like "q" are typed instead of triggering shortcuts.
 func (m Model) CapturesText() bool {
 	return m.focused && len(m.items) > 0 && m.items[m.cursor].input != nil
 }
@@ -110,7 +110,7 @@ func (m *Model) focusCurrent() tea.Cmd {
 	return cmd
 }
 
-// Update procesa un mensaje y devuelve si cambió algún valor.
+// Update handles a message and reports whether any value changed.
 func (m *Model) Update(msg tea.Msg) (changed bool, cmd tea.Cmd) {
 	if len(m.items) == 0 {
 		return false, nil
@@ -184,7 +184,7 @@ func (m Model) delta(k tea.KeyPressMsg) int {
 	return 0
 }
 
-// text es la representación del valor de una opción.
+// text is the representation of an option's value.
 func (m Model) text(o tool.Option) string {
 	switch o.Kind {
 	case tool.Toggle:
@@ -199,7 +199,7 @@ func (m Model) text(o tool.Option) string {
 	}
 }
 
-// Lines devuelve el panel repartido en líneas de como máximo width columnas.
+// Lines returns the panel split into lines at most width columns wide.
 func (m Model) Lines(width int) []string {
 	var lines []string
 	cur := ""
