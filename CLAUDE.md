@@ -29,8 +29,10 @@ make bench          # benchmarks (incluye el spike de textarea)
   Sin `init()` mágicos.
 - `internal/tools/<categoría>/<id>.go`: una herramienta por archivo.
 - `internal/tui`: `app.go` (modelo raíz), `keys.go` (keymap central),
-  `theme.go` (**todos** los estilos), y los subpaquetes `sidebar/` y
-  `workspace/`. Los subpaquetes exponen un struct `Styles` que llena `theme.go`.
+  `theme.go` (**todos** los estilos), y los subpaquetes `sidebar/`,
+  `workspace/` y `workspace/options/` (panel generado desde `Spec.Options`).
+  Los subpaquetes exponen structs `Styles` y `KeyMap` que llenan `theme.go`
+  y `keys.go`.
 - `internal/testutil`: helpers de golden files (`ReadInput`, `Golden`).
 - `testdata/<id>/*.in|*.golden`: fixtures por herramienta. `testdata/tui/`
   guarda las vistas sin ANSI.
@@ -70,6 +72,23 @@ Reglas (las verifica `internal/registry/contract_test.go` sobre `tools.All()`):
    `.golden`, casos de error con línea y columna y, si es reversible, un
    fuzz de ida y vuelta.
 
+## Herramientas actuales
+
+`json-format`, `base64`, `url`, `hash` (registradas en ese orden en
+`internal/tools/all.go`).
+
+## TUI
+
+- Foco con Tab: sidebar → opciones → entrada → salida (se saltan los paneles
+  que no aplican).
+- Opciones: ↑/↓ cambia de opción, ←/→ cambia el valor, espacio invierte un
+  Toggle. Number y String son `textinput`; un Number fuera de rango se marca
+  y no se aplica.
+- `F5` ejecuta (herramientas `Live: false` y modo de entrada grande).
+  `ctrl+l` limpia la entrada y sale del modo grande.
+- Los tests de comportamiento de la TUI usan un registro solo con `base64`
+  (`newApp`) para no depender del orden de `tools.All()`.
+
 ## Convenciones
 
 - Commits pequeños en formato Conventional Commits (`feat(tools): …`,
@@ -82,6 +101,9 @@ Reglas (las verifica `internal/registry/contract_test.go` sobre `tools.All()`):
 - TUI: ningún color ni estilo en línea fuera de `theme.go`. Las dimensiones se
   recalculan en `tea.WindowSizeMsg`. `q` solo sale fuera de los campos de
   texto.
-- Entradas grandes: ver ADR 0002 (`live_max_bytes`; el `textarea` trunca a
-  10 000 líneas y renderiza en O(tamaño)).
+- Entradas grandes (ADR 0002, `workspace.DefaultLimits`): por encima de
+  32 KB o 5 000 líneas la entrada pasa a un viewport de solo lectura; los
+  números de línea se ocultan por encima de 16 KB. El `textarea` trunca a
+  10 000 líneas y renderiza en O(tamaño), así que nunca recibe más que eso.
+- Los algoritmos débiles (MD5, SHA-1) llevan `//nolint:gosec` con motivo.
 - Variable de entorno de config (fase 2): `DEVTOOLTUI_CONFIG`.
