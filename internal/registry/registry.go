@@ -149,11 +149,14 @@ func (r *Registry) Detect(sample string) []Scored {
 	return out
 }
 
+// runDetector da a cada Detect DetectTimeout desde que empieza a correr: la
+// espera hasta que la goroutine arranca no cuenta (en runners lentos, con
+// -race, esa latencia sola llegaba a consumir los 20 ms).
 func runDetector(d tool.Detector, sample string) float64 {
-	timer := time.NewTimer(DetectTimeout)
-	defer timer.Stop()
 	ch := make(chan float64, 1)
+	started := make(chan struct{})
 	go func() {
+		close(started)
 		defer func() {
 			if recover() != nil {
 				ch <- 0
@@ -161,6 +164,9 @@ func runDetector(d tool.Detector, sample string) float64 {
 		}()
 		ch <- d.Detect(sample)
 	}()
+	<-started
+	timer := time.NewTimer(DetectTimeout)
+	defer timer.Stop()
 	select {
 	case s := <-ch:
 		return s
