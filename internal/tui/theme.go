@@ -86,6 +86,7 @@ func DarkTheme() Theme {
 			Item:            lipgloss.NewStyle(),
 			Selected:        lipgloss.NewStyle().Foreground(accent).Bold(true),
 			SelectedBlurred: lipgloss.NewStyle().Foreground(accent),
+			Filter:          lipgloss.NewStyle().Foreground(accent),
 		},
 		Workspace: workspace.Styles{
 			Title:       lipgloss.NewStyle().Bold(true).Foreground(accent),

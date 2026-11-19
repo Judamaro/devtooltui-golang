@@ -156,6 +156,12 @@ func (m *Model) Overlay(base string, width, height int) string {
 		lines = append(lines, m.styles.Detail.Render(fmt.Sprintf("  %d de %d", end-start, len(m.filtered))))
 	}
 	box := m.styles.Box.Width(boxW).Render(strings.Join(lines, "\n"))
+	return Place(base, box, width, height)
+}
+
+// Place dibuja box centrado horizontalmente cerca del borde superior de
+// base, sin cambiar su tamaño.
+func Place(base, box string, width, height int) string {
 	x := max((width-lipgloss.Width(box))/2, 0)
 	y := min(2, max(height-lipgloss.Height(box), 0))
 	return lipgloss.NewCompositor(

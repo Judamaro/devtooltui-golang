@@ -33,6 +33,10 @@ func (a *App) actions() []action {
 			}
 			return nil
 		}},
+		{"use-output", "Usar la salida como entrada", k.UseOutput, (*App).useOutput},
+		{"edit", "Editar la entrada en $EDITOR", k.EditInput, (*App).editInput},
+		{"save", "Guardar la salida en un archivo", k.SaveOutput, (*App).askSave},
+		{"help", "Ayuda: todos los atajos", k.Help, func(a *App) tea.Cmd { a.showHelp = true; return nil }},
 		{"sidebar", "Mostrar u ocultar el sidebar", k.ToggleSidebar, (*App).toggleSidebar},
 		{"quit", "Salir", k.Quit, func(*App) tea.Cmd { return tea.Quit }},
 	}

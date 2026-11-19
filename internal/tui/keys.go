@@ -19,6 +19,10 @@ type KeyMap struct {
 	PasteInput    key.Binding
 	DetectClip    key.Binding
 	OpenPalette   key.Binding
+	UseOutput     key.Binding
+	EditInput     key.Binding
+	SaveOutput    key.Binding
+	Help          key.Binding
 	Quit          key.Binding
 	QuitOutside   key.Binding // "q": solo fuera de los campos de texto
 	Sidebar       sidebar.KeyMap
@@ -37,6 +41,10 @@ func DefaultKeyMap() KeyMap {
 		PasteInput:    key.NewBinding(key.WithKeys("ctrl+o"), key.WithHelp("ctrl+o", "pegar")),
 		DetectClip:    key.NewBinding(key.WithKeys("ctrl+d"), key.WithHelp("ctrl+d", "detectar portapapeles")),
 		OpenPalette:   key.NewBinding(key.WithKeys("ctrl+p"), key.WithHelp("ctrl+p", "paleta")),
+		UseOutput:     key.NewBinding(key.WithKeys("ctrl+r"), key.WithHelp("ctrl+r", "salida → entrada")),
+		EditInput:     key.NewBinding(key.WithKeys("ctrl+e"), key.WithHelp("ctrl+e", "editar en $EDITOR")),
+		SaveOutput:    key.NewBinding(key.WithKeys("ctrl+s"), key.WithHelp("ctrl+s", "guardar salida")),
+		Help:          key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "ayuda")),
 		Palette: palette.KeyMap{
 			Up:     key.NewBinding(key.WithKeys("up", "ctrl+k")),
 			Down:   key.NewBinding(key.WithKeys("down", "ctrl+j")),
@@ -46,8 +54,11 @@ func DefaultKeyMap() KeyMap {
 		Quit:        key.NewBinding(key.WithKeys("ctrl+c"), key.WithHelp("ctrl+c", "salir")),
 		QuitOutside: key.NewBinding(key.WithKeys("q"), key.WithHelp("q", "salir")),
 		Sidebar: sidebar.KeyMap{
-			Up:   key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "subir")),
-			Down: key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "bajar")),
+			Up:          key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "subir")),
+			Down:        key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "bajar")),
+			Filter:      key.NewBinding(key.WithKeys("/"), key.WithHelp("/", "filtrar")),
+			EndFilter:   key.NewBinding(key.WithKeys("enter")),
+			ClearFilter: key.NewBinding(key.WithKeys("esc")),
 		},
 		Options: options.KeyMap{
 			Prev:     key.NewBinding(key.WithKeys("up"), key.WithHelp("↑", "opción anterior")),
@@ -61,7 +72,7 @@ func DefaultKeyMap() KeyMap {
 
 // ShortHelp implementa help.KeyMap.
 func (k KeyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.NextFocus, k.OpenPalette, k.CopyOutput, k.Quit}
+	return []key.Binding{k.NextFocus, k.OpenPalette, k.CopyOutput, k.Help}
 }
 
 // FullHelp implementa help.KeyMap.
@@ -69,7 +80,8 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.NextFocus, k.PrevFocus, k.ToggleSidebar, k.Run, k.ClearInput},
 		{k.OpenPalette, k.CopyOutput, k.PasteInput, k.DetectClip},
-		{k.Sidebar.Up, k.Sidebar.Down, k.Quit, k.QuitOutside},
+		{k.Sidebar.Up, k.Sidebar.Down, k.Sidebar.Filter, k.Quit, k.QuitOutside},
+		{k.UseOutput, k.EditInput, k.SaveOutput, k.Help},
 		{k.Options.Prev, k.Options.Next, k.Options.Decrease, k.Options.Increase, k.Options.Toggle},
 	}
 }

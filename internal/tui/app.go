@@ -2,6 +2,7 @@
 package tui
 
 import (
+	"os/exec"
 	"strings"
 	"time"
 
@@ -38,6 +39,9 @@ type Options struct {
 	Debounce      time.Duration // espera entre la última tecla y la ejecución
 	Clipboard     Clipboard     // nil: sin portapapeles
 	DetectOnStart bool          // --clipboard: detectar el portapapeles al abrir
+	// Editor arma el comando del editor externo (Ctrl+E); nil usa
+	// $VISUAL/$EDITOR. Los tests lo reemplazan.
+	Editor func(path string) *exec.Cmd
 }
 
 // DefaultOptions son los valores del plan (debounce de 120 ms).
@@ -56,9 +60,11 @@ type App struct {
 	active  string
 	focus   focus
 
-	flash       string         // aviso transitorio en la statusbar
-	palette     *palette.Model // nil: cerrada
-	pendingText string         // texto a cargar al elegir en el selector de detección
+	flash       string          // aviso transitorio en la statusbar
+	palette     *palette.Model  // nil: cerrada
+	prompt      *palette.Prompt // nil: cerrado
+	showHelp    bool
+	pendingText string // texto a cargar al elegir en el selector de detección
 
 	width, height int
 	wide          bool // ancho ≥ sidebarMinWidth en el último resize
@@ -110,8 +116,18 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.activate(msg.ID)
 
 	case palette.ClosedMsg:
-		a.palette, a.pendingText = nil, ""
+		a.palette, a.prompt, a.pendingText = nil, nil, ""
 		return a, nil
+
+	case palette.PromptDoneMsg:
+		a.prompt = nil
+		if msg.ID == "save" {
+			return a, a.saveOutput(msg.Value)
+		}
+		return a, nil
+
+	case editorDoneMsg:
+		return a, a.handleEditorDone(msg)
 
 	case palette.ChosenMsg:
 		return a, a.choose(msg.Item)
@@ -145,10 +161,25 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		a.flash = ""
-		if a.palette != nil {
+		switch {
+		case a.showHelp:
+			a.showHelp = false // cualquier tecla cierra la ayuda
+			return a, nil
+		case a.prompt != nil:
+			return a, a.prompt.Update(msg)
+		case a.palette != nil:
 			return a, a.palette.Update(msg)
 		}
 		switch {
+		case key.Matches(msg, a.keys.Help) && !a.capturesText():
+			a.showHelp = true
+			return a, nil
+		case key.Matches(msg, a.keys.UseOutput):
+			return a, a.useOutput()
+		case key.Matches(msg, a.keys.EditInput):
+			return a, a.editInput()
+		case key.Matches(msg, a.keys.SaveOutput):
+			return a, a.askSave()
 		case key.Matches(msg, a.keys.OpenPalette):
 			return a, a.openPalette("Paleta de comandos", a.paletteItems())
 		case key.Matches(msg, a.keys.CopyOutput):
@@ -185,7 +216,10 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if a.palette != nil { // parpadeo del cursor de la paleta
+	switch { // parpadeo del cursor de la paleta o del prompt
+	case a.prompt != nil:
+		return a, a.prompt.Update(msg)
+	case a.palette != nil:
 		return a, a.palette.Update(msg)
 	}
 	if ws := a.workspace(); ws != nil {
@@ -196,7 +230,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (a *App) View() tea.View {
 	content := a.render()
-	if a.palette != nil {
+	switch {
+	case a.showHelp:
+		content = a.helpOverlay(content)
+	case a.prompt != nil:
+		content = a.prompt.Overlay(content, a.width, a.height)
+	case a.palette != nil:
 		content = a.palette.Overlay(content, a.width, a.height)
 	}
 	v := tea.NewView(content)
@@ -230,8 +269,11 @@ func (a *App) render() string {
 func (a *App) workspace() *workspace.Model { return a.spaces[a.active] }
 
 func (a *App) capturesText() bool {
+	if a.focus == focusSidebar {
+		return a.sidebar.Filtering()
+	}
 	ws := a.workspace()
-	return a.focus != focusSidebar && ws != nil && ws.CapturesText()
+	return ws != nil && ws.CapturesText()
 }
 
 func (a *App) activate(id string) tea.Cmd {

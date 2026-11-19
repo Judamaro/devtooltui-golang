@@ -289,6 +289,20 @@ func (m *Model) SetInput(text string) tea.Cmd {
 	return m.runNow()
 }
 
+// ActiveValue devuelve el contenido de la entrada que recibirá SetInput.
+func (m *Model) ActiveValue() string {
+	if !m.HasInput() {
+		return ""
+	}
+	if m.focus != FocusInput {
+		return m.inputs[0].value()
+	}
+	return m.inputs[m.active].value()
+}
+
+// OutputLang es el lenguaje de la última salida (para sugerir extensión).
+func (m *Model) OutputLang() string { return m.result.Lang }
+
 // Run ejecuta la herramienta a pedido (F5), sin debounce.
 func (m *Model) Run() tea.Cmd { return m.runNow() }
 
