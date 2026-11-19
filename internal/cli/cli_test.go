@@ -143,3 +143,25 @@ func TestListJSON(t *testing.T) {
 		t.Errorf("list --json inesperado: %+v", list[0])
 	}
 }
+
+type fakeClip struct{ data string }
+
+func (f *fakeClip) Read() (string, error) { return f.data, nil }
+func (f *fakeClip) Write(s string) error  { f.data = s; return nil }
+
+func TestCopyFlag(t *testing.T) {
+	d, out, errb := deps(t, "hola")
+	clip := &fakeClip{}
+	d.Clipboard = clip
+	if code := cli.Execute([]string{"base64", "--copy"}, d); code != 0 {
+		t.Fatalf("código %d: %s", code, errb)
+	}
+	if clip.data != "aG9sYQ==" || out.String() != "aG9sYQ==\n" {
+		t.Errorf("portapapeles = %q, stdout = %q", clip.data, out)
+	}
+
+	d, _, errb = deps(t, "hola")
+	if code := cli.Execute([]string{"base64", "--copy"}, d); code != 0 || !strings.Contains(errb.String(), "no hay portapapeles") {
+		t.Errorf("sin portapapeles: código %d, stderr %q", code, errb)
+	}
+}

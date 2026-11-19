@@ -276,6 +276,19 @@ func (m *Model) ClearInput() tea.Cmd {
 	return m.runNow()
 }
 
+// SetInput reemplaza el contenido de la primera entrada (o de la que tenga
+// el foco) por text, como si se pegara; respeta el modo de entrada grande.
+func (m *Model) SetInput(text string) tea.Cmd {
+	if !m.HasInput() {
+		return nil
+	}
+	if m.focus != FocusInput {
+		m.active = 0
+	}
+	m.inputs[m.active].clear()
+	return m.updateInput(tea.PasteMsg{Content: text})
+}
+
 // Run ejecuta la herramienta a pedido (F5), sin debounce.
 func (m *Model) Run() tea.Cmd { return m.runNow() }
 

@@ -34,7 +34,9 @@ const (
 
 // Options configura la App.
 type Options struct {
-	Debounce time.Duration // espera entre la última tecla y la ejecución
+	Debounce      time.Duration // espera entre la última tecla y la ejecución
+	Clipboard     Clipboard     // nil: sin portapapeles
+	DetectOnStart bool          // --clipboard: detectar el portapapeles al abrir
 }
 
 // DefaultOptions son los valores del plan (debounce de 120 ms).
@@ -52,6 +54,8 @@ type App struct {
 	spaces  map[string]*workspace.Model
 	active  string
 	focus   focus
+
+	flash string // aviso transitorio en la statusbar
 
 	width, height int
 	wide          bool // ancho ≥ sidebarMinWidth en el último resize
@@ -77,6 +81,9 @@ func New(reg *registry.Registry, opts Options) *App {
 	}
 	a.initCmd = a.activate(a.sidebar.Selected())
 	a.setFocus(focusSidebar)
+	if opts.DetectOnStart {
+		a.initCmd = tea.Batch(a.initCmd, a.readClipboard(clipDetect))
+	}
 	return a
 }
 
@@ -99,6 +106,21 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case sidebar.SelectedMsg:
 		return a, a.activate(msg.ID)
 
+	case flashMsg:
+		a.flash = string(msg)
+		return a, nil
+
+	case clipReadMsg:
+		return a, a.handleClipRead(msg)
+
+	case clipWroteMsg:
+		if msg.err != nil {
+			a.flash = "no se pudo copiar: " + msg.err.Error()
+		} else {
+			a.flash = "salida copiada al portapapeles"
+		}
+		return a, nil
+
 	case workspace.DebounceMsg:
 		if ws, ok := a.spaces[msg.ToolID]; ok {
 			return a, ws.HandleDebounce(msg)
@@ -112,7 +134,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case tea.KeyPressMsg:
+		a.flash = ""
 		switch {
+		case key.Matches(msg, a.keys.CopyOutput):
+			return a, a.copyOutput()
+		case key.Matches(msg, a.keys.PasteInput):
+			return a, a.readClipboard(clipPaste)
+		case key.Matches(msg, a.keys.DetectClip):
+			return a, a.readClipboard(clipDetect)
 		case key.Matches(msg, a.keys.Quit):
 			return a, tea.Quit
 		case key.Matches(msg, a.keys.QuitOutside) && !a.capturesText():
@@ -174,6 +203,9 @@ func (a *App) render() string {
 	var st statusbar.Status
 	if ws := a.workspace(); ws != nil {
 		st = ws.Status()
+	}
+	if a.flash != "" {
+		st.Note = a.flash
 	}
 	return body + "\n" + statusbar.View(st, a.help.View(a.keys), a.width, a.theme.Status)
 }
@@ -266,7 +298,7 @@ func (a *App) setFocus(f focus) tea.Cmd {
 }
 
 // Run arranca el programa de Bubble Tea.
-func Run(reg *registry.Registry) error {
-	_, err := tea.NewProgram(New(reg, DefaultOptions())).Run()
+func Run(reg *registry.Registry, opts Options) error {
+	_, err := tea.NewProgram(New(reg, opts)).Run()
 	return err
 }

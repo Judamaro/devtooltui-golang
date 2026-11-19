@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/Judamaro/devtooltui-golang/internal/clipboard"
 	"github.com/Judamaro/devtooltui-golang/internal/render"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 )
@@ -79,7 +80,13 @@ func newToolCmd(t tool.Tool, d Deps, g *globalFlags) *cobra.Command {
 		if err != nil {
 			return runError(err, sources)
 		}
-		return writeResult(cmd.OutOrStdout(), res, s.Output, inputs, d, g)
+		if err := writeResult(cmd.OutOrStdout(), res, s.Output, inputs, d, g); err != nil {
+			return err
+		}
+		if g.copy {
+			copyOutput(cmd.ErrOrStderr(), res.Text, d)
+		}
+		return nil
 	}
 	return cmd
 }
@@ -272,6 +279,22 @@ func writeResult(w io.Writer, res tool.Result, kind tool.OutputKind, inputs map[
 	}
 	_, err := io.WriteString(w, out)
 	return err
+}
+
+// copyOutput copia al portapapeles; si falla solo avisa por stderr (la
+// salida ya se escribió).
+func copyOutput(stderr io.Writer, text string, d Deps) {
+	if d.Clipboard == nil {
+		fmt.Fprintln(stderr, "devtooltui: no hay portapapeles disponible")
+		return
+	}
+	if err := d.Clipboard.Write(text); err != nil {
+		fmt.Fprintln(stderr, "devtooltui: no se pudo copiar:", err)
+		return
+	}
+	if sys, ok := d.Clipboard.(*clipboard.System); ok && !sys.SSH() && sys.UseOSC52() {
+		fmt.Fprintln(stderr, "devtooltui: copiado con OSC 52; para el portapapeles del sistema,", sys.InstallHint())
+	}
 }
 
 // useColor: solo si stdout es una terminal, sin --no-color ni NO_COLOR.

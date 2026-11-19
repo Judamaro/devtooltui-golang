@@ -64,6 +64,16 @@ func (m Model) Selected() string {
 	return m.entries[m.cursor].id
 }
 
+// Select mueve el cursor a la herramienta id.
+func (m *Model) Select(id string) {
+	for i, e := range m.entries {
+		if e.header == "" && e.id == id {
+			m.cursor = i
+			return
+		}
+	}
+}
+
 func (m *Model) SetSize(w, h int) { m.width, m.height = w, h }
 func (m *Model) Focus()           { m.focused = true }
 func (m *Model) Blur()            { m.focused = false }

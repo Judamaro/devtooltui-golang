@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/x/term"
 
 	"github.com/Judamaro/devtooltui-golang/internal/cli"
+	"github.com/Judamaro/devtooltui-golang/internal/clipboard"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 	"github.com/Judamaro/devtooltui-golang/internal/tui"
@@ -29,6 +30,7 @@ func run(args []string) int {
 		fmt.Fprintln(os.Stderr, "devtooltui: registro inválido:", err)
 		return cli.ExitInternal
 	}
+	clip := clipboard.New(os.Getenv, os.Stderr)
 	return cli.Execute(args, cli.Deps{
 		Registry:     reg,
 		Stdin:        os.Stdin,
@@ -38,8 +40,14 @@ func run(args []string) int {
 		StdoutTTY:    term.IsTerminal(os.Stdout.Fd()),
 		Getenv:       os.Getenv,
 		RenderStyles: tui.RenderStyles(),
-		RunTUI:       func(bool) error { return tui.Run(reg) },
-		Version:      version,
-		Commit:       commit,
+		RunTUI: func(detect bool) error {
+			opts := tui.DefaultOptions()
+			opts.Clipboard = clipboard.New(os.Getenv, nil) // en la TUI, OSC 52 va por tea.SetClipboard
+			opts.DetectOnStart = detect
+			return tui.Run(reg, opts)
+		},
+		Clipboard: clip,
+		Version:   version,
+		Commit:    commit,
 	})
 }

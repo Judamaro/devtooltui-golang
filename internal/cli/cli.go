@@ -13,6 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/Judamaro/devtooltui-golang/internal/clipboard"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/render"
 )
@@ -38,6 +39,7 @@ type Deps struct {
 	Getenv          func(string) string
 	RenderStyles    render.Styles
 	RunTUI          func(clipboard bool) error // nil: no hay TUI disponible
+	Clipboard       clipboard.Clipboard        // para --copy
 	Version, Commit string
 }
 
@@ -82,6 +84,7 @@ func Execute(args []string, d Deps) int {
 
 type globalFlags struct {
 	json     bool
+	copy     bool
 	noColor  bool
 	maxInput int64
 }
@@ -111,6 +114,7 @@ func newRoot(d Deps) *cobra.Command {
 	root.Flags().BoolVar(&clip, "clipboard", false, "abrir la TUI con la herramienta detectada en el portapapeles")
 	root.PersistentFlags().BoolVar(&g.json, "json", false, "salida en JSON (el Result completo)")
 	root.PersistentFlags().BoolVar(&g.noColor, "no-color", false, "sin colores (también con NO_COLOR)")
+	root.PersistentFlags().BoolVar(&g.copy, "copy", false, "copiar la salida al portapapeles")
 	root.PersistentFlags().Int64Var(&g.maxInput, "max-input", DefaultMaxInput, "tamaño máximo de entrada en bytes")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return &exitError{ExitUsage, err} })
 	spanishHelp(root)
