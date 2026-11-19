@@ -14,12 +14,14 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
 // Styles los define tui/theme.go.
 type Styles struct {
-	Title, Description, Options, Section, SectionFocused, Error, Meta lipgloss.Style
-	Textarea                                                          textarea.Styles
+	Title, Description, Section, SectionFocused, Error, Meta lipgloss.Style
+	Textarea                                                 textarea.Styles
+	Options                                                  options.Styles
 }
 
 // Model es el estado de una herramienta. La TUI guarda uno por herramienta,
@@ -27,7 +29,7 @@ type Styles struct {
 type Model struct {
 	tool    tool.Tool
 	spec    tool.Spec
-	opts    tool.Values
+	opts    options.Model
 	input   textarea.Model
 	output  viewport.Model
 	result  tool.Result
@@ -35,6 +37,7 @@ type Model struct {
 	elapsed time.Duration
 	styles  Styles
 	width   int
+	height  int
 	focus   Focus
 }
 
@@ -43,11 +46,12 @@ type Focus int
 
 const (
 	FocusNone Focus = iota
+	FocusOptions
 	FocusInput
 	FocusOutput
 )
 
-func New(t tool.Tool, styles Styles) *Model {
+func New(t tool.Tool, styles Styles, optKeys options.KeyMap) *Model {
 	spec := t.Spec()
 	ta := textarea.New()
 	ta.Placeholder = "Escribe o pega aquí…"
@@ -58,7 +62,7 @@ func New(t tool.Tool, styles Styles) *Model {
 	m := &Model{
 		tool:   t,
 		spec:   spec,
-		opts:   tool.Values{}.WithDefaults(spec),
+		opts:   options.New(spec, tool.Values{}.WithDefaults(spec), styles.Options, optKeys),
 		input:  ta,
 		output: viewport.New(),
 		styles: styles,
@@ -70,10 +74,28 @@ func New(t tool.Tool, styles Styles) *Model {
 // HasInput indica si la herramienta tiene un campo de entrada.
 func (m *Model) HasInput() bool { return len(m.spec.Inputs) > 0 }
 
-// SetSize reparte el alto entre la entrada y la salida.
+// HasOptions indica si la herramienta tiene opciones.
+func (m *Model) HasOptions() bool { return !m.opts.Empty() }
+
+// CapturesText indica si el foco está en un campo de texto (entrada u
+// opción Number/String), donde "q" se escribe en lugar de salir.
+func (m *Model) CapturesText() bool {
+	return m.focus == FocusInput || (m.focus == FocusOptions && m.opts.CapturesText())
+}
+
+// SetSize reparte el alto entre las opciones, la entrada y la salida.
 func (m *Model) SetSize(w, h int) {
-	m.width = w
-	const chrome = 5 // título, opciones, 2 separadores, línea de estado
+	m.width, m.height = w, h
+	m.resize()
+}
+
+func (m *Model) resize() {
+	w, h := m.width, m.height
+	// título, separadores de entrada y salida, línea de estado y opciones
+	chrome := 3 + len(m.opts.Lines(w))
+	if m.HasInput() {
+		chrome++
+	}
 	avail := max(h-chrome, 2)
 	inH := avail / 2
 	if !m.HasInput() {
@@ -88,10 +110,14 @@ func (m *Model) SetSize(w, h int) {
 // SetFocus cambia el panel con foco.
 func (m *Model) SetFocus(f Focus) tea.Cmd {
 	m.focus = f
-	if f == FocusInput && m.HasInput() {
-		return m.input.Focus()
-	}
 	m.input.Blur()
+	m.opts.Blur()
+	switch {
+	case f == FocusInput && m.HasInput():
+		return m.input.Focus()
+	case f == FocusOptions:
+		return m.opts.Focus()
+	}
 	return nil
 }
 
@@ -99,6 +125,13 @@ func (m *Model) SetFocus(f Focus) tea.Cmd {
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch m.focus {
+	case FocusOptions:
+		var changed bool
+		changed, cmd = m.opts.Update(msg)
+		if changed {
+			m.run()
+		}
+		m.resize() // el panel puede cambiar de alto al editar un valor
 	case FocusInput:
 		if !m.HasInput() {
 			return nil
@@ -125,7 +158,7 @@ func (m *Model) run() {
 		inputs[in.Key] = m.input.Value()
 	}
 	start := time.Now()
-	res, err := m.tool.Run(context.Background(), tool.Request{Inputs: inputs, Opts: m.opts})
+	res, err := m.tool.Run(context.Background(), tool.Request{Inputs: inputs, Opts: m.opts.Values()})
 	m.elapsed = time.Since(start)
 	m.err = err
 	if err != nil {
@@ -146,7 +179,9 @@ func (m *Model) View() string {
 	title := m.styles.Title.Render(m.spec.Name)
 	desc := m.styles.Description.Render(" " + m.spec.Description)
 	b.WriteString(clip(title+desc, m.width) + "\n")
-	b.WriteString(clip(m.styles.Options.Render(m.optionsText()), m.width) + "\n")
+	for _, line := range m.opts.Lines(m.width) {
+		b.WriteString(clip(line, m.width) + "\n")
+	}
 	if m.HasInput() {
 		b.WriteString(m.section(m.spec.Inputs[0].Label, m.focus == FocusInput) + "\n")
 		b.WriteString(m.input.View() + "\n")
@@ -155,26 +190,6 @@ func (m *Model) View() string {
 	b.WriteString(m.output.View() + "\n")
 	b.WriteString(clip(m.statusText(), m.width))
 	return b.String()
-}
-
-func (m *Model) optionsText() string {
-	parts := make([]string, 0, len(m.spec.Options))
-	for _, o := range m.spec.Options {
-		var v string
-		switch o.Kind {
-		case tool.Toggle:
-			v = "[ ]"
-			if m.opts.Bool(o.Key) {
-				v = "[x]"
-			}
-		case tool.Number:
-			v = fmt.Sprint(m.opts.Int(o.Key))
-		default:
-			v = m.opts.String(o.Key)
-		}
-		parts = append(parts, o.Label+": "+v)
-	}
-	return strings.Join(parts, " · ")
 }
 
 func (m *Model) statusText() string {

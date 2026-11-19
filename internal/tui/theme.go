@@ -3,10 +3,12 @@ package tui
 import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/textinput"
 	"charm.land/lipgloss/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
 // Theme reúne todos los estilos de la TUI. Ningún otro archivo define
@@ -36,9 +38,15 @@ func DarkTheme() Theme {
 			SelectedBlurred: lipgloss.NewStyle().Foreground(accent),
 		},
 		Workspace: workspace.Styles{
-			Title:          lipgloss.NewStyle().Bold(true).Foreground(accent),
-			Description:    lipgloss.NewStyle().Foreground(muted),
-			Options:        lipgloss.NewStyle(),
+			Title:       lipgloss.NewStyle().Bold(true).Foreground(accent),
+			Description: lipgloss.NewStyle().Foreground(muted),
+			Options: options.Styles{
+				Label:   lipgloss.NewStyle().Foreground(muted),
+				Value:   lipgloss.NewStyle(),
+				Focused: lipgloss.NewStyle().Foreground(accent).Bold(true),
+				Invalid: lipgloss.NewStyle().Foreground(errC),
+				Input:   textinput.DefaultDarkStyles(),
+			},
 			Section:        lipgloss.NewStyle().Foreground(muted),
 			SectionFocused: lipgloss.NewStyle().Foreground(accent),
 			Error:          lipgloss.NewStyle().Foreground(errC),

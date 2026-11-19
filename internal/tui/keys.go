@@ -4,6 +4,7 @@ import (
 	"charm.land/bubbles/v2/key"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
 // KeyMap es el keymap central de la TUI.
@@ -14,6 +15,7 @@ type KeyMap struct {
 	Quit          key.Binding
 	QuitOutside   key.Binding // "q": solo fuera de los campos de texto
 	Sidebar       sidebar.KeyMap
+	Options       options.KeyMap
 }
 
 func DefaultKeyMap() KeyMap {
@@ -26,6 +28,13 @@ func DefaultKeyMap() KeyMap {
 		Sidebar: sidebar.KeyMap{
 			Up:   key.NewBinding(key.WithKeys("up", "k"), key.WithHelp("↑/k", "subir")),
 			Down: key.NewBinding(key.WithKeys("down", "j"), key.WithHelp("↓/j", "bajar")),
+		},
+		Options: options.KeyMap{
+			Prev:     key.NewBinding(key.WithKeys("up"), key.WithHelp("↑", "opción anterior")),
+			Next:     key.NewBinding(key.WithKeys("down"), key.WithHelp("↓", "opción siguiente")),
+			Decrease: key.NewBinding(key.WithKeys("left"), key.WithHelp("←", "valor anterior")),
+			Increase: key.NewBinding(key.WithKeys("right"), key.WithHelp("→", "valor siguiente")),
+			Toggle:   key.NewBinding(key.WithKeys("space"), key.WithHelp("espacio", "activar")),
 		},
 	}
 }
@@ -40,5 +49,6 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.NextFocus, k.PrevFocus, k.ToggleSidebar},
 		{k.Sidebar.Up, k.Sidebar.Down, k.Quit, k.QuitOutside},
+		{k.Options.Prev, k.Options.Next, k.Options.Decrease, k.Options.Increase, k.Options.Toggle},
 	}
 }

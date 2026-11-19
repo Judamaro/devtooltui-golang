@@ -36,6 +36,16 @@ func press(a *App, keys ...string) {
 			msg = tea.KeyPressMsg{Code: tea.KeyTab, Mod: tea.ModShift}
 		case "ctrl+b":
 			msg = tea.KeyPressMsg{Code: 'b', Mod: tea.ModCtrl}
+		case "right":
+			msg = tea.KeyPressMsg{Code: tea.KeyRight}
+		case "left":
+			msg = tea.KeyPressMsg{Code: tea.KeyLeft}
+		case "down":
+			msg = tea.KeyPressMsg{Code: tea.KeyDown}
+		case "up":
+			msg = tea.KeyPressMsg{Code: tea.KeyUp}
+		case "space":
+			msg = tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
 		default:
 			for _, r := range k {
 				msg = tea.KeyPressMsg{Code: r, Text: string(r)}
@@ -66,7 +76,8 @@ func TestViewGolden(t *testing.T) {
 		do   func(a *App)
 	}{
 		{"inicio-100x30", 100, 30, func(*App) {}},
-		{"base64-hola-100x30", 100, 30, func(a *App) { press(a, "tab", "hola") }},
+		{"base64-hola-100x30", 100, 30, func(a *App) { press(a, "tab", "tab", "hola") }},
+		{"opciones-enfocadas-100x30", 100, 30, func(a *App) { press(a, "tab", "right") }},
 		{"angosto-80x20", 80, 20, func(a *App) { press(a, "hola") }},
 	}
 	for _, tt := range tests {
@@ -95,11 +106,12 @@ func TestFocusRotation(t *testing.T) {
 		want focus
 	}{
 		{"inicio en sidebar", 100, nil, focusSidebar},
-		{"tab a entrada", 100, []string{"tab"}, focusInput},
-		{"tab tab a salida", 100, []string{"tab", "tab"}, focusOutput},
-		{"vuelta completa", 100, []string{"tab", "tab", "tab"}, focusSidebar},
+		{"tab a opciones", 100, []string{"tab"}, focusOptions},
+		{"tab tab a entrada", 100, []string{"tab", "tab"}, focusInput},
+		{"tres tabs a salida", 100, []string{"tab", "tab", "tab"}, focusOutput},
+		{"vuelta completa", 100, []string{"tab", "tab", "tab", "tab"}, focusSidebar},
 		{"shift+tab hacia atrás", 100, []string{"shift+tab"}, focusOutput},
-		{"angosto salta sidebar", 80, []string{"tab", "tab"}, focusInput},
+		{"angosto salta sidebar", 80, []string{"tab", "tab", "tab"}, focusInput},
 		{"ctrl+b oculta y mueve foco", 100, []string{"ctrl+b"}, focusInput},
 	}
 	for _, tt := range tests {
@@ -140,8 +152,9 @@ func TestQuitKeys(t *testing.T) {
 		wantQuit bool
 	}{
 		{"q en sidebar sale", nil, tea.KeyPressMsg{Code: 'q', Text: "q"}, true},
-		{"q en la entrada escribe", []string{"tab"}, tea.KeyPressMsg{Code: 'q', Text: "q"}, false},
-		{"ctrl+c en la entrada sale", []string{"tab"}, tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}, true},
+		{"q en opciones select sale", []string{"tab"}, tea.KeyPressMsg{Code: 'q', Text: "q"}, true},
+		{"q en la entrada escribe", []string{"tab", "tab"}, tea.KeyPressMsg{Code: 'q', Text: "q"}, false},
+		{"ctrl+c en la entrada sale", []string{"tab", "tab"}, tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -161,15 +174,30 @@ func isQuit(msg tea.Msg) bool {
 	return ok
 }
 
-func TestInputErrorKeepsOutput(t *testing.T) {
-	a := newApp(t, 100, 30)
-	press(a, "tab", "hola")
-	ws := a.workspace()
-	if ws.Output() != "aG9sYQ==" {
-		t.Fatalf("salida = %q", ws.Output())
+func TestOptionsRerun(t *testing.T) {
+	tests := []struct {
+		name    string
+		keys    []string
+		want    string
+		wantErr bool
+	}{
+		{"encode por defecto", []string{"tab", "tab", "hola"}, "aG9sYQ==", false},
+		{"cambiar a decode re-ejecuta", []string{"tab", "tab", "aG9sYQ==", "shift+tab", "right"}, "hola", false},
+		{"sin padding", []string{"tab", "down", "down", "space", "tab", "hola"}, "aG9sYQ", false},
+		{"error mantiene la salida anterior", []string{"tab", "right", "tab", "aG9sYQ==", "*"}, "hola", true},
 	}
-	if ws.Err() != nil {
-		t.Fatalf("error inesperado: %v", ws.Err())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newApp(t, 100, 30)
+			press(a, tt.keys...)
+			ws := a.workspace()
+			if ws.Output() != tt.want {
+				t.Errorf("salida = %q, want %q", ws.Output(), tt.want)
+			}
+			if (ws.Err() != nil) != tt.wantErr {
+				t.Errorf("err = %v, wantErr %v", ws.Err(), tt.wantErr)
+			}
+		})
 	}
 }
 
@@ -185,6 +213,7 @@ func TestProgram(t *testing.T) {
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
 		return strings.Contains(string(b), "Codificadores")
 	}, teatest.WithDuration(3*time.Second))
+	tm.Send(tea.KeyPressMsg{Code: tea.KeyTab})
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyTab})
 	tm.Type("hola")
 	tm.Send(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})

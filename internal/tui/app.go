@@ -23,6 +23,7 @@ type focus int
 
 const (
 	focusSidebar focus = iota
+	focusOptions
 	focusInput
 	focusOutput
 	focusCount
@@ -89,7 +90,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch {
 		case key.Matches(msg, a.keys.Quit):
 			return a, tea.Quit
-		case key.Matches(msg, a.keys.QuitOutside) && a.focus != focusInput:
+		case key.Matches(msg, a.keys.QuitOutside) && !a.capturesText():
 			return a, tea.Quit
 		case key.Matches(msg, a.keys.NextFocus):
 			return a, a.rotateFocus(1)
@@ -140,13 +141,18 @@ func (a *App) render() string {
 
 func (a *App) workspace() *workspace.Model { return a.spaces[a.active] }
 
+func (a *App) capturesText() bool {
+	ws := a.workspace()
+	return a.focus != focusSidebar && ws != nil && ws.CapturesText()
+}
+
 func (a *App) activate(id string) {
 	t, ok := a.reg.Get(id)
 	if !ok {
 		return
 	}
 	if _, ok := a.spaces[id]; !ok {
-		a.spaces[id] = workspace.New(t, a.theme.Workspace)
+		a.spaces[id] = workspace.New(t, a.theme.Workspace, a.keys.Options)
 	}
 	a.active = id
 	a.layout()
@@ -173,7 +179,11 @@ func (a *App) rotateFocus(delta int) tea.Cmd {
 		if f == focusSidebar && !a.showSidebar {
 			continue
 		}
-		if f == focusInput && (a.workspace() == nil || !a.workspace().HasInput()) {
+		ws := a.workspace()
+		if f == focusInput && (ws == nil || !ws.HasInput()) {
+			continue
+		}
+		if f == focusOptions && (ws == nil || !ws.HasOptions()) {
 			continue
 		}
 		break
@@ -193,6 +203,8 @@ func (a *App) setFocus(f focus) tea.Cmd {
 		return nil
 	}
 	switch f {
+	case focusOptions:
+		return ws.SetFocus(workspace.FocusOptions)
 	case focusInput:
 		return ws.SetFocus(workspace.FocusInput)
 	case focusOutput:
