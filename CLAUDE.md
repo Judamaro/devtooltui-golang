@@ -74,8 +74,16 @@ Reglas (las verifica `internal/registry/contract_test.go` sobre `tools.All()`):
 
 ## Herramientas actuales
 
-`json-format`, `base64`, `url`, `jwt`, `timestamp`, `number-base`, `hash`,
-`uuid` (registradas en ese orden en `internal/tools/all.go`).
+`json-format`, `xml-format`, `base64`, `url`, `jwt`, `timestamp`,
+`number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (registradas en
+ese orden en `internal/tools/all.go`; 12 = MVP completo).
+
+- `regex`: el patrón es la opción `pattern` (como el flag `--pattern` de la
+  CLI), no una entrada. `diff` y `jwt` (token + PEM) tienen dos entradas.
+- `diff` usa `Result.Lang` = `"diff"` (unificado) o `"diff-side"` para que la
+  TUI sepa cómo colorear; por palabras deja `Lang` vacío y colorea `Diff`.
+- Los fuzz que encuentran fallos dejan casos en
+  `internal/tools/<cat>/testdata/fuzz/`: se commitean como regresión.
 
 - Reloj y aleatoriedad: las herramientas que los necesitan (`jwt`,
   `timestamp`, `uuid`) tienen campos opcionales `Now func() time.Time` y
@@ -96,6 +104,12 @@ Reglas (las verifica `internal/registry/contract_test.go` sobre `tools.All()`):
   ejecución cancela el `ctx` anterior; `workspace.ResultMsg` con otra `seq`
   o cancelado se descarta. Los mensajes llevan `ToolID` y la App los enruta.
   Opciones, F5, pegado grande y ctrl+l ejecutan sin debounce.
+- Dos entradas van lado a lado desde 120 columnas de terminal; si no, apiladas.
+  Tab recorre sidebar → opciones → entrada A → entrada B → salida.
+- Coloreado (en la goroutine de ejecución, nunca en `Run`): `Highlighted` con
+  Chroma (`theme.go`, 16 colores ANSI), `Matches` con las coincidencias en
+  video inverso sobre la lista, `DiffView` por prefijo/marcador. Por encima
+  de 64 KB no se colorea (`HighlightMaxBytes`, ver `BenchmarkHighlight`).
 - La última fila es `internal/tui/statusbar`: estado a la izquierda, ayuda a
   la derecha. Con error, la salida anterior se atenúa.
 - En tests, `testutil.RunCmds` ejecuta los `tea.Cmd` y entrega los mensajes
