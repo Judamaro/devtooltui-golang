@@ -1,7 +1,7 @@
 ▾ Codificadores          │Base64 Codifica y decodifica Base64 estándar o URL-safe
   ▸ Base64               │Modo: ◀ encode ▶   Alfabeto: ◀ standard ▶   Padding: [x]
+                         │Salida: ◀ auto ▶
                          │── Entrada ───────────────────────────────────────────────────────────────
-                         │hola mundo
                          │hola mundo
                          │hola mundo
                          │hola mundo

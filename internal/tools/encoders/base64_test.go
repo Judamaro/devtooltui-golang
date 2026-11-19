@@ -25,6 +25,7 @@ func TestBase64Golden(t *testing.T) {
 		{"encode-text", nil},
 		{"encode-utf8-url-nopad", tool.Values{"variant": "url", "padding": false}},
 		{"decode-wrapped", tool.Values{"mode": "decode"}},
+		{"decode-binary", tool.Values{"mode": "decode"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -52,7 +53,12 @@ func TestBase64(t *testing.T) {
 		{"decode con padding", "aG9sYQ==", tool.Values{"mode": "decode"}, "hola"},
 		{"decode sin padding", "aG9sYQ", tool.Values{"mode": "decode"}, "hola"},
 		{"decode con espacios", " aG9s\nYQ== \n", tool.Values{"mode": "decode"}, "hola"},
-		{"decode url", "-_8", tool.Values{"mode": "decode", "variant": "url"}, "\xfb\xff"},
+		{"decode url como texto", "-_8", tool.Values{"mode": "decode", "variant": "url", "output": "text"}, "\xfb\xff"},
+		{"decode binario auto a hex", "-_8", tool.Values{"mode": "decode", "variant": "url"}, "fbff"},
+		{"decode con NUL auto a hex", "AGhvbGE=", tool.Values{"mode": "decode"}, "00686f6c61"},
+		{"decode texto forzado a hex", "aG9sYQ==", tool.Values{"mode": "decode", "output": "hex"}, "686f6c61"},
+		{"decode texto auto", "aG9sYQ==", tool.Values{"mode": "decode", "output": "auto"}, "hola"},
+		{"encode ignora output", "hola", tool.Values{"output": "hex"}, "aG9sYQ=="},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -129,7 +135,7 @@ func FuzzBase64RoundTrip(f *testing.F) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		dec, err := runBase64(t, enc.Text, tool.Values{"mode": "decode", "variant": variant})
+		dec, err := runBase64(t, enc.Text, tool.Values{"mode": "decode", "variant": variant, "output": "text"})
 		if err != nil {
 			t.Fatal(err)
 		}

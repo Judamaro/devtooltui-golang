@@ -4,6 +4,7 @@ package encoders
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -28,6 +29,7 @@ func (Base64) Spec() tool.Spec {
 			{Key: "mode", Label: "Modo", Kind: tool.Select, Choices: []string{"encode", "decode"}, Default: "encode"},
 			{Key: "variant", Label: "Alfabeto", Kind: tool.Select, Choices: []string{"standard", "url"}, Default: "standard"},
 			{Key: "padding", Label: "Padding", Help: "Agregar '=' al codificar", Kind: tool.Toggle, Default: true},
+			{Key: "output", Label: "Salida", Help: "Al decodificar: auto muestra hex si el resultado es binario", Kind: tool.Select, Choices: []string{"auto", "text", "hex"}, Default: "auto"},
 		},
 		Output: tool.PlainText,
 		Live:   true,
@@ -43,13 +45,14 @@ func (b Base64) Run(ctx context.Context, req tool.Request) (tool.Result, error) 
 	urlSafe := opts.String("variant") == "url"
 
 	var out string
+	var meta []tool.KV
 	switch opts.String("mode") {
 	case "decode":
 		dec, err := decodeBase64(in, urlSafe)
 		if err != nil {
 			return tool.Result{}, err
 		}
-		out = string(dec)
+		out, meta = renderDecoded(dec, opts.String("output"))
 	default:
 		enc := base64.StdEncoding
 		if urlSafe {
@@ -62,11 +65,35 @@ func (b Base64) Run(ctx context.Context, req tool.Request) (tool.Result, error) 
 	}
 	return tool.Result{
 		Text: out,
-		Meta: []tool.KV{
+		Meta: append([]tool.KV{
 			{Key: "Entrada", Value: fmt.Sprintf("%d B", len(in))},
 			{Key: "Salida", Value: fmt.Sprintf("%d B", len(out))},
-		},
+		}, meta...),
 	}, nil
+}
+
+// renderDecoded muestra los bytes como texto o, si son binarios (o se
+// pidió), en hex.
+func renderDecoded(dec []byte, output string) (string, []tool.KV) {
+	binary := len(dec) > 0 && !isText(dec)
+	if output == "hex" || (output == "auto" && binary) {
+		meta := []tool.KV{{Key: "Formato", Value: "hex"}}
+		if binary {
+			meta = append(meta, tool.KV{Key: "Binario", Value: fmt.Sprintf("%d bytes", len(dec))})
+		}
+		return hex.EncodeToString(dec), meta
+	}
+	return string(dec), nil
+}
+
+// isText exige UTF-8 válido, ningún NUL y al menos 90 % de runas imprimibles.
+func isText(b []byte) bool {
+	for _, c := range b {
+		if c == 0 {
+			return false
+		}
+	}
+	return mostlyPrintable(b)
 }
 
 // decodeBase64 ignora los espacios y saltos de línea, acepta la entrada con
