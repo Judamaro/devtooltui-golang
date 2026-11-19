@@ -19,5 +19,6 @@ func All() []tool.Tool {
 		converters.Timestamp{},
 		converters.NumberBase{},
 		generators.Hash{},
+		generators.UUID{},
 	}
 }
