@@ -1,6 +1,6 @@
 # ADR 0002 · Umbral de edición en vivo (`live_max_bytes`)
 
-- Estado: propuesta (fase 0, 2026-11-19), pendiente de aprobar en el gate
+- Estado: aceptada (gate de la fase 0, 2026-11-19)
 
 ## Contexto
 
@@ -45,7 +45,7 @@ minificado.
 tarda 13–30 ms una sola vez, y cada frame posterior (scroll + `View`) tarda
 0.03 ms indentado y 10 ms minificado.
 
-## Decisión propuesta
+## Decisión
 
 - `live_max_bytes = 32768` (32 KB) por defecto, en lugar del 1 MB del plan.
   Además, un límite de **5 000 líneas** para no acercarse al tope de 10 000.
