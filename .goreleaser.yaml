@@ -1,0 +1,86 @@
+# GoReleaser v2: se publica al empujar un tag vX.Y.Z (ver .github/workflows/release.yml).
+version: 2
+
+project_name: devtooltui
+
+builds:
+  - id: devtooltui
+    main: ./cmd/devtooltui
+    binary: devtooltui
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }} -X main.commit={{ .ShortCommit }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Novedades
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Correcciones
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Otros
+      order: 999
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - '^ci:'
+
+nfpms:
+  - id: packages
+    package_name: devtooltui
+    vendor: Judamaro
+    homepage: https://github.com/Judamaro/devtooltui-golang
+    maintainer: Judamaro <noreply@github.com>
+    description: Utilidades de desarrollo en la terminal (JSON, JWT, Base64, hashes, regex, diff…) como TUI y CLI.
+    formats: [deb, rpm, apk]
+
+homebrew_casks:
+  - name: devtooltui
+    homepage: https://github.com/Judamaro/devtooltui-golang
+    description: Utilidades de desarrollo en la terminal como TUI y CLI
+    repository:
+      owner: Judamaro
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    # El binario no está firmado ni notarizado: no se quita la cuarentena de
+    # macOS automáticamente; se explica cómo hacerlo.
+    caveats: |
+      El binario no está firmado. Si macOS lo bloquea, ejecuta:
+        xattr -dr com.apple.quarantine "$(brew --prefix)/bin/devtooltui"
+
+release:
+  github:
+    owner: Judamaro
+    name: devtooltui-golang
+  draft: false
+  prerelease: auto
