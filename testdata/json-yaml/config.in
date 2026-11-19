@@ -1,0 +1,3 @@
+{"zeta":1,"name":"devtooltui","version":"1.0","enabled":true,"ratio":0.5,"big":12345678901234567890,
+ "tags":["cli","tui"],"nested":{"b":null,"a":[{"x":1},{"y":"true"}]},"empty":{},"list":[],
+ "quoted":"a: b","multi":"línea 1\nlínea 2","num_str":"123"}

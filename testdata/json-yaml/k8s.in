@@ -1,0 +1,17 @@
+# Deployment de ejemplo
+defaults: &defaults
+  replicas: 2
+  image: nginx:1.27
+  ports: [80, 443]
+service:
+  <<: *defaults
+  replicas: 3
+  name: web
+  enabled: yes
+  timeout: 1.5e3
+  hex: 0x1F
+  started: 2026-01-01
+  empty:
+  notes: |
+    línea uno
+    línea dos

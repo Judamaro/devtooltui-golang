@@ -1,0 +1,1 @@
+{"defaults":{"replicas":2,"image":"nginx:1.27","ports":[80,443]},"service":{"replicas":3,"name":"web","enabled":"yes","timeout":1.5e3,"hex":31,"started":"2026-01-01","empty":null,"notes":"línea uno\nlínea dos\n","image":"nginx:1.27","ports":[80,443]}}

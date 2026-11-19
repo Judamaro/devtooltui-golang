@@ -7,10 +7,10 @@
 ▾ Conversores            │┃
     Timestamp            │┃
     Bases numéricas      │┃
+    JSON ↔ YAML          │┃
 ▾ Generadores            │┃
     Hash                 │┃
     UUID / ULID          │┃
-                         │┃
                          │┃
                          │┃
                          │── Salida ────────────────────────────────────────────────────────────────
