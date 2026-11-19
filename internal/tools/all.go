@@ -3,6 +3,7 @@ package tools
 
 import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/converters"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/generators"
@@ -15,6 +16,7 @@ func All() []tool.Tool {
 		encoders.Base64{},
 		encoders.URL{},
 		encoders.JWT{},
+		converters.Timestamp{},
 		generators.Hash{},
 	}
 }
