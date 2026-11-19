@@ -177,7 +177,9 @@ func (Timestamp) Detect(sample string) float64 {
 		return 0
 	}
 	t, err := fromUnix(s, map[int]string{10: "s", 13: "ms"}[len(s)])
-	if err != nil || t.Year() < 2000 || t.Year() >= 2100 {
+	// UTC: t.Year() on a Local time loads the system zone the first time,
+	// which on Windows (with -race) alone exceeded the 20 ms detect budget.
+	if err != nil || t.UTC().Year() < 2000 || t.UTC().Year() >= 2100 {
 		return 0
 	}
 	return 0.70
