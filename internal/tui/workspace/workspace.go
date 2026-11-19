@@ -4,7 +4,9 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -51,6 +53,13 @@ type Model struct {
 	largeView viewport.Model
 	stale     bool // la entrada cambió y no se ha ejecutado (F5)
 
+	// Ejecución asíncrona: seq identifica la ejecución vigente; los
+	// resultados con otra seq se descartan.
+	debounce time.Duration
+	seq      int
+	cancel   context.CancelFunc
+	running  bool
+
 	result  tool.Result
 	err     error
 	elapsed time.Duration
@@ -70,7 +79,24 @@ const (
 	FocusOutput
 )
 
-func New(t tool.Tool, styles Styles, optKeys options.KeyMap) *Model {
+// DebounceMsg llega cuando vence el debounce de la ejecución Seq.
+type DebounceMsg struct {
+	ToolID string
+	Seq    int
+}
+
+// ResultMsg trae el resultado de la ejecución Seq.
+type ResultMsg struct {
+	ToolID  string
+	Seq     int
+	Result  tool.Result
+	Err     error
+	Elapsed time.Duration
+}
+
+// New crea el workspace. debounce es la espera entre la última tecla y la
+// ejecución; con 0 se ejecuta enseguida (útil en tests).
+func New(t tool.Tool, styles Styles, optKeys options.KeyMap, debounce time.Duration) *Model {
 	spec := t.Spec()
 	ta := textarea.New()
 	ta.Placeholder = "Escribe o pega aquí…"
@@ -86,11 +112,14 @@ func New(t tool.Tool, styles Styles, optKeys options.KeyMap) *Model {
 		output:    viewport.New(),
 		largeView: viewport.New(),
 		limits:    DefaultLimits,
+		debounce:  debounce,
 		styles:    styles,
 	}
-	m.run()
 	return m
 }
+
+// Init lanza la primera ejecución (entrada vacía).
+func (m *Model) Init() tea.Cmd { return m.runNow() }
 
 // HasInput indica si la herramienta tiene un campo de entrada.
 func (m *Model) HasInput() bool { return len(m.spec.Inputs) > 0 }
@@ -151,10 +180,10 @@ func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	case FocusOptions:
 		var changed bool
 		changed, cmd = m.opts.Update(msg)
-		if changed {
-			m.run()
-		}
 		m.resize() // el panel puede cambiar de alto al editar un valor
+		if changed {
+			cmd = tea.Batch(cmd, m.runNow())
+		}
 	case FocusInput:
 		if !m.HasInput() {
 			return nil
@@ -173,8 +202,7 @@ func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 	if m.large {
 		if p, ok := msg.(tea.PasteMsg); ok {
 			m.setLarge(m.largeText + p.Content)
-			m.run()
-			return nil
+			return m.runNow()
 		}
 		var cmd tea.Cmd
 		m.largeView, cmd = m.largeView.Update(msg)
@@ -184,8 +212,7 @@ func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 	if p, ok := msg.(tea.PasteMsg); ok && m.exceeds(before+p.Content) {
 		// Se agrega al final: el textarea truncaría o se congelaría.
 		m.setLarge(before + p.Content)
-		m.run() // una vez al pegar; después, solo con F5
-		return nil
+		return m.runNow() // una vez al pegar; después, solo con F5
 	}
 	var cmd tea.Cmd
 	m.input, cmd = m.input.Update(msg)
@@ -195,13 +222,12 @@ func (m *Model) updateInput(msg tea.Msg) tea.Cmd {
 	}
 	if m.exceeds(after) {
 		m.setLarge(after)
-		m.run()
-		return cmd
+		return tea.Batch(cmd, m.runNow())
 	}
 	m.input.ShowLineNumbers = len(after) <= m.limits.LineNumbersMaxBytes
 	m.stale = true
 	if m.spec.Live {
-		m.run()
+		return tea.Batch(cmd, m.schedule())
 	}
 	return cmd
 }
@@ -221,39 +247,88 @@ func (m *Model) setLarge(s string) {
 func (m *Model) Large() bool { return m.large }
 
 // ClearInput vacía la entrada y sale del modo de entrada grande.
-func (m *Model) ClearInput() {
+func (m *Model) ClearInput() tea.Cmd {
 	m.large = false
 	m.largeText = ""
 	m.largeView.SetContent("")
 	m.input.Reset()
 	m.input.ShowLineNumbers = true
-	m.run()
+	return m.runNow()
 }
 
-// Run ejecuta la herramienta a pedido (F5).
-func (m *Model) Run() { m.run() }
+// Run ejecuta la herramienta a pedido (F5), sin debounce.
+func (m *Model) Run() tea.Cmd { return m.runNow() }
 
-// run ejecuta la herramienta de forma síncrona. El debounce y la
-// cancelación llegan en la fase 1.
-func (m *Model) run() {
-	inputs := map[string]string{}
+// Running indica si hay una ejecución en curso.
+func (m *Model) Running() bool { return m.running }
+
+// schedule programa una ejecución tras el debounce. Cada llamada invalida
+// las anteriores.
+func (m *Model) schedule() tea.Cmd {
+	m.seq++
+	if m.debounce <= 0 {
+		return m.launch(m.seq)
+	}
+	id, seq := m.spec.ID, m.seq
+	return tea.Tick(m.debounce, func(time.Time) tea.Msg { return DebounceMsg{ToolID: id, Seq: seq} })
+}
+
+// runNow ejecuta sin esperar el debounce.
+func (m *Model) runNow() tea.Cmd {
+	m.seq++
+	return m.launch(m.seq)
+}
+
+// HandleDebounce lanza la ejecución si el tick sigue vigente.
+func (m *Model) HandleDebounce(msg DebounceMsg) tea.Cmd {
+	if msg.Seq != m.seq {
+		return nil
+	}
+	return m.launch(msg.Seq)
+}
+
+// launch cancela la ejecución anterior y corre la herramienta en una
+// goroutine con una copia de la entrada y las opciones.
+func (m *Model) launch(seq int) tea.Cmd {
+	if m.cancel != nil {
+		m.cancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	m.cancel = cancel
+	m.running = true
+	m.stale = false
+
 	value := m.input.Value()
 	if m.large {
 		value = m.largeText
 	}
+	inputs := make(map[string]string, len(m.spec.Inputs))
 	for _, in := range m.spec.Inputs {
 		inputs[in.Key] = value
 	}
-	m.stale = false
-	start := time.Now()
-	res, err := m.tool.Run(context.Background(), tool.Request{Inputs: inputs, Opts: m.opts.Values()})
-	m.elapsed = time.Since(start)
-	m.err = err
-	if err != nil {
+	req := tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
+	t, id := m.tool, m.spec.ID
+	return func() tea.Msg {
+		start := time.Now()
+		res, err := t.Run(ctx, req)
+		return ResultMsg{ToolID: id, Seq: seq, Result: res, Err: err, Elapsed: time.Since(start)}
+	}
+}
+
+// HandleResult aplica un resultado si corresponde a la ejecución vigente.
+func (m *Model) HandleResult(msg ResultMsg) {
+	if msg.Seq != m.seq || errors.Is(msg.Err, context.Canceled) {
+		return // resultado viejo o cancelado
+	}
+	m.running = false
+	m.cancel = nil
+	m.elapsed = msg.Elapsed
+	m.err = msg.Err
+	if msg.Err != nil {
 		return // la salida anterior se mantiene
 	}
-	m.result = res
-	m.output.SetContent(res.Text)
+	m.result = msg.Result
+	m.output.SetContent(msg.Result.Text)
 }
 
 // Output devuelve el texto de la última ejecución correcta.

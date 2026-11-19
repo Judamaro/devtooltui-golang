@@ -3,6 +3,7 @@ package tui
 import (
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
 // newApp arma una App solo con base64, para que los tests de
@@ -30,9 +32,23 @@ func newAppWith(t *testing.T, w, h int, ts ...tool.Tool) *App {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := New(reg)
-	a.Update(tea.WindowSizeMsg{Width: w, Height: h})
+	a := New(reg, Options{Debounce: 0})
+	send(a, tea.WindowSizeMsg{Width: w, Height: h})
+	testutil.RunCmds(a.Init(), func(msg tea.Msg) tea.Cmd { _, c := a.Update(msg); return c })
 	return a
+}
+
+// send entrega msg a la App y ejecuta los comandos que devuelva, de modo
+// que los resultados asíncronos ya estén aplicados al volver.
+func send(a *App, msg tea.Msg) {
+	_, cmd := a.Update(msg)
+	testutil.RunCmds(cmd, func(m tea.Msg) tea.Cmd {
+		if _, ok := m.(tea.QuitMsg); ok {
+			return nil
+		}
+		_, c := a.Update(m)
+		return c
+	})
 }
 
 func press(a *App, keys ...string) {
@@ -57,12 +73,11 @@ func press(a *App, keys ...string) {
 			msg = tea.KeyPressMsg{Code: tea.KeySpace, Text: " "}
 		default:
 			for _, r := range k {
-				msg = tea.KeyPressMsg{Code: r, Text: string(r)}
-				a.Update(msg)
+				send(a, tea.KeyPressMsg{Code: r, Text: string(r)})
 			}
 			continue
 		}
-		a.Update(msg)
+		send(a, msg)
 	}
 }
 
@@ -90,7 +105,7 @@ func TestViewGolden(t *testing.T) {
 		{"opciones-enfocadas-100x30", 100, 30, func(a *App) { press(a, "tab", "right") }},
 		{"entrada-grande-100x30", 100, 30, func(a *App) {
 			press(a, "tab", "tab")
-			a.Update(tea.PasteMsg{Content: strings.Repeat("hola mundo\n", 3500)})
+			send(a, tea.PasteMsg{Content: strings.Repeat("hola mundo\n", 3500)})
 		}},
 		{"angosto-80x20", 80, 20, func(a *App) { press(a, "hola") }},
 	}
@@ -149,7 +164,7 @@ func TestSidebarCollapse(t *testing.T) {
 	if !a.showSidebar {
 		t.Fatal("sidebar oculto a 100 columnas")
 	}
-	a.Update(tea.WindowSizeMsg{Width: 89, Height: 30})
+	send(a, tea.WindowSizeMsg{Width: 89, Height: 30})
 	if a.showSidebar {
 		t.Error("sidebar visible a 89 columnas")
 	}
@@ -157,7 +172,7 @@ func TestSidebarCollapse(t *testing.T) {
 	if !a.showSidebar {
 		t.Error("ctrl+b no muestra el sidebar")
 	}
-	a.Update(tea.WindowSizeMsg{Width: 85, Height: 30})
+	send(a, tea.WindowSizeMsg{Width: 85, Height: 30})
 	if !a.showSidebar {
 		t.Error("un resize sin cruzar el umbral pisó la elección del usuario")
 	}
@@ -191,16 +206,16 @@ func TestQuitKeys(t *testing.T) {
 func TestRunAndClearKeys(t *testing.T) {
 	a := newApp(t, 100, 30)
 	press(a, "tab", "tab")
-	a.Update(tea.PasteMsg{Content: strings.Repeat("a", 40000)})
+	send(a, tea.PasteMsg{Content: strings.Repeat("a", 40000)})
 	ws := a.workspace()
 	if !ws.Large() {
 		t.Fatal("no entró en modo grande")
 	}
-	a.Update(tea.KeyPressMsg{Code: tea.KeyF5})
+	send(a, tea.KeyPressMsg{Code: tea.KeyF5})
 	if ws.Err() != nil {
 		t.Fatalf("F5: %v", ws.Err())
 	}
-	a.Update(tea.KeyPressMsg{Code: 'l', Mod: tea.ModCtrl})
+	send(a, tea.KeyPressMsg{Code: 'l', Mod: tea.ModCtrl})
 	if ws.Large() || ws.Output() != "" {
 		t.Errorf("ctrl+l no limpió la entrada (Large=%v, salida=%d bytes)", ws.Large(), len(ws.Output()))
 	}
@@ -246,13 +261,30 @@ func TestProgram(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tm := teatest.NewTestModel(t, New(reg), teatest.WithInitialTermSize(100, 30))
+	// El filtro avisa cuando llega el resultado de "hola", porque la
+	// ejecución es asíncrona y no se puede salir antes.
+	done := make(chan struct{})
+	var once sync.Once
+	filter := func(_ tea.Model, msg tea.Msg) tea.Msg {
+		if r, ok := msg.(workspace.ResultMsg); ok && r.Result.Text == "aG9sYQ==" {
+			once.Do(func() { close(done) })
+		}
+		return msg
+	}
+	tm := teatest.NewTestModel(t, New(reg, DefaultOptions()),
+		teatest.WithInitialTermSize(100, 30),
+		teatest.WithProgramOptions(tea.WithFilter(filter)))
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
 		return strings.Contains(string(b), "Codificadores")
 	}, teatest.WithDuration(3*time.Second))
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyTab})
 	tm.Send(tea.KeyPressMsg{Code: tea.KeyTab})
 	tm.Type("hola")
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("no llegó el resultado de la ejecución asíncrona")
+	}
 	tm.Send(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	final, ok := tm.FinalModel(t, teatest.WithFinalTimeout(3*time.Second)).(*App)
 	if !ok {

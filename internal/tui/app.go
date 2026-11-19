@@ -3,6 +3,7 @@ package tui
 
 import (
 	"strings"
+	"time"
 
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
@@ -29,8 +30,18 @@ const (
 	focusCount
 )
 
+// Options configura la App.
+type Options struct {
+	Debounce time.Duration // espera entre la última tecla y la ejecución
+}
+
+// DefaultOptions son los valores del plan (debounce de 120 ms).
+func DefaultOptions() Options { return Options{Debounce: 120 * time.Millisecond} }
+
 // App es el modelo raíz.
 type App struct {
+	opts    Options
+	initCmd tea.Cmd
 	reg     *registry.Registry
 	theme   Theme
 	keys    KeyMap
@@ -46,12 +57,13 @@ type App struct {
 }
 
 // New crea la App con la primera herramienta del sidebar activa.
-func New(reg *registry.Registry) *App {
+func New(reg *registry.Registry, opts Options) *App {
 	theme := DarkTheme()
 	keys := DefaultKeyMap()
 	h := help.New()
 	h.Styles = theme.Help
 	a := &App{
+		opts:        opts,
 		reg:         reg,
 		theme:       theme,
 		keys:        keys,
@@ -61,12 +73,12 @@ func New(reg *registry.Registry) *App {
 		showSidebar: true,
 		wide:        true,
 	}
-	a.activate(a.sidebar.Selected())
+	a.initCmd = a.activate(a.sidebar.Selected())
 	a.setFocus(focusSidebar)
 	return a
 }
 
-func (a *App) Init() tea.Cmd { return nil }
+func (a *App) Init() tea.Cmd { return a.initCmd }
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -83,7 +95,18 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case sidebar.SelectedMsg:
-		a.activate(msg.ID)
+		return a, a.activate(msg.ID)
+
+	case workspace.DebounceMsg:
+		if ws, ok := a.spaces[msg.ToolID]; ok {
+			return a, ws.HandleDebounce(msg)
+		}
+		return a, nil
+
+	case workspace.ResultMsg:
+		if ws, ok := a.spaces[msg.ToolID]; ok {
+			ws.HandleResult(msg)
+		}
 		return a, nil
 
 	case tea.KeyPressMsg:
@@ -98,12 +121,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, a.rotateFocus(-1)
 		case key.Matches(msg, a.keys.Run):
 			if ws := a.workspace(); ws != nil {
-				ws.Run()
+				return a, ws.Run()
 			}
 			return a, nil
 		case key.Matches(msg, a.keys.ClearInput):
 			if ws := a.workspace(); ws != nil {
-				ws.ClearInput()
+				return a, ws.ClearInput()
 			}
 			return a, nil
 		case key.Matches(msg, a.keys.ToggleSidebar):
@@ -156,17 +179,20 @@ func (a *App) capturesText() bool {
 	return a.focus != focusSidebar && ws != nil && ws.CapturesText()
 }
 
-func (a *App) activate(id string) {
+func (a *App) activate(id string) tea.Cmd {
 	t, ok := a.reg.Get(id)
 	if !ok {
-		return
+		return nil
 	}
+	var initCmd tea.Cmd
 	if _, ok := a.spaces[id]; !ok {
-		a.spaces[id] = workspace.New(t, a.theme.Workspace, a.keys.Options)
+		ws := workspace.New(t, a.theme.Workspace, a.keys.Options, a.opts.Debounce)
+		a.spaces[id] = ws
+		initCmd = ws.Init()
 	}
 	a.active = id
 	a.layout()
-	a.setFocus(a.focus)
+	return tea.Batch(initCmd, a.setFocus(a.focus))
 }
 
 func (a *App) layout() {
@@ -226,6 +252,6 @@ func (a *App) setFocus(f focus) tea.Cmd {
 
 // Run arranca el programa de Bubble Tea.
 func Run(reg *registry.Registry) error {
-	_, err := tea.NewProgram(New(reg)).Run()
+	_, err := tea.NewProgram(New(reg, DefaultOptions())).Run()
 	return err
 }
