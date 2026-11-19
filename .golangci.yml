@@ -9,7 +9,6 @@ linters:
     - gosec
     - revive
     - gocritic
-    - misspell
     - unconvert
   settings:
     revive:

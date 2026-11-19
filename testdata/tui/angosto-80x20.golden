@@ -1,0 +1,20 @@
+Base64 Codifica y decodifica Base64 estándar o URL-safe
+Modo: encode · Alfabeto: standard · Padding: [x]
+── Entrada ─────────────────────────────────────────────────────────────────────
+┃  1 hola
+┃
+┃
+┃
+┃
+┃
+┃
+── Salida ──────────────────────────────────────────────────────────────────────
+aG9sYQ==
+
+
+
+
+
+
+✓ 0s · Entrada: 4 B · Salida: 8 B
+tab foco • ctrl+b sidebar • ctrl+c salir

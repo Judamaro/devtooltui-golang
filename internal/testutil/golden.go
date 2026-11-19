@@ -6,15 +6,20 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-)
 
-var update = flag.Bool("update", false, "regenera los golden files")
+	// Define el flag -update; teatest también lo usa, así que no puede
+	// declararse dos veces en el mismo binario de test.
+	_ "github.com/charmbracelet/x/exp/golden"
+)
 
 // Updating indica si hay que regenerar los golden files: con -update en un
 // paquete concreto o con UPDATE_GOLDEN=1 (lo usa make golden-update, porque
 // -update rompe los paquetes que no importan testutil).
 func Updating() bool {
-	return *update || os.Getenv("UPDATE_GOLDEN") == "1"
+	if f := flag.Lookup("update"); f != nil && f.Value.String() == "true" {
+		return true
+	}
+	return os.Getenv("UPDATE_GOLDEN") == "1"
 }
 
 // Root devuelve la raíz del módulo (el directorio con go.mod).
