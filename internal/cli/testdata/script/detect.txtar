@@ -1,0 +1,22 @@
+exec devtooltui detect token.txt
+stdout '^jwt \(0\.98\)$'
+
+stdin data.json
+exec devtooltui detect
+stdout '^json-format \(0\.90\)$'
+
+exec devtooltui detect --json ts.txt
+stdout '"id": "timestamp"'
+stdout '"ambiguous": false'
+
+! exec devtooltui detect plano.txt
+stderr 'no se reconoció el formato'
+
+-- token.txt --
+eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ4In0.c2ln
+-- data.json --
+{"a": [1, 2]}
+-- ts.txt --
+1767225600
+-- plano.txt --
+hola, esto es texto normal

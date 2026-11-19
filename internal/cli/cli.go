@@ -119,7 +119,7 @@ func newRoot(d Deps) *cobra.Command {
 	root.AddGroup(&cobra.Group{ID: "tools", Title: "Herramientas:"}, &cobra.Group{ID: "general", Title: "Generales:"})
 	root.SetHelpCommandGroupID("general")
 	root.SetCompletionCommandGroupID("general")
-	root.AddCommand(newVersion(d), newList(d, &g))
+	root.AddCommand(newVersion(d), newList(d, &g), newDetect(d, &g))
 	for _, t := range d.Registry.All() {
 		root.AddCommand(newToolCmd(t, d, &g))
 	}
