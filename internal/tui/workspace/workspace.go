@@ -425,7 +425,9 @@ func (m *Model) View() string {
 func (m *Model) Status() statusbar.Status {
 	st := statusbar.Status{
 		Running: m.running,
-		Stale:   m.stale && !m.running,
+		// "f5 para ejecutar" solo si no se va a ejecutar sola: en las
+		// herramientas live, durante el debounce, no hay nada que pedir.
+		Stale:   m.stale && !m.running && (!m.spec.Live || m.Large()),
 		Err:     m.err,
 		Elapsed: m.elapsed,
 		Meta:    m.result.Meta,

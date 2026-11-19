@@ -301,3 +301,14 @@ func TestSetInput(t *testing.T) {
 		})
 	}
 }
+
+func TestLiveDebounceIsNotStale(t *testing.T) {
+	c := &counter{live: true}
+	m := workspace.New(c, workspace.Styles{}, optKeys, time.Hour) // el tick nunca llega
+	m.SetSize(80, 24, false)
+	m.SetFocus(workspace.FocusInput)
+	m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
+	if m.Status().Stale {
+		t.Error("una herramienta live muestra \"f5 para ejecutar\" durante el debounce")
+	}
+}
