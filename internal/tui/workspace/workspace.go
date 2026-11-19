@@ -27,6 +27,7 @@ type Styles struct {
 	Options                                                  options.Styles
 	Chroma                                                   *chroma.Style  // colores de las salidas Highlighted
 	Match                                                    lipgloss.Style // coincidencias de las salidas Matches
+	Diff                                                     DiffStyles     // salidas DiffView
 }
 
 // Limits define cuándo la entrada deja de editarse en vivo (ADR 0002).
@@ -324,7 +325,7 @@ func (m *Model) launch(seq int) tea.Cmd {
 		inputs[f.spec.Key] = f.value()
 	}
 	req := tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
-	t, id, kind, style, match := m.tool, m.spec.ID, m.spec.Output, m.styles.Chroma, m.styles.Match
+	t, id, kind, style, match, diffStyles := m.tool, m.spec.ID, m.spec.Output, m.styles.Chroma, m.styles.Match, m.styles.Diff
 	return func() tea.Msg {
 		start := time.Now()
 		res, err := t.Run(ctx, req)
@@ -339,6 +340,12 @@ func (m *Model) launch(seq int) tea.Cmd {
 				msg.NoColor = true
 			} else if out, ok := highlight(res.Text, res.Lang, style); ok {
 				msg.Rendered = out
+			}
+		case kind == tool.DiffView:
+			if len(res.Text) > HighlightMaxBytes {
+				msg.NoColor = true
+			} else {
+				msg.Rendered = renderDiff(res, diffStyles)
 			}
 		case kind == tool.Matches && len(res.Spans) > 0:
 			// El texto con las coincidencias resaltadas va sobre la lista.

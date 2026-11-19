@@ -1,0 +1,5 @@
+go test fuzz v1
+string("c\n0")
+string("c")
+bool(false)
+bool(false)

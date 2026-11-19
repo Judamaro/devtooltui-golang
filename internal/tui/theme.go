@@ -77,7 +77,13 @@ func DarkTheme() Theme {
 			OutputStale:    lipgloss.NewStyle().Faint(true),
 			Chroma:         darkChroma,
 			Match:          lipgloss.NewStyle().Reverse(true),
-			Textarea:       textarea.DefaultDarkStyles(),
+			Diff: workspace.DiffStyles{
+				Insert: lipgloss.NewStyle().Foreground(ok),
+				Delete: lipgloss.NewStyle().Foreground(errC),
+				Change: lipgloss.NewStyle().Foreground(warn),
+				Hunk:   lipgloss.NewStyle().Foreground(accent),
+			},
+			Textarea: textarea.DefaultDarkStyles(),
 		},
 		Help: h.Styles,
 	}

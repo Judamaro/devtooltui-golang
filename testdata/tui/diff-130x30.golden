@@ -1,0 +1,30 @@
+▾ Texto                  │Diff Compara dos textos por líneas o por palabras
+  ▸ Diff                 │Por: ◀ lines ▶   Ignorar espacios: [ ]   Vista: ◀ unified ▶
+                         │── Texto A (original) ───────────────────────────── ── Texto B (nuevo) ─────────────────────────────────
+                         │┃  1 uno                                           │┃  1 uno
+                         │┃  2 dos                                           │┃  2 DOS
+                         │┃  3 tres                                          │┃  3 tres
+                         │┃  4                                               │┃  4 cuatro
+                         │┃                                                  │┃  5
+                         │┃                                                  │┃
+                         │┃                                                  │┃
+                         │┃                                                  │┃
+                         │┃                                                  │┃
+                         │┃                                                  │┃
+                         │┃                                                  │┃
+                         │┃                                                  │┃
+                         │── Salida ──────────────────────────────────────────────────────────────────────────────────────────────
+                         │--- A
+                         │+++ B
+                         │@@ -1,3 +1,4 @@
+                         │ uno
+                         │-dos
+                         │+DOS
+                         │ tres
+                         │+cuatro
+                         │
+                         │
+                         │
+                         │
+                         │
+✓ 0 µs · Cambios: +2 −1 líneas  tab foco • ctrl+b sidebar • ctrl+c salir

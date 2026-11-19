@@ -1,0 +1,16 @@
+package main
+
+import {+(
+	+}"fmt"{+
+	"os"
+)+}
+
+func main() {
+	nombre := "mundo"
+	[-fmt.Println("hola",-]{+fmt.Println("hola,",+} nombre)
+	for i := 0; i < 3; i++ {
+		fmt.Println(i)
+	}
+	// fin
+	[-return-]{+os.Exit(0)+}
+}

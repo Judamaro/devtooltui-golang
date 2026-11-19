@@ -1,0 +1,13 @@
+package main
+
+import "fmt"
+
+func main() {
+	nombre := "mundo"
+	fmt.Println("hola", nombre)
+	for i := 0; i < 3; i++ {
+		fmt.Println(i)
+	}
+	// fin
+	return
+}

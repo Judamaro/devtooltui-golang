@@ -8,6 +8,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/generators"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/testers"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/text"
 )
 
 // All devuelve todas las herramientas en el orden en que se registran.
@@ -24,5 +25,6 @@ func All() []tool.Tool {
 		generators.Hash{},
 		generators.UUID{},
 		testers.Regex{},
+		text.Diff{},
 	}
 }

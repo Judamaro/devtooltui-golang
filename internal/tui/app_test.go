@@ -19,6 +19,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/testers"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/text"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
@@ -346,4 +347,19 @@ func TestRegexMatchesView(t *testing.T) {
 		t.Errorf("Coincidencias = %s, want 3", got)
 	}
 	testutil.Golden(t, "tui", "regex-coincidencias-100x30", plainView(a))
+}
+
+func TestDiffView(t *testing.T) {
+	a := newAppWith(t, 130, 30, text.Diff{})
+	press(a, "tab", "tab")
+	send(a, tea.PasteMsg{Content: "uno\ndos\ntres\n"})
+	press(a, "tab")
+	send(a, tea.PasteMsg{Content: "uno\nDOS\ntres\ncuatro\n"})
+	if got := a.workspace().Status().Meta[0].Value; got != "+2 −1 líneas" {
+		t.Errorf("Cambios = %q", got)
+	}
+	if !strings.Contains(a.View().Content, "\x1b[") {
+		t.Error("el diff no está coloreado")
+	}
+	testutil.Golden(t, "tui", "diff-130x30", plainView(a))
 }
