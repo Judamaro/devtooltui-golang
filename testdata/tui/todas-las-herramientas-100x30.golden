@@ -1,7 +1,8 @@
 ▾ Formateadores          │JSON Indenta, minifica y ordena claves de JSON
   ▸ JSON                 │Indentación: 2   Ordenar claves: [ ]
-▾ Codificadores          │── Entrada ───────────────────────────────────────────────────────────────
-    Base64               │┃  1 Escribe o pega aquí…
+    XML                  │── Entrada ───────────────────────────────────────────────────────────────
+▾ Codificadores          │┃  1 Escribe o pega aquí…
+    Base64               │┃
     URL                  │┃
     JWT                  │┃
 ▾ Conversores            │┃
@@ -11,7 +12,6 @@
 ▾ Generadores            │┃
     Hash                 │┃
     UUID / ULID          │┃
-                         │┃
                          │┃
                          │── Salida ────────────────────────────────────────────────────────────────
                          │

@@ -13,6 +13,7 @@ import (
 func All() []tool.Tool {
 	return []tool.Tool{
 		formatters.JSONFormat{},
+		formatters.XMLFormat{},
 		encoders.Base64{},
 		encoders.URL{},
 		encoders.JWT{},
