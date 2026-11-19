@@ -13,6 +13,7 @@ import (
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/alecthomas/chroma/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
@@ -24,6 +25,7 @@ type Styles struct {
 	Title, Description, Section, SectionFocused, OutputStale lipgloss.Style
 	Textarea                                                 textarea.Styles
 	Options                                                  options.Styles
+	Chroma                                                   *chroma.Style // colores de las salidas Highlighted
 }
 
 // Limits define cuándo la entrada deja de editarse en vivo (ADR 0002).
@@ -57,6 +59,7 @@ type Model struct {
 	running  bool
 
 	result  tool.Result
+	noColor bool
 	err     error
 	elapsed time.Duration
 	styles  Styles
@@ -88,6 +91,9 @@ type ResultMsg struct {
 	Result  tool.Result
 	Err     error
 	Elapsed time.Duration
+
+	Rendered string // Result.Text coloreado; vacío si no aplica
+	NoColor  bool   // la salida superó HighlightMaxBytes
 }
 
 // New crea el workspace. debounce es la espera entre la última tecla y la
@@ -317,11 +323,20 @@ func (m *Model) launch(seq int) tea.Cmd {
 		inputs[f.spec.Key] = f.value()
 	}
 	req := tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
-	t, id := m.tool, m.spec.ID
+	t, id, kind, style := m.tool, m.spec.ID, m.spec.Output, m.styles.Chroma
 	return func() tea.Msg {
 		start := time.Now()
 		res, err := t.Run(ctx, req)
-		return ResultMsg{ToolID: id, Seq: seq, Result: res, Err: err, Elapsed: time.Since(start)}
+		msg := ResultMsg{ToolID: id, Seq: seq, Result: res, Err: err, Elapsed: time.Since(start)}
+		// El coloreado también corre fuera del bucle de la UI.
+		if err == nil && kind == tool.Highlighted && res.Lang != "" && ctx.Err() == nil {
+			if len(res.Text) > HighlightMaxBytes {
+				msg.NoColor = true
+			} else if out, ok := highlight(res.Text, res.Lang, style); ok {
+				msg.Rendered = out
+			}
+		}
+		return msg
 	}
 }
 
@@ -338,7 +353,12 @@ func (m *Model) HandleResult(msg ResultMsg) {
 		return // la salida anterior se mantiene
 	}
 	m.result = msg.Result
-	m.output.SetContent(msg.Result.Text)
+	m.noColor = msg.NoColor
+	if msg.Rendered != "" {
+		m.output.SetContent(msg.Rendered)
+	} else {
+		m.output.SetContent(msg.Result.Text)
+	}
 }
 
 // Output devuelve el texto de la última ejecución correcta.
@@ -386,6 +406,9 @@ func (m *Model) Status() statusbar.Status {
 		Err:     m.err,
 		Elapsed: m.elapsed,
 		Meta:    m.result.Meta,
+	}
+	if m.noColor {
+		st.Note = "sin color: salida de más de " + statusbar.HumanBytes(HighlightMaxBytes)
 	}
 	for _, f := range m.inputs {
 		if f.large {

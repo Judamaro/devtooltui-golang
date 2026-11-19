@@ -26,6 +26,7 @@ type Status struct {
 	Meta       []tool.KV
 	LargeBytes int // > 0: la entrada está en modo de solo lectura
 	LargeLines int
+	Note       string // aviso secundario (p. ej. salida sin color)
 }
 
 // View devuelve una fila de exactamente width columnas.
@@ -65,6 +66,9 @@ func Text(st Status, s Styles) string {
 			ok = append(ok, kv.Key+": "+kv.Value)
 		}
 		parts = append(parts, s.OK.Render(strings.Join(ok, " · ")))
+	}
+	if st.Note != "" {
+		parts = append(parts, s.Warning.Render(st.Note))
 	}
 	return strings.Join(parts, " · ")
 }

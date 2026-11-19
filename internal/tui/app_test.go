@@ -2,6 +2,7 @@ package tui
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -16,6 +17,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
@@ -300,5 +302,34 @@ func TestProgram(t *testing.T) {
 	}
 	if got := final.workspace().Output(); got != "aG9sYQ==" {
 		t.Errorf("salida = %q, want %q", got, "aG9sYQ==")
+	}
+}
+
+func TestHighlightedOutput(t *testing.T) {
+	tests := []struct {
+		name      string
+		paste     string
+		wantColor bool
+		wantNote  bool
+	}{
+		{"json chico se colorea", `{"a":[1,true,null]}`, true, false},
+		{"json grande sin color", "[" + strings.Repeat(`"xxxxxxxxxxxxxxxxxxxx",`, 3500) + "1]", false, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := newAppWith(t, 100, 30, formatters.JSONFormat{})
+			press(a, "tab", "tab")
+			send(a, tea.PasteMsg{Content: tt.paste})
+			// Solo las líneas del panel de salida: entre su encabezado y la statusbar.
+			lines := strings.Split(a.View().Content, "\n")
+			head := slices.IndexFunc(lines, func(l string) bool { return strings.Contains(l, "Salida ") })
+			out := strings.Join(lines[head+1:len(lines)-1], "\n")
+			if got := strings.Contains(out, "\x1b[3"); got != tt.wantColor { // colores de primer plano 30-37
+				t.Errorf("salida coloreada = %v, want %v", got, tt.wantColor)
+			}
+			if got := a.workspace().Status().Note != ""; got != tt.wantNote {
+				t.Errorf("aviso sin color = %v, want %v", got, tt.wantNote)
+			}
+		})
 	}
 }

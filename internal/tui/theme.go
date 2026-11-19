@@ -5,6 +5,7 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/lipgloss/v2"
+	"github.com/alecthomas/chroma/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
@@ -21,6 +22,20 @@ type Theme struct {
 	Workspace workspace.Styles
 	Help      help.Styles
 }
+
+// darkChroma colorea JSON, YAML y XML con nombres de colores ANSI, que el
+// formatter terminal16 traduce a la paleta de la terminal.
+var darkChroma = chroma.MustNewStyle("devtooltui-dark", chroma.StyleEntries{
+	chroma.NameTag:         "#ansiblue",      // claves JSON/YAML, etiquetas XML
+	chroma.NameAttribute:   "#ansiturquoise", // atributos XML
+	chroma.LiteralString:   "#ansigreen",
+	chroma.LiteralNumber:   "#ansiyellow",
+	chroma.KeywordConstant: "#ansifuchsia", // true, false, null
+	chroma.Comment:         "#ansidarkgray",
+	chroma.CommentPreproc:  "#ansidarkgray",
+	chroma.Punctuation:     "#ansilightgray",
+	chroma.NameBuiltin:     "#ansifuchsia",
+})
 
 // DarkTheme usa solo los 16 colores ANSI.
 func DarkTheme() Theme {
@@ -60,6 +75,7 @@ func DarkTheme() Theme {
 			Section:        lipgloss.NewStyle().Foreground(muted),
 			SectionFocused: lipgloss.NewStyle().Foreground(accent),
 			OutputStale:    lipgloss.NewStyle().Faint(true),
+			Chroma:         darkChroma,
 			Textarea:       textarea.DefaultDarkStyles(),
 		},
 		Help: h.Styles,
