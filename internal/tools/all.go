@@ -41,5 +41,6 @@ func All() []tool.Tool {
 		converters.CSVJSON{},
 		encoders.X509{},
 		text.Markdown{},
+		converters.JSONClass{},
 	}
 }

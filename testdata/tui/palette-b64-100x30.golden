@@ -17,6 +17,7 @@
     Color                │
     Cron                 │
     CSV ↔ JSON           │
+    JSON → classes       │
 ▾ Generators             │
     Hash                 │
     UUID / ULID          │
@@ -25,6 +26,5 @@
 ▾ Testers                │
     RegEx                │
     JSONPath             │
-    XPath                │
-  ↓ 5 more               │
+  ↓ 6 more               │
 ✓ 0 µs

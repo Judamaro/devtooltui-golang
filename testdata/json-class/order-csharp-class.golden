@@ -1,0 +1,56 @@
+using System.Collections.Generic;
+using System.Text.Json.Serialization;
+
+public class Root
+{
+    [JsonPropertyName("order_id")]
+    public long OrderId { get; set; }
+
+    [JsonPropertyName("customer")]
+    public Customer Customer { get; set; }
+
+    [JsonPropertyName("total")]
+    public double Total { get; set; }
+
+    [JsonPropertyName("paid")]
+    public bool Paid { get; set; }
+
+    [JsonPropertyName("tags")]
+    public List<string> Tags { get; set; }
+
+    [JsonPropertyName("items")]
+    public List<Item> Items { get; set; }
+
+    [JsonPropertyName("shipping_url")]
+    public string ShippingUrl { get; set; }
+
+    [JsonPropertyName("metadata")]
+    public Dictionary<string, object> Metadata { get; set; }
+}
+
+public class Customer
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; }
+
+    [JsonPropertyName("full-name")]
+    public string FullName { get; set; }
+
+    [JsonPropertyName("email")]
+    public object? Email { get; set; }
+}
+
+public class Item
+{
+    [JsonPropertyName("sku")]
+    public string Sku { get; set; }
+
+    [JsonPropertyName("qty")]
+    public long Qty { get; set; }
+
+    [JsonPropertyName("price")]
+    public double Price { get; set; }
+
+    [JsonPropertyName("note")]
+    public string? Note { get; set; }
+}

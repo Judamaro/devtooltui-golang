@@ -1,0 +1,13 @@
+{
+  "order_id": 1024,
+  "customer": {"id": "c-7", "full-name": "Ana Pérez", "email": null},
+  "total": 59.9,
+  "paid": true,
+  "tags": ["express", "gift"],
+  "items": [
+    {"sku": "A-1", "qty": 2, "price": 10},
+    {"sku": "B-2", "qty": 1, "price": 39.9, "note": "wrap it"}
+  ],
+  "shipping_url": "https://example.com/t/1024",
+  "metadata": {}
+}

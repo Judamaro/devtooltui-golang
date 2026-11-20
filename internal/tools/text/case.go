@@ -71,21 +71,21 @@ func convertCase(s, to string, splitDigits bool) string {
 	case "title", "sentence":
 		if !strings.ContainsFunc(s, unicode.IsSpace) && !strings.ContainsAny(s, "'’") {
 			// An identifier: split it into words first (userID → User Id).
-			s = strings.ToLower(strings.Join(identWords(s, splitDigits), " "))
+			s = strings.ToLower(strings.Join(IdentWords(s, splitDigits), " "))
 		}
 		return titleText(s, to == "title")
 	}
-	words := identWords(s, splitDigits)
+	words := IdentWords(s, splitDigits)
 	for i, w := range words {
 		switch to {
 		case "camel":
 			if i == 0 {
 				words[i] = strings.ToLower(w)
 			} else {
-				words[i] = titleWord(w)
+				words[i] = TitleWord(w)
 			}
 		case "pascal":
-			words[i] = titleWord(w)
+			words[i] = TitleWord(w)
 		case "constant":
 			words[i] = strings.ToUpper(w)
 		default:
@@ -96,11 +96,11 @@ func convertCase(s, to string, splitDigits bool) string {
 	return strings.Join(words, sep)
 }
 
-// identWords splits identifiers and phrases into words: at any character
+// IdentWords splits identifiers and phrases into words: at any character
 // that is not a letter or a digit, at lower→upper (fooBar), before the last
 // capital of an acronym (HTTPServer → HTTP Server) and, with splitDigits,
 // between letters and digits (v2 → v 2).
-func identWords(s string, splitDigits bool) []string {
+func IdentWords(s string, splitDigits bool) []string {
 	rs := []rune(s)
 	var words []string
 	start := -1
@@ -140,7 +140,8 @@ func identWords(s string, splitDigits bool) []string {
 	return words
 }
 
-func titleWord(w string) string {
+// TitleWord capitalises the first letter and lowercases the rest.
+func TitleWord(w string) string {
 	rs := []rune(strings.ToLower(w))
 	if len(rs) > 0 {
 		rs[0] = unicode.ToUpper(rs[0])
