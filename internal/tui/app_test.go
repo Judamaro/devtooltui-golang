@@ -363,3 +363,25 @@ func TestDiffView(t *testing.T) {
 	}
 	testutil.Golden(t, "tui", "diff-130x30", plainView(a))
 }
+
+func TestInputErrorExcerpt(t *testing.T) {
+	a := newAppWith(t, 100, 30, formatters.JSONFormat{})
+	press(a, "tab", "tab")
+	send(a, tea.PasteMsg{Content: "{\n  \"a\": [1, 2]\n}"})
+	if a.workspace().Err() != nil {
+		t.Fatal(a.workspace().Err())
+	}
+	send(a, tea.PasteMsg{Content: ","})
+	if a.workspace().Err() == nil {
+		t.Fatal("expected an InputError")
+	}
+	content := a.View().Content
+	if !strings.Contains(content, "\x1b[4") && !strings.Contains(content, ";4m") && !strings.Contains(content, ";4;") {
+		t.Error("the culprit character is not underlined")
+	}
+	raw := ansi.Strip(content)
+	if n := strings.Count(raw, "\n") + 1; n != 30 {
+		t.Errorf("the view has %d lines, want 30", n)
+	}
+	testutil.Golden(t, "tui", "json-error-100x30", plainView(a))
+}

@@ -101,6 +101,8 @@ func DarkTheme() Theme {
 			Section:        lipgloss.NewStyle().Foreground(muted),
 			SectionFocused: lipgloss.NewStyle().Foreground(accent),
 			OutputStale:    lipgloss.NewStyle().Faint(true),
+			ErrorText:      lipgloss.NewStyle().Foreground(errC),
+			ErrorMark:      lipgloss.NewStyle().Foreground(errC).Underline(true).Bold(true),
 			Render:         RenderStyles(),
 			Textarea:       textarea.DefaultDarkStyles(),
 		},

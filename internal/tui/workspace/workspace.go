@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 // Styles are defined by tui/theme.go.
 type Styles struct {
 	Title, Description, Section, SectionFocused, OutputStale lipgloss.Style
+	ErrorText, ErrorMark                                     lipgloss.Style // InputError excerpt
 	Textarea                                                 textarea.Styles
 	Options                                                  options.Styles
 	Render                                                   render.Styles // output colours
@@ -413,10 +415,22 @@ func (m *Model) View() string {
 	}
 	b.WriteString(m.section("Output", m.focus == FocusOutput) + "\n")
 	out := m.output.View()
-	if m.err != nil {
-		out = m.styles.OutputStale.Render(out) // previous output, dimmed
+	if m.err == nil {
+		b.WriteString(out)
+		return b.String()
 	}
-	b.WriteString(out)
+	// The excerpt takes rows from the top of the output, so the layout
+	// keeps its height; the previous output stays below, dimmed.
+	h := m.output.Height()
+	ex := m.errorExcerpt()
+	ex = ex[:min(len(ex), h)]
+	lines := strings.Split(out, "\n")
+	lines = lines[:max(min(len(lines), h-len(ex)), 0)]
+	rows := slices.Clone(ex)
+	if len(lines) > 0 {
+		rows = append(rows, m.styles.OutputStale.Render(strings.Join(lines, "\n")))
+	}
+	b.WriteString(strings.Join(rows, "\n"))
 	return b.String()
 }
 

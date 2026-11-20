@@ -121,7 +121,8 @@ that order in `internal/tools/all.go`; 12 = complete MVP).
   the list, `DiffView` by prefix/marker. Above 64 KB nothing is coloured
   (`render.MaxBytes`, see `BenchmarkHighlight`).
 - The last row is `internal/tui/statusbar`: status on the left, help on the
-  right. On error the previous output is dimmed.
+  right. On error the previous output is dimmed; an `InputError` also puts
+  an excerpt (line, underlined culprit, caret) at the top of the output.
 - In tests, `testutil.RunCmds` runs the `tea.Cmd`s and delivers the messages
   (dropping those that take over 30 ms, like the cursor blink). Test Apps use
   `Options{Debounce: 0}`.
