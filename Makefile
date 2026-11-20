@@ -4,7 +4,7 @@ LDFLAGS  = -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT)
 
 FUZZTIME ?= 30s
 
-.PHONY: build test golden-update lint bench fuzz release-dry
+.PHONY: build test golden-update lint bench fuzz docs man release-dry
 
 build:
 	CGO_ENABLED=0 go build -ldflags "$(LDFLAGS)" -o bin/devtooltui ./cmd/devtooltui
@@ -13,7 +13,7 @@ test:
 	go test -race ./...
 
 golden-update:
-	UPDATE_GOLDEN=1 go test ./internal/...
+	UPDATE_GOLDEN=1 go test ./internal/... ./cmd/...
 
 lint:
 	golangci-lint run && govulncheck ./...
@@ -29,6 +29,14 @@ fuzz:
 			go test -run '^$$' -fuzz "^$$t$$" -fuzztime $(FUZZTIME) $$pkg; \
 		done; \
 	done
+
+# docs/index.md and docs/tools/*.md, from the registry and the goldens.
+docs:
+	go run ./cmd/gendocs -site docs
+
+# Man pages in man/ (GoReleaser ships them; not committed).
+man:
+	go run ./cmd/gendocs -man man
 
 release-dry:
 	goreleaser release --snapshot --clean

@@ -126,6 +126,10 @@ func loadConfig(d Deps, g *globalFlags) {
 	g.cfg, g.cfgWarnings = config.Load(path, explicit, d.Registry)
 }
 
+// NewRoot builds the command tree without running it (cmd/gendocs walks it
+// for the man pages).
+func NewRoot(d Deps) *cobra.Command { return newRoot(d) }
+
 func newRoot(d Deps) *cobra.Command {
 	var g globalFlags
 	var clip bool

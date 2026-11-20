@@ -13,6 +13,8 @@ make lint           # golangci-lint run && govulncheck ./...
 make golden-update  # regenerates testdata/**/*.golden (UPDATE_GOLDEN=1)
 make bench          # benchmarks (including the textarea spike)
 make fuzz           # every Fuzz* target for FUZZTIME (30s; CI runs it too)
+make docs           # docs/index.md and docs/tools/*.md (GitHub Pages)
+make man            # man pages in man/ (GoReleaser ships them)
 ```
 
 - Go ≥ 1.26 (required by the `charm.land/*` v2 modules). If `go` is not on the
@@ -23,6 +25,9 @@ make fuzz           # every Fuzz* target for FUZZTIME (30s; CI runs it too)
 ## Layout
 
 - `cmd/devtooltui`: startup; builds `cli.Deps` and delegates to `cli.Execute`.
+- `cmd/gendocs`: the site (`docs/index.md`, `docs/tools/<id>.md`) from the
+  Specs plus the goldens as examples, and the man pages from
+  `cli.NewRoot`. `TestSiteUpToDate` fails when `docs/` is stale.
 - `internal/cli`: cobra. One subcommand per `Spec` (flags generated from the
   options, `sort_keys` → `--sort-keys`; `mode` also as the first argument),
   plus `list`, `detect`, `version` and `completion`. Without arguments and on
@@ -97,6 +102,7 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 3. From the first commit: table tests, `testdata/<id>/*.in` with their
    `.golden`, error cases with line and column and, if reversible, a
    round-trip fuzz.
+4. `make docs` to add its page (the gendocs test checks it).
 
 ## Current tools
 
