@@ -1,0 +1,25 @@
+Certificate 1 of 2
+Subject:     CN=example.com,O=Example Ltd
+Issuer:      CN=Devtooltui Test CA,O=Devtooltui,C=CO
+Serial:      0A:1B:2C:3D:4E:5F
+Valid:       2026-09-01 00:00 UTC → 2026-12-01 00:00 UTC (valid, expires in 10 d)
+SAN:         DNS: example.com, www.example.com; IP: 192.0.2.10; Email: admin@example.com; URI: https://example.com/id
+Key:         Ed25519
+Signature:   Ed25519
+CA:          no
+Key usage:   Digital Signature
+Ext. usage:  Server Auth, Client Auth
+SHA-256:     83:C5:5A:BF:CC:B7:76:29:51:E4:1B:3C:E1:C9:27:E7:25:1D:74:67:28:70:81:41:8E:1D:01:B6:D9:17:23:7B
+SHA-1:       15:8C:8F:CB:5F:89:83:EA:E1:D4:4E:17:8B:33:21:5A:AA:B7:49:80
+
+Certificate 2 of 2
+Subject:     CN=Devtooltui Test CA,O=Devtooltui,C=CO
+Issuer:      CN=Devtooltui Test CA,O=Devtooltui,C=CO
+Serial:      01
+Valid:       2026-01-01 00:00 UTC → 2036-01-01 00:00 UTC (valid, expires in 9 years)
+Key:         Ed25519
+Signature:   Ed25519
+CA:          yes (path length 0)
+Key usage:   Certificate Sign, CRL Sign
+SHA-256:     9C:03:CA:74:83:71:B1:A0:52:FB:E6:EC:37:6F:36:CC:78:2D:9D:A2:79:21:7E:BD:36:1E:15:FD:83:BD:52:AB
+SHA-1:       86:57:92:6F:AD:37:79:8C:28:F6:A3:5B:81:F2:4F:16:FC:04:39:C0

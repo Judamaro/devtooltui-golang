@@ -9,11 +9,12 @@
     GZip                 │┃
     String escape        │┃
     QR code              │┃
+    X.509 certificate    │┃
 ▾ Converters             │┃
     Timestamp            │┃
     Number bases         │┃
-    JSON ↔ YAML          │┃
-    Color                │── Output ────────────────────────────────────────────────────────────────
+    JSON ↔ YAML          │── Output ────────────────────────────────────────────────────────────────
+    Color                │
     Cron                 │
     CSV ↔ JSON           │
 ▾ Generators             │
@@ -26,5 +27,4 @@
     JSONPath             │
     XPath                │
 ▾ Text                   │
-    Diff                 │
 ✓ 0 µs

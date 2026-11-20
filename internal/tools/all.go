@@ -39,5 +39,6 @@ func All() []tool.Tool {
 		converters.Color{},
 		converters.Cron{},
 		converters.CSVJSON{},
+		encoders.X509{},
 	}
 }
