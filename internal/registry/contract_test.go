@@ -33,7 +33,7 @@ func TestContract(t *testing.T) {
 				}
 			})
 
-			t.Run("ctx cancelado", func(t *testing.T) {
+			t.Run("cancelled ctx", func(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
 				cancel()
 				_, err := tl.Run(ctx, empty)
@@ -57,7 +57,7 @@ func TestContract(t *testing.T) {
 			})
 
 			if d, ok := tl.(tool.Detector); ok {
-				t.Run("detect acotado", func(t *testing.T) {
+				t.Run("detect in range", func(t *testing.T) {
 					for _, s := range []string{"", " ", "\x00\xff", "{}", "a.b.c"} {
 						if score := d.Detect(s); score < 0 || score > 1 {
 							t.Errorf("Detect(%q) = %v outside [0,1]", s, score)

@@ -84,8 +84,9 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 ## Current tools
 
 `json-format`, `xml-format`, `base64`, `url`, `jwt`, `timestamp`,
-`number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (registered in
-that order in `internal/tools/all.go`; 12 = complete MVP).
+`number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (the 12 of the
+MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
+`inspect`, `escape` (registered in that order in `internal/tools/all.go`).
 
 - `regex`: the pattern is the `pattern` option (like the CLI `--pattern`
   flag), not an input. `diff` and `jwt` (token + PEM) have two inputs.
@@ -93,10 +94,14 @@ that order in `internal/tools/all.go`; 12 = complete MVP).
   knows how to colour it; by words it leaves `Lang` empty and colours `Diff`.
 - Fuzz targets that find failures leave cases in
   `internal/tools/<cat>/testdata/fuzz/`: commit them as regressions.
-- Clock and randomness: the tools that need them (`jwt`, `timestamp`, `uuid`)
-  have optional `Now func() time.Time` and `Rand io.Reader` fields; when nil
-  they use `time.Now` and `crypto/rand`. Tests always pin them. Reading them
-  does not count as forbidden I/O in `Run`.
+- `gzip` decompresses at most `GzipMaxOutput` (64 MB). `escape` encodes the
+  inside of the literal (shell: a whole quoted word) and decodes with or
+  without the quotes; an encoded value always decodes back as it is.
+- Clock and randomness: the tools that need them (`jwt`, `timestamp`, `uuid`,
+  `password`, `lorem`) have optional `Now func() time.Time` and
+  `Rand io.Reader` fields; when nil they use `time.Now` and `crypto/rand`.
+  Tests always pin them. Reading them does not count as forbidden I/O in
+  `Run`. `lorem` only seeds a ChaCha8 from `Rand` (`//nolint:gosec`).
 - `converters.Relative` ("in 3 h", "2 d ago") is shared.
 - `timestamp` embeds `time/tzdata`: IANA zones do not depend on the system.
   Detectors must not touch `time.Local` (loading it took over 20 ms on the

@@ -40,6 +40,13 @@ On Linux, clipboard support needs `wl-clipboard` (Wayland) or `xclip`/`xsel`
 | `uuid` | UUID / ULID | Generates v4, v7 or ULID; inspects version and timestamp |
 | `regex` | RegEx | RE2 with highlighted matches and groups |
 | `diff` | Diff | By lines (unified or side by side) or by words |
+| `html` | HTML entities | Escape and unescape, optionally non-ASCII as `&#N;` |
+| `gzip` | GZip | Compress to Base64 and back, with the compression ratio |
+| `password` | Password | Random passwords with chosen character sets and their entropy |
+| `lorem` | Lorem Ipsum | Words, sentences or paragraphs of placeholder text |
+| `case` | Case converter | camelCase, PascalCase, snake_case, kebab-case, CONSTANT, Title… |
+| `inspect` | Text inspector | Count characters, words and lines; sort, dedupe or reverse lines |
+| `escape` | String escape | Escape and unescape literals for JSON, Go, C#, SQL and shell |
 
 ## TUI
 
