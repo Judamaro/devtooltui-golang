@@ -2,6 +2,7 @@
 package tui
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
+	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
@@ -39,6 +41,12 @@ type Options struct {
 	Debounce      time.Duration // wait between the last key and the run
 	Clipboard     Clipboard     // nil: no clipboard
 	DetectOnStart bool          // --clipboard: detect the clipboard on start
+	// ToolDefaults are the [tools.<id>] option values from the config.
+	ToolDefaults map[string]tool.Values
+	// Limits are the large input thresholds; zero uses DefaultLimits.
+	Limits workspace.Limits
+	// Warnings (config problems) are shown in the statusbar on start.
+	Warnings []string
 	// Editor builds the external editor command (Ctrl+E); nil uses
 	// $VISUAL/$EDITOR. Tests replace it.
 	Editor func(path string) *exec.Cmd
@@ -94,6 +102,13 @@ func New(reg *registry.Registry, opts Options) *App {
 	a.setFocus(focusSidebar)
 	if opts.DetectOnStart {
 		a.initCmd = tea.Batch(a.initCmd, a.readClipboard(clipDetect))
+	}
+	if n := len(opts.Warnings); n > 0 {
+		msg := opts.Warnings[0]
+		if n > 1 {
+			msg += fmt.Sprintf(" (+%d more)", n-1)
+		}
+		a.initCmd = tea.Batch(a.initCmd, flash("config: "+msg))
 	}
 	return a
 }
@@ -286,6 +301,12 @@ func (a *App) activate(id string) tea.Cmd {
 	var initCmd tea.Cmd
 	if _, ok := a.spaces[id]; !ok {
 		ws := workspace.New(t, a.theme.Workspace, a.keys.Options, a.opts.Debounce)
+		if d, ok := a.opts.ToolDefaults[id]; ok {
+			ws.SetOptions(d)
+		}
+		if a.opts.Limits != (workspace.Limits{}) {
+			ws.SetLimits(a.opts.Limits)
+		}
 		a.spaces[id] = ws
 		initCmd = ws.Init()
 	}

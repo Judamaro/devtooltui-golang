@@ -397,3 +397,30 @@ func TestColorSwatch(t *testing.T) {
 		t.Error("the output has no conversions")
 	}
 }
+
+func TestConfigOptions(t *testing.T) {
+	reg, err := registry.New(encoders.Base64{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := New(reg, Options{
+		ToolDefaults: map[string]tool.Values{"base64": {"mode": "decode"}},
+		Limits:       workspace.LimitsFor(4 << 10),
+		Warnings:     []string{"config.toml: unknown key \"colour\"", "second"},
+	})
+	send(a, tea.WindowSizeMsg{Width: 100, Height: 30})
+	testutil.RunCmds(a.Init(), func(msg tea.Msg) tea.Cmd { _, c := a.Update(msg); return c })
+	view := plainView(a)
+	if !strings.Contains(view, "Mode: ◀ decode ▶") {
+		t.Errorf("the config default was not applied:\n%s", view)
+	}
+	if a.flash != `config: config.toml: unknown key "colour" (+1 more)` {
+		t.Errorf("flash = %q", a.flash)
+	}
+	// live_max_bytes = 4 KB: a 5 KB paste goes to large mode.
+	press(a, "tab", "tab")
+	send(a, tea.PasteMsg{Content: strings.Repeat("aG9s", 1300)})
+	if !a.workspace().Large() {
+		t.Error("the limits from the config were not applied")
+	}
+}

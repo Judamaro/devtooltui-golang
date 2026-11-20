@@ -99,6 +99,30 @@ pbpaste | devtooltui url decode --copy
   usage error, `3` internal error.
 - Shell completion: `devtooltui completion bash|zsh|fish|powershell`.
 
+## Configuration
+
+Optional, in `~/.config/devtooltui/config.toml` (the user config directory of
+each OS), or the file given by `--config` or `$DEVTOOLTUI_CONFIG`:
+
+```toml
+theme = "auto"            # auto | dark | light
+detect_on_start = false   # read the clipboard when the TUI opens
+debounce_ms = 120
+live_max_bytes = 32768    # above it, the input is read-only and runs with F5
+
+[history]
+enabled = true
+remember_options = true   # last options per tool
+store_inputs = false      # inputs may hold secrets (JWT, HMAC)
+
+[tools.json-format]       # defaults per tool, same keys as its options
+indent = 4
+sort_keys = true
+```
+
+Unknown keys or invalid values are reported as warnings and ignored.
+Command line flags always win over the file.
+
 ## Development
 
 ```bash

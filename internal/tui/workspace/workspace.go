@@ -39,18 +39,30 @@ type Limits struct {
 // DefaultLimits are the values approved in ADR 0002.
 var DefaultLimits = Limits{MaxBytes: 32 << 10, MaxLines: 5000, LineNumbersMaxBytes: 16 << 10}
 
+// LimitsFor derives the limits from live_max_bytes: line numbers hide at
+// half of it, at most 16 KB, as in ADR 0002.
+func LimitsFor(maxBytes int) Limits {
+	l := DefaultLimits
+	if maxBytes > 0 {
+		l.MaxBytes = maxBytes
+		l.LineNumbersMaxBytes = min(DefaultLimits.LineNumbersMaxBytes, maxBytes/2)
+	}
+	return l
+}
+
 // Model is one tool's state. The TUI keeps one per tool, so switching tools
 // does not lose what was typed.
 type Model struct {
-	tool   tool.Tool
-	spec   tool.Spec
-	opts   options.Model
-	inputs []*field
-	active int // focused input when focus == FocusInput
-	output viewport.Model
-	limits Limits
-	stale  bool // the input changed and has not run yet (F5)
-	wide   bool // the terminal allows two inputs side by side
+	tool    tool.Tool
+	spec    tool.Spec
+	opts    options.Model
+	optKeys options.KeyMap
+	inputs  []*field
+	active  int // focused input when focus == FocusInput
+	output  viewport.Model
+	limits  Limits
+	stale   bool // the input changed and has not run yet (F5)
+	wide    bool // the terminal allows two inputs side by side
 
 	// Async runs: seq identifies the current run; results with another seq
 	// are dropped.
@@ -105,6 +117,7 @@ func New(t tool.Tool, styles Styles, optKeys options.KeyMap, debounce time.Durat
 		tool:     t,
 		spec:     spec,
 		opts:     options.New(spec, tool.Values{}.WithDefaults(spec), styles.Options, optKeys),
+		optKeys:  optKeys,
 		output:   viewport.New(),
 		limits:   DefaultLimits,
 		debounce: debounce,
@@ -115,6 +128,15 @@ func New(t tool.Tool, styles Styles, optKeys options.KeyMap, debounce time.Durat
 	}
 	return m
 }
+
+// SetOptions replaces the option values (config defaults, history); keys
+// that are missing take the Spec defaults. Call it before Init.
+func (m *Model) SetOptions(v tool.Values) {
+	m.opts = options.New(m.spec, v.WithDefaults(m.spec), m.styles.Options, m.optKeys)
+}
+
+// SetLimits changes the large input thresholds (live_max_bytes).
+func (m *Model) SetLimits(l Limits) { m.limits = l }
 
 // Init starts the first run (empty input).
 func (m *Model) Init() tea.Cmd { return m.runNow() }

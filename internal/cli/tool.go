@@ -73,7 +73,7 @@ func newToolCmd(t tool.Tool, d Deps, g *globalFlags) *cobra.Command {
 		return nil, cobra.ShellCompDirectiveDefault
 	}
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		opts, args, err := collectOptions(s, cmd.Flags(), vals, args)
+		opts, args, err := collectOptions(s, cmd.Flags(), vals, args, g.cfg.Tools[s.ID])
 		if err != nil {
 			return err
 		}
@@ -150,9 +150,15 @@ func longHelp(s tool.Spec) string {
 
 // collectOptions builds tool.Values from the flags; "mode" is also accepted
 // as the first argument (devtooltui base64 decode).
-func collectOptions(s tool.Spec, fs *pflag.FlagSet, vals map[string]any, args []string) (tool.Values, []string, error) {
+// collectOptions reads the flags; options without a flag on the command
+// line take the [tools.<id>] value from the config, if any.
+func collectOptions(s tool.Spec, fs *pflag.FlagSet, vals map[string]any, args []string, defaults tool.Values) (tool.Values, []string, error) {
 	opts := tool.Values{}
 	for _, o := range s.Options {
+		if v, ok := defaults[o.Key]; ok && !fs.Changed(flagName(o.Key)) {
+			opts[o.Key] = v // already validated by config
+			continue
+		}
 		switch v := vals[o.Key].(type) {
 		case *bool:
 			opts[o.Key] = *v

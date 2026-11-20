@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/Judamaro/devtooltui-golang/internal/clipboard"
+	"github.com/Judamaro/devtooltui-golang/internal/config"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/render"
 )
@@ -31,16 +32,26 @@ const DefaultMaxInput = 64 << 20
 
 // Deps is everything the CLI takes from the environment; tests replace it.
 type Deps struct {
-	Registry        *registry.Registry
-	Stdin           io.Reader
-	Stdout, Stderr  io.Writer
-	StdinTTY        bool
-	StdoutTTY       bool
-	Getenv          func(string) string
-	RenderStyles    render.Styles
-	RunTUI          func(clipboard bool) error // nil: no TUI available
-	Clipboard       clipboard.Clipboard        // for --copy
+	Registry       *registry.Registry
+	Stdin          io.Reader
+	Stdout, Stderr io.Writer
+	StdinTTY       bool
+	StdoutTTY      bool
+	Getenv         func(string) string
+	RenderStyles   render.Styles
+	RunTUI         func(TUIRequest) error // nil: no TUI available
+	Clipboard      clipboard.Clipboard    // for --copy
+	// UserConfigDir locates the default config.toml; nil means no default
+	// file (tests), only --config or $DEVTOOLTUI_CONFIG.
+	UserConfigDir   func() (string, error)
 	Version, Commit string
+}
+
+// TUIRequest is what the CLI hands to the TUI.
+type TUIRequest struct {
+	Clipboard bool          // --clipboard
+	Config    config.Config // loaded and validated
+	Warnings  []string      // config problems, for the statusbar
 }
 
 // exitError carries the exit code along with the error.
@@ -83,10 +94,29 @@ func Execute(args []string, d Deps) int {
 }
 
 type globalFlags struct {
-	json     bool
-	copy     bool
-	noColor  bool
-	maxInput int64
+	json       bool
+	copy       bool
+	noColor    bool
+	maxInput   int64
+	configPath string
+
+	cfg         config.Config // loaded in PersistentPreRunE
+	cfgWarnings []string
+}
+
+// loadConfig fills g.cfg. A missing default file is silent; every other
+// problem is a warning and the defaults stay.
+func loadConfig(d Deps, g *globalFlags) {
+	userDir := d.UserConfigDir
+	if userDir == nil {
+		userDir = func() (string, error) { return "", errors.New("no default config") }
+	}
+	path, explicit, err := config.Path(g.configPath, d.Getenv, userDir)
+	if err != nil {
+		g.cfg = config.Default()
+		return
+	}
+	g.cfg, g.cfgWarnings = config.Load(path, explicit, d.Registry)
 }
 
 func newRoot(d Deps) *cobra.Command {
@@ -105,7 +135,7 @@ func newRoot(d Deps) *cobra.Command {
 			if !d.StdinTTY || !d.StdoutTTY || d.RunTUI == nil {
 				return usageErr("the TUI needs a terminal; use a subcommand (devtooltui list)")
 			}
-			if err := d.RunTUI(clip); err != nil {
+			if err := d.RunTUI(TUIRequest{Clipboard: clip, Config: g.cfg, Warnings: g.cfgWarnings}); err != nil {
 				return &exitError{ExitInternal, err}
 			}
 			return nil
@@ -116,6 +146,15 @@ func newRoot(d Deps) *cobra.Command {
 	root.PersistentFlags().BoolVar(&g.noColor, "no-color", false, "no colours (also with NO_COLOR)")
 	root.PersistentFlags().BoolVar(&g.copy, "copy", false, "copy the output to the clipboard")
 	root.PersistentFlags().Int64Var(&g.maxInput, "max-input", DefaultMaxInput, "maximum input size in bytes")
+	root.PersistentFlags().StringVar(&g.configPath, "config", "", "config file (default $"+config.EnvVar+" or <user config dir>/devtooltui/config.toml)")
+	root.PersistentPreRun = func(cmd *cobra.Command, _ []string) {
+		loadConfig(d, &g)
+		if cmd != cmd.Root() { // the TUI shows them in the statusbar
+			for _, w := range g.cfgWarnings {
+				fmt.Fprintln(d.Stderr, "devtooltui: warning:", w)
+			}
+		}
+	}
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return &exitError{ExitUsage, err} })
 	setupHelp(root)
 	root.CompletionOptions.HiddenDefaultCmd = false

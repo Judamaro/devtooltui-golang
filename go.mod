@@ -17,6 +17,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/ohler55/ojg v1.28.9
 	github.com/oklog/ulid/v2 v2.1.2
+	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/rogpeppe/go-internal v1.16.0
 	github.com/sahilm/fuzzy v0.1.3
 	github.com/sergi/go-diff v1.4.5

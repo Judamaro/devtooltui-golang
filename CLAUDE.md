@@ -28,6 +28,12 @@ make fuzz           # every Fuzz* target for FUZZTIME (30s; CI runs it too)
   plus `list`, `detect`, `version` and `completion`. Without arguments and on
   a TTY it opens the TUI. Tests: `testdata/script/*.txtar` (testscript) and
   exit-code tables in `cli_test.go`.
+- `internal/config`: optional `config.toml` (`--config`, `$DEVTOOLTUI_CONFIG`
+  or `<user config dir>/devtooltui/config.toml`). Problems are warnings
+  (stderr in the CLI, statusbar in the TUI), never errors; `[tools.<id>]`
+  values are validated against `Spec.Options` and only apply to flags not
+  given on the command line. CLI tests leave `Deps.UserConfigDir` nil so
+  they never read the developer's config.
 - `internal/detect`: 64 KB sample, 0.5 threshold and a tie below 0.1.
 - `internal/clipboard`: atotto + OSC 52 (over SSH or without wl-clipboard/xclip).
 - `internal/render`: colouring shared by the TUI and the CLI (Chroma, diff, regex).
@@ -169,4 +175,4 @@ MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
   16 KB. The `textarea` truncates at 10,000 lines and renders in O(size), so it
   never receives more than that.
 - Weak algorithms (MD5, SHA-1) carry `//nolint:gosec` with a reason.
-- Config environment variable (phase 2): `DEVTOOLTUI_CONFIG`.
+- Config environment variable: `DEVTOOLTUI_CONFIG`.

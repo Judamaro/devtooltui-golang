@@ -1,0 +1,45 @@
+# [tools.<id>] gives defaults; flags on the command line win.
+exec devtooltui --config conf.toml json-format data.json
+stdout '^    "a": 1$'
+! stderr .
+exec devtooltui --config conf.toml json-format --indent 2 data.json
+stdout '^  "a": 1$'
+
+# The mode as the first argument also wins over the config.
+exec devtooltui --config conf.toml base64 hola.txt
+stdout '^hola$'
+exec devtooltui --config conf.toml base64 encode plain.txt
+stdout '^aG9sYQo=$'
+
+# $DEVTOOLTUI_CONFIG, used when there is no --config.
+env DEVTOOLTUI_CONFIG=conf.toml
+exec devtooltui json-format data.json
+stdout '^    "a": 1$'
+env DEVTOOLTUI_CONFIG=
+
+# Problems are warnings on stderr; the rest of the file still applies.
+exec devtooltui --config bad.toml json-format data.json
+stderr 'warning: bad.toml: unknown key "colour"'
+stderr 'warning: bad.toml: tools.json-format.indent: 99 is outside \[0, 8\]'
+stderr 'warning: bad.toml: tools.json-format: unknown option "use_tabs"'
+stdout '^  "a": 1$'
+exec devtooltui --config missing.toml json-format data.json
+stderr 'warning: config missing.toml not found; using defaults'
+stdout '^  "a": 1$'
+
+-- conf.toml --
+[tools.json-format]
+indent = 4
+[tools.base64]
+mode = "decode"
+-- bad.toml --
+colour = "red"
+[tools.json-format]
+indent = 99
+use_tabs = true
+-- data.json --
+{"a":1}
+-- hola.txt --
+aG9sYQ==
+-- plain.txt --
+hola

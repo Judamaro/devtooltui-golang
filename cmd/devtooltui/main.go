@@ -4,6 +4,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/charmbracelet/x/term"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 	"github.com/Judamaro/devtooltui-golang/internal/tui"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
 // Injected with -ldflags at build time.
@@ -40,14 +42,19 @@ func run(args []string) int {
 		StdoutTTY:    term.IsTerminal(os.Stdout.Fd()),
 		Getenv:       os.Getenv,
 		RenderStyles: tui.RenderStyles(),
-		RunTUI: func(detect bool) error {
+		RunTUI: func(r cli.TUIRequest) error {
 			opts := tui.DefaultOptions()
 			opts.Clipboard = clipboard.New(os.Getenv, nil) // in the TUI, OSC 52 goes through tea.SetClipboard
-			opts.DetectOnStart = detect
+			opts.DetectOnStart = r.Clipboard || r.Config.DetectOnStart
+			opts.Debounce = time.Duration(r.Config.DebounceMS) * time.Millisecond
+			opts.ToolDefaults = r.Config.Tools
+			opts.Limits = workspace.LimitsFor(r.Config.LiveMaxBytes)
+			opts.Warnings = r.Warnings
 			return tui.Run(reg, opts)
 		},
-		Clipboard: clip,
-		Version:   version,
-		Commit:    commit,
+		Clipboard:     clip,
+		UserConfigDir: os.UserConfigDir,
+		Version:       version,
+		Commit:        commit,
 	})
 }
