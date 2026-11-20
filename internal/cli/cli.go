@@ -15,6 +15,7 @@ import (
 
 	"github.com/Judamaro/devtooltui-golang/internal/clipboard"
 	"github.com/Judamaro/devtooltui-golang/internal/config"
+	"github.com/Judamaro/devtooltui-golang/internal/plugin"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/render"
 )
@@ -48,6 +49,8 @@ type Deps struct {
 	TermWidth func() int
 	RunTUI    func(TUIRequest) error // nil: no TUI available
 	Clipboard clipboard.Clipboard    // for --copy
+	// Plugins found at startup, for "devtooltui plugin list".
+	Plugins []plugin.Info
 	// UserConfigDir locates the default config.toml; nil means no default
 	// file (tests), only --config or $DEVTOOLTUI_CONFIG.
 	UserConfigDir   func() (string, error)
@@ -173,7 +176,7 @@ func newRoot(d Deps) *cobra.Command {
 	root.AddGroup(&cobra.Group{ID: "tools", Title: "Tools:"}, &cobra.Group{ID: "general", Title: "General:"})
 	root.SetHelpCommandGroupID("general")
 	root.SetCompletionCommandGroupID("general")
-	root.AddCommand(newVersion(d), newList(d, &g), newDetect(d, &g))
+	root.AddCommand(newVersion(d), newList(d, &g), newDetect(d, &g), newPlugin(d, &g))
 	for _, t := range d.Registry.All() {
 		root.AddCommand(newToolCmd(t, d, &g))
 	}

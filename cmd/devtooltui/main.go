@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/cli"
 	"github.com/Judamaro/devtooltui-golang/internal/clipboard"
 	"github.com/Judamaro/devtooltui-golang/internal/history"
+	"github.com/Judamaro/devtooltui-golang/internal/plugin"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
@@ -29,7 +31,7 @@ func main() {
 }
 
 func run(args []string) int {
-	reg, err := registry.New(tools.All()...)
+	reg, plugins, err := plugin.Registry(context.Background(), os.Getenv("PATH"), tools.All())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "devtooltui: invalid registry:", err)
 		return cli.ExitInternal
@@ -53,6 +55,7 @@ func run(args []string) int {
 		},
 		RunTUI:        func(r cli.TUIRequest) error { return runTUI(reg, r) },
 		Clipboard:     clip,
+		Plugins:       plugins,
 		UserConfigDir: os.UserConfigDir,
 		Version:       version,
 		Commit:        commit,

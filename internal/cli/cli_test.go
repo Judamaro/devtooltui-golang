@@ -2,6 +2,7 @@ package cli_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"github.com/rogpeppe/go-internal/testscript"
 
 	"github.com/Judamaro/devtooltui-golang/internal/cli"
+	"github.com/Judamaro/devtooltui-golang/internal/plugin"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 	"github.com/Judamaro/devtooltui-golang/internal/tui"
@@ -34,12 +36,12 @@ func deps(t testing.TB, stdin string) (cli.Deps, *bytes.Buffer, *bytes.Buffer) {
 func TestMain(m *testing.M) {
 	testscript.Main(m, map[string]func(){
 		"devtooltui": func() {
-			reg, err := registry.New(tools.All()...)
+			reg, plugins, err := plugin.Registry(context.Background(), os.Getenv("PATH"), tools.All())
 			if err != nil {
 				os.Exit(cli.ExitInternal)
 			}
 			os.Exit(cli.Execute(os.Args[1:], cli.Deps{
-				Registry: reg, Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
+				Registry: reg, Plugins: plugins, Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
 				Getenv: os.Getenv, RenderStyles: tui.RenderStyles(), Version: "test", Commit: "abc",
 			}))
 		},

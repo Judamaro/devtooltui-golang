@@ -5,9 +5,12 @@
 // reading the Spec; no tool writes UI code.
 //
 // Contract rules:
-//  1. Run does no I/O, keeps no global state and honours ctx.
+//  1. Run does no I/O, keeps no global state and honours ctx. The one
+//     exception is the plugin adapter (internal/plugin), which starts the
+//     plugin's process; the plugin itself must follow the rule.
 //  2. Reversible tools use a "mode" option (Select) with the values
-//     "encode" and "decode".
+//     "encode" and "decode"; conversions between two formats name the
+//     target instead ("to-yaml", "to-json").
 //  3. Input errors are returned as *InputError; any other error is
 //     considered a bug.
 //  4. Binary outputs are shown as Base64 or hex depending on the
@@ -25,11 +28,13 @@ const (
 	Generators Category = "Generators"
 	Testers    Category = "Testers"
 	Text       Category = "Text"
+	// Plugins holds external tools whose category is not one of the above.
+	Plugins Category = "Plugins"
 )
 
 // Categories returns the categories in display order.
 func Categories() []Category {
-	return []Category{Formatters, Encoders, Converters, Generators, Testers, Text}
+	return []Category{Formatters, Encoders, Converters, Generators, Testers, Text, Plugins}
 }
 
 type OptionKind int

@@ -1,0 +1,57 @@
+# A plugin is any devtooltui-<name> executable in the PATH; this one is a
+# shell script, so it does not run on Windows.
+[windows] skip 'shell script plugin'
+
+exec devtooltui plugin list
+stdout 'No plugins'
+
+chmod 755 bin/devtooltui-shout
+env PATH=$WORK/bin${:}$PATH
+exec devtooltui plugin list
+stdout '^shout +shout +.*bin/devtooltui-shout$'
+
+exec devtooltui plugin list --json
+stdout '"tools": \['
+stdout '"shout"'
+
+# Its tool is a subcommand like any other, with flags from its options.
+exec devtooltui shout in.txt
+stdout '^HELLO!$'
+exec devtooltui shout --marks 3 in.txt
+stdout '^HELLO!!!$'
+exec devtooltui list
+stdout '^shout +Plugins +Shout the text$'
+
+# An InputError from the plugin is exit code 1 with file:line:col.
+! exec devtooltui shout bad.txt
+stderr 'bad.txt:1:1: nothing to shout'
+
+-- in.txt --
+hello
+-- bad.txt --
+-- bin/devtooltui-shout --
+#!/bin/sh
+# Shouts its input: a minimal plugin in shell (no JSON parser needed for
+# such a small request; real plugins should use one).
+case "$1" in
+spec)
+  cat <<'JSON'
+{"protocol": 1, "tools": [{"id": "shout", "name": "Shout", "category": "Fun",
+  "description": "Shout the text",
+  "inputs": [{"key": "input", "label": "Text"}],
+  "options": [{"key": "marks", "label": "Marks", "kind": "number", "min": 1, "max": 5, "default": 1}]}]}
+JSON
+  ;;
+run)
+  req=$(cat)
+  text=$(printf '%s' "$req" | sed -n 's/.*"input":"\([^"]*\)".*/\1/p' | sed 's/\\n$//')
+  marks=$(printf '%s' "$req" | sed -n 's/.*"marks":\([0-9]*\).*/\1/p')
+  if [ -z "$text" ]; then
+    echo '{"error": {"input": "input", "line": 1, "col": 1, "message": "nothing to shout"}}'
+    exit 0
+  fi
+  bang=$(printf '%*s' "$marks" '' | tr ' ' '!')
+  upper=$(printf '%s' "$text" | tr '[:lower:]' '[:upper:]')
+  printf '{"result": {"text": "%s%s"}}\n' "$upper" "$bang"
+  ;;
+esac
