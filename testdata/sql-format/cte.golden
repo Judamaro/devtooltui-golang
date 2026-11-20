@@ -1,0 +1,30 @@
+WITH recent AS (
+  SELECT
+    id,
+    total
+  FROM
+    orders
+  WHERE
+    created_at > now() - INTERVAL '7 days'
+),
+big AS (
+  SELECT
+    *
+  FROM
+    recent
+  WHERE
+    total > 100
+)
+SELECT
+  r.id,
+  (
+    SELECT
+      count(*)
+    FROM
+      big
+  ) AS big_count
+FROM
+  recent r
+WHERE
+  r.id IN (1, 2, 3)
+  OR r.total::numeric > 50;

@@ -42,5 +42,6 @@ func All() []tool.Tool {
 		encoders.X509{},
 		text.Markdown{},
 		converters.JSONClass{},
+		formatters.SQLFormat{},
 	}
 }

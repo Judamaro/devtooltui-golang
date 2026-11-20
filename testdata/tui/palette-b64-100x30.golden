@@ -1,19 +1,20 @@
 ▾ Formatters             │JSON Indent, minify and sort the keys of JSON
   ▸ JSON                 │Indent: 2   Sort keys: [ ]
     XML           ╭──────────────────────────────────────────────────────────────╮──────────────────
-▾ Encoders        │ Command palette                                              │
-    Base64        │ › b64                                                        │
-    URL           │                                                              │
-    JWT           │ ▸ Base64                                            Encoders │
-    HTML entities ╰──────────────────────────────────────────────────────────────╯
+    SQL           │ Command palette                                              │
+▾ Encoders        │ › b64                                                        │
+    Base64        │                                                              │
+    URL           │ ▸ Base64                                            Encoders │
+    JWT           ╰──────────────────────────────────────────────────────────────╯
+    HTML entities        │┃
     GZip                 │┃
     String escape        │┃
     QR code              │┃
     X.509 certificate    │┃
 ▾ Converters             │┃
     Timestamp            │┃
-    Number bases         │┃
-    JSON ↔ YAML          │── Output ────────────────────────────────────────────────────────────────
+    Number bases         │── Output ────────────────────────────────────────────────────────────────
+    JSON ↔ YAML          │
     Color                │
     Cron                 │
     CSV ↔ JSON           │
@@ -25,6 +26,5 @@
     Lorem Ipsum          │
 ▾ Testers                │
     RegEx                │
-    JSONPath             │
-  ↓ 6 more               │
+  ↓ 7 more               │
 ✓ 0 µs

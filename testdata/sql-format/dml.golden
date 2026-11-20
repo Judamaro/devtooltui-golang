@@ -1,0 +1,27 @@
+INSERT INTO users (id, email, name)
+VALUES
+  (1, 'ana@example.com', 'Ana'),
+  (2, 'bob@example.com', 'O''Brien')
+ON CONFLICT (id) DO UPDATE
+SET
+  email = excluded.email
+RETURNING
+  id;
+
+UPDATE users
+SET
+  name = 'Ana P.',
+  updated_at = now()
+WHERE
+  id = 1;
+
+DELETE FROM sessions
+WHERE
+  expires_at < now() /* stale */;
+
+CREATE TABLE orders (
+  id bigint PRIMARY KEY,
+  customer_id bigint NOT NULL REFERENCES customers(id),
+  total numeric(10, 2) DEFAULT 0,
+  created_at timestamptz
+);

@@ -1,0 +1,4 @@
+insert into users (id, email, name) values (1, 'ana@example.com', 'Ana'), (2, 'bob@example.com', 'O''Brien') on conflict (id) do update set email = excluded.email returning id;
+update users set name = 'Ana P.', updated_at = now() where id = 1;
+delete from sessions where expires_at < now() /* stale */;
+create table orders (id bigint primary key, customer_id bigint not null references customers(id), total numeric(10, 2) default 0, created_at timestamptz);
