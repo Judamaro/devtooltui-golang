@@ -65,6 +65,8 @@ type App struct {
 	prompt      *palette.Prompt // nil: closed
 	showHelp    bool
 	pendingText string // text to load when choosing in the detection picker
+	export      []byte // binary export offered by the save prompt (Exporter)
+	exportExt   string // its extension; other paths save the text output
 
 	width, height int
 	wide          bool // width ≥ sidebarMinWidth on the last resize

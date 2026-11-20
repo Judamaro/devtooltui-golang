@@ -346,11 +346,7 @@ func (m *Model) launch(seq int) tea.Cmd {
 	m.running = true
 	m.stale = false
 
-	inputs := make(map[string]string, len(m.inputs))
-	for _, f := range m.inputs {
-		inputs[f.spec.Key] = f.value()
-	}
-	req := tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
+	req := m.request()
 	t, id, kind, rs := m.tool, m.spec.ID, m.spec.Output, m.styles.Render
 	return func() tea.Msg {
 		start := time.Now()
@@ -362,6 +358,27 @@ func (m *Model) launch(seq int) tea.Cmd {
 		}
 		return msg
 	}
+}
+
+// request copies the current inputs and options.
+func (m *Model) request() tool.Request {
+	inputs := make(map[string]string, len(m.inputs))
+	for _, f := range m.inputs {
+		inputs[f.spec.Key] = f.value()
+	}
+	return tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
+}
+
+// Export runs the tool's Exporter on the current inputs and options. ok is
+// false when the tool has none. It runs in the caller's goroutine: exports
+// are small (a QR PNG takes milliseconds).
+func (m *Model) Export(ctx context.Context) (data []byte, ext string, ok bool, err error) {
+	e, ok := m.tool.(tool.Exporter)
+	if !ok {
+		return nil, "", false, nil
+	}
+	data, ext, err = e.Export(ctx, m.request())
+	return data, ext, true, err
 }
 
 // HandleResult applies a result if it belongs to the current run.

@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
 )
 
@@ -111,5 +113,34 @@ func TestSidebarFilterInApp(t *testing.T) {
 	press(a, "x") // "q" was typed into the filter: the app is still alive
 	if _, cmd := a.Update(tea.KeyPressMsg{Code: 'q', Text: "q"}); cmd != nil && isQuit(cmd()) {
 		t.Error("q quit while filtering")
+	}
+}
+
+func TestSaveExport(t *testing.T) {
+	a := newAppWith(t, 100, 30, encoders.QR{})
+	press(a, "tab", "tab", "hola")
+	send(a, keyCtrl('s'))
+	if a.prompt == nil || !strings.Contains(ansi.Strip(a.View().Content), "output.png") {
+		t.Fatal("ctrl+s did not suggest output.png")
+	}
+	dir := t.TempDir()
+	png := filepath.Join(dir, "code.PNG")
+	send(a, keyCtrl('u'))
+	press(a, png)
+	send(a, keyEnter())
+	data, err := os.ReadFile(png)
+	if err != nil || !bytes.HasPrefix(data, []byte("\x89PNG")) {
+		t.Fatalf("code.PNG = %d bytes, %v; want a PNG", len(data), err)
+	}
+
+	// Another extension saves the text art.
+	txt := filepath.Join(dir, "code.txt")
+	send(a, keyCtrl('s'))
+	send(a, keyCtrl('u'))
+	press(a, txt)
+	send(a, keyEnter())
+	data, err = os.ReadFile(txt)
+	if err != nil || !strings.Contains(string(data), "▀") {
+		t.Fatalf("code.txt = %q, %v; want the text art", data, err)
 	}
 }

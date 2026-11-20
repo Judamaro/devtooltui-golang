@@ -56,6 +56,16 @@ func TestContract(t *testing.T) {
 				}
 			})
 
+			if e, ok := tl.(tool.Exporter); ok {
+				t.Run("export cancelled ctx", func(t *testing.T) {
+					ctx, cancel := context.WithCancel(context.Background())
+					cancel()
+					if _, _, err := e.Export(ctx, empty); !errors.Is(err, context.Canceled) {
+						t.Errorf("Export with cancelled ctx = %v, want context.Canceled", err)
+					}
+				})
+			}
+
 			if d, ok := tl.(tool.Detector); ok {
 				t.Run("detect in range", func(t *testing.T) {
 					for _, s := range []string{"", " ", "\x00\xff", "{}", "a.b.c"} {

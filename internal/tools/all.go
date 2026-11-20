@@ -34,5 +34,6 @@ func All() []tool.Tool {
 		text.Inspect{},
 		encoders.Escape{},
 		testers.JSONPath{},
+		encoders.QR{},
 	}
 }

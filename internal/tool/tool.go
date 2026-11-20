@@ -126,3 +126,11 @@ type Tool interface {
 type Detector interface {
 	Detect(sample string) float64 // 0..1
 }
+
+// Exporter is optional: tools whose output also has a binary form (the PNG
+// of a QR code) implement it. The TUI uses it when Ctrl+S saves to a path
+// with that extension, and the CLI with --out. Like Run, it does no I/O and
+// honours ctx; ext includes the dot (".png").
+type Exporter interface {
+	Export(ctx context.Context, req Request) (data []byte, ext string, err error)
+}

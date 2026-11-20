@@ -61,6 +61,11 @@ func newToolCmd(t tool.Tool, d Deps, g *globalFlags) *cobra.Command {
 			vals[o.Key] = cmd.Flags().String(name, def, o.Label+helpSuffix(o))
 		}
 	}
+	exporter, _ := t.(tool.Exporter)
+	var outPath *string
+	if exporter != nil {
+		outPath = cmd.Flags().String("out", "", "write the binary export (a PNG for qr) to this file instead of stdout")
+	}
 	cmd.ValidArgsFunction = func(_ *cobra.Command, args []string, _ string) ([]string, cobra.ShellCompDirective) {
 		if len(args) == 0 && hasMode(s) {
 			return modeChoices(s), cobra.ShellCompDirectiveDefault
@@ -76,7 +81,11 @@ func newToolCmd(t tool.Tool, d Deps, g *globalFlags) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		res, err := t.Run(cmd.Context(), tool.Request{Inputs: inputs, Opts: opts})
+		req := tool.Request{Inputs: inputs, Opts: opts}
+		if outPath != nil && *outPath != "" {
+			return exportTo(cmd, exporter, req, *outPath, sources)
+		}
+		res, err := t.Run(cmd.Context(), req)
 		if err != nil {
 			return runError(err, sources)
 		}
@@ -89,6 +98,18 @@ func newToolCmd(t tool.Tool, d Deps, g *globalFlags) *cobra.Command {
 		return nil
 	}
 	return cmd
+}
+
+// exportTo writes the tool's binary export to path (--out).
+func exportTo(cmd *cobra.Command, e tool.Exporter, req tool.Request, path string, sources map[string]string) error {
+	data, _, err := e.Export(cmd.Context(), req)
+	if err != nil {
+		return runError(err, sources)
+	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return &exitError{ExitInput, err}
+	}
+	return nil
 }
 
 func hasMode(s tool.Spec) bool { return len(modeChoices(s)) > 0 }

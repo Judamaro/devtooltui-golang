@@ -1,0 +1,49 @@
+# GZip round trip through a file.
+exec devtooltui gzip hola.txt
+stdout '^H4sI'
+cp stdout hola.gz.b64
+exec devtooltui gzip decode hola.gz.b64
+stdout '^hola$'
+
+exec devtooltui html encode tags.txt
+stdout '^&lt;b&gt;Fish &amp; chips&lt;/b&gt;$'
+
+exec devtooltui escape --lang sql quote.txt
+stdout '^O''''Brien$'
+! exec devtooltui escape decode --lang json bad.json.txt
+stderr 'bad.json.txt:1:5: invalid escape'
+
+exec devtooltui case --to snake ids.txt
+stdout '^http_server_2$'
+stdout '^get_user_by_id$'
+
+exec devtooltui jsonpath --path '$.a[*].b' doc.json
+stdout '^  1,$'
+stdout '^  2$'
+
+# qr: the art on stdout, the PNG with --out (and nothing on stdout).
+exec devtooltui qr hola.txt
+stdout '▀'
+exec devtooltui qr --out code.png --size 128 hola.txt
+! stdout .
+exists code.png
+grep 'IHDR' code.png
+grep 'IEND' code.png
+
+# Tools without an export have no --out.
+! exec devtooltui base64 --out x.bin hola.txt
+stderr 'unknown flag: --out'
+
+-- hola.txt --
+hola
+-- tags.txt --
+<b>Fish & chips</b>
+-- quote.txt --
+O'Brien
+-- bad.json.txt --
+bad \q
+-- ids.txt --
+HTTPServer2
+getUserByID
+-- doc.json --
+{"a": [{"b": 1}, {"b": 2}]}

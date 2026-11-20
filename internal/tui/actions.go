@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -113,6 +115,12 @@ func (a *App) askSave() tea.Cmd {
 	if ext == "" {
 		ext = ".txt"
 	}
+	a.export, a.exportExt = nil, ""
+	if data, xext, ok, err := ws.Export(context.Background()); ok && err == nil {
+		// Suggest the binary form (qr → .png); a path with another
+		// extension still saves the text.
+		a.export, a.exportExt, ext = data, xext, xext
+	}
 	a.prompt = palette.NewPrompt("save", "Save the output to", "output"+ext, a.theme.Palette, a.keys.Palette)
 	return a.prompt.Init()
 }
@@ -123,24 +131,27 @@ func (a *App) saveOutput(path string) tea.Cmd {
 	if ws == nil || path == "" {
 		return flash("not saved: missing path")
 	}
-	out := ws.Output()
-	if !strings.HasSuffix(out, "\n") {
-		out += "\n"
+	data := []byte(ws.Output())
+	if a.export != nil && strings.EqualFold(filepath.Ext(path), a.exportExt) {
+		data = a.export
+	} else if !bytes.HasSuffix(data, []byte("\n")) {
+		data = append(data, '\n')
 	}
+	a.export, a.exportExt = nil, ""
 	verb := "saved"
 	if _, err := os.Stat(path); err == nil {
 		verb = "replaced"
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return flash("not saved: " + err.Error())
 	}
-	if err := os.WriteFile(path, []byte(out), 0o600); err != nil {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
 		return flash("not saved: " + err.Error())
 	}
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		abs = path
 	}
-	return flash(fmt.Sprintf("%s %s (%s)", verb, abs, statusbar.HumanBytes(len(out))))
+	return flash(fmt.Sprintf("%s %s (%s)", verb, abs, statusbar.HumanBytes(len(data))))
 }
 
 // helpOverlay draws the full help over the view (?).
