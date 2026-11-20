@@ -1,0 +1,5 @@
+[
+  {"id": "1", "name": "Ana Pérez", "city": "Bogotá, CO", "score": "9.5"},
+  {"id": "2", "name": "John \"JD\" Doe", "city": "London", "score": ""},
+  {"id": "3", "name": "Mei", "city": "Tokyo", "score": "true"}
+]

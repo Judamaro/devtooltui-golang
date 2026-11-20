@@ -38,5 +38,6 @@ func All() []tool.Tool {
 		encoders.QR{},
 		converters.Color{},
 		converters.Cron{},
+		converters.CSVJSON{},
 	}
 }

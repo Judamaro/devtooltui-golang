@@ -15,6 +15,7 @@
     JSON ↔ YAML          │┃
     Color                │── Output ────────────────────────────────────────────────────────────────
     Cron                 │
+    CSV ↔ JSON           │
 ▾ Generators             │
     Hash                 │
     UUID / ULID          │
@@ -26,5 +27,4 @@
     XPath                │
 ▾ Text                   │
     Diff                 │
-    Case converter       │
 ✓ 0 µs
