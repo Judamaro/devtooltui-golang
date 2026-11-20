@@ -32,5 +32,6 @@ func All() []tool.Tool {
 		generators.Lorem{},
 		text.Case{},
 		text.Inspect{},
+		encoders.Escape{},
 	}
 }

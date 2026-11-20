@@ -7,13 +7,14 @@
     JWT           │ ▸ Base64                                            Encoders │
     HTML entities ╰──────────────────────────────────────────────────────────────╯
     GZip                 │┃
+    String escape        │┃
 ▾ Converters             │┃
     Timestamp            │┃
     Number bases         │┃
     JSON ↔ YAML          │┃
 ▾ Generators             │┃
-    Hash                 │┃
-    UUID / ULID          │── Output ────────────────────────────────────────────────────────────────
+    Hash                 │── Output ────────────────────────────────────────────────────────────────
+    UUID / ULID          │
     Password             │
     Lorem Ipsum          │
 ▾ Testers                │
@@ -22,7 +23,6 @@
     Diff                 │
     Case converter       │
     Text inspector       │
-                         │
                          │
                          │
                          │
