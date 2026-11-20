@@ -13,7 +13,8 @@
     Timestamp            │┃
     Number bases         │┃
     JSON ↔ YAML          │┃
-▾ Generators             │── Output ────────────────────────────────────────────────────────────────
+    Color                │── Output ────────────────────────────────────────────────────────────────
+▾ Generators             │
     Hash                 │
     UUID / ULID          │
     Password             │
@@ -25,6 +26,5 @@
     Diff                 │
     Case converter       │
     Text inspector       │
-                         │
                          │
 ✓ 0 µs

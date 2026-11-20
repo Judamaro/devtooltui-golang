@@ -16,6 +16,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/testutil"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
+	"github.com/Judamaro/devtooltui-golang/internal/tools/converters"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/testers"
@@ -384,4 +385,15 @@ func TestInputErrorExcerpt(t *testing.T) {
 		t.Errorf("the view has %d lines, want 30", n)
 	}
 	testutil.Golden(t, "tui", "json-error-100x30", plainView(a))
+}
+
+func TestColorSwatch(t *testing.T) {
+	a := newAppWith(t, 100, 30, converters.Color{})
+	press(a, "tab", "#663399")
+	if content := a.View().Content; !strings.Contains(content, "48;2;102;51;153") {
+		t.Error("the output has no swatch")
+	}
+	if !strings.Contains(plainView(a), "Name:     rebeccapurple") {
+		t.Error("the output has no conversions")
+	}
 }

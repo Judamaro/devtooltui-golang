@@ -19,6 +19,12 @@ type Styles struct {
 // rendered when it does not apply, and noColor when skipped for size.
 func Result(res tool.Result, kind tool.OutputKind, inputs map[string]string, s Styles) (rendered string, noColor bool) {
 	switch {
+	case res.Lang == "color":
+		for _, kv := range res.Meta {
+			if kv.Key == "Hex" {
+				return Swatch(kv.Value) + "\n" + res.Text, false
+			}
+		}
 	case kind == tool.Highlighted && res.Lang != "":
 		if len(res.Text) > MaxBytes {
 			return "", true
