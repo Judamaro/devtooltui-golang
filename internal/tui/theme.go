@@ -122,6 +122,7 @@ func ThemeFor(dark bool) Theme {
 			Selected:        lipgloss.NewStyle().Foreground(accent).Bold(true),
 			SelectedBlurred: lipgloss.NewStyle().Foreground(accent),
 			Filter:          lipgloss.NewStyle().Foreground(accent),
+			More:            lipgloss.NewStyle().Foreground(muted),
 		},
 		Workspace: workspace.Styles{
 			Title:       lipgloss.NewStyle().Bold(true).Foreground(accent),

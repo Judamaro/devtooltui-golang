@@ -3,6 +3,8 @@
 package sidebar
 
 import (
+	"fmt"
+	"slices"
 	"strings"
 
 	"charm.land/bubbles/v2/key"
@@ -16,6 +18,7 @@ import (
 // Styles are defined by tui/theme.go.
 type Styles struct {
 	Category, Item, Selected, SelectedBlurred, Filter lipgloss.Style
+	More                                              lipgloss.Style // "↓ 3 more" when the list does not fit
 }
 
 // KeyMap holds the sidebar keys.
@@ -202,10 +205,30 @@ func (m Model) View() string {
 	if len(lines) == bodyStart {
 		lines = append(lines, m.styles.Item.Render("  (no results)"))
 	}
-	// Keep the cursor visible when the list does not fit (the filter stays put).
-	if start := cursorLine - m.height + 1; m.height > 0 && start > bodyStart {
-		lines = append(lines[:bodyStart], lines[start:]...)
-	}
+	lines = append(lines[:bodyStart], m.window(lines[bodyStart:], cursorLine-bodyStart, m.height-bodyStart)...)
 	return lipgloss.NewStyle().Width(m.width).MaxWidth(m.width).Height(m.height).MaxHeight(m.height).
 		Render(strings.Join(lines, "\n"))
+}
+
+// window fits body into avail rows keeping the cursor visible (the filter
+// line above stays put). Rows cut above or below become "↑ N more" and
+// "↓ N more"; the cursor never lands on them.
+func (m Model) window(body []string, cursor, avail int) []string {
+	if m.height <= 0 || len(body) <= avail {
+		return body
+	}
+	if avail < 3 { // no room for the markers
+		start := max(cursor-avail+1, 0)
+		return body[start:min(start+avail, len(body))]
+	}
+	start := max(cursor-(avail-2), 0)
+	start = min(start, len(body)-avail)
+	out := slices.Clone(body[start : start+avail])
+	if start > 0 {
+		out[0] = m.styles.More.Render(fmt.Sprintf("  ↑ %d more", start+1))
+	}
+	if end := start + avail; end < len(body) {
+		out[avail-1] = m.styles.More.Render(fmt.Sprintf("  ↓ %d more", len(body)-end+1))
+	}
+	return out
 }

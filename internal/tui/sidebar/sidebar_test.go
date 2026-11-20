@@ -118,3 +118,41 @@ func TestSelectClearsHidingFilter(t *testing.T) {
 		t.Errorf("Select did not clear the filter hiding the tool")
 	}
 }
+
+func TestScrollMarkers(t *testing.T) {
+	var tools []tool.Tool
+	for i := range 12 {
+		tools = append(tools, t1{id: string(rune('a'+i)) + "-tool", name: "Tool " + string(rune('A'+i)), cat: tool.Text})
+	}
+	reg, err := registry.New(tools...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := sidebar.New(reg.ByCategory(), sidebar.Styles{}, keys)
+	m.SetSize(25, 6) // 13 rows (a header and 12 tools) in 6
+	m.Focus()
+	lines := func() []string { return strings.Split(ansi.Strip(m.View()), "\n") }
+
+	got := lines()
+	if strings.TrimSpace(got[5]) != "↓ 8 more" || strings.Contains(got[0], "more") {
+		t.Errorf("at the top:\n%s", strings.Join(got, "\n"))
+	}
+	for i := range 11 {
+		m = press(m, "down")
+		got = lines()
+		if len(got) != 6 {
+			t.Fatalf("%d lines, want 6", len(got))
+		}
+		want := "▸ Tool " + string(rune('B'+i))
+		found := false
+		for _, l := range got {
+			found = found || strings.TrimSpace(l) == want
+		}
+		if !found {
+			t.Fatalf("after %d downs the cursor is hidden:\n%s", i+1, strings.Join(got, "\n"))
+		}
+	}
+	if strings.TrimSpace(got[0]) != "↑ 8 more" || strings.Contains(got[5], "more") {
+		t.Errorf("at the bottom:\n%s", strings.Join(got, "\n"))
+	}
+}
