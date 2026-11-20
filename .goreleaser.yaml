@@ -3,6 +3,12 @@ version: 2
 
 project_name: devtooltui
 
+# Man pages and shell completions go into the archives and packages.
+before:
+  hooks:
+    - go run ./cmd/gendocs -man man
+    - sh -c 'mkdir -p completions && for sh in bash zsh fish; do go run ./cmd/devtooltui completion "$sh" > "completions/devtooltui.$sh"; done'
+
 builds:
   - id: devtooltui
     main: ./cmd/devtooltui
@@ -26,6 +32,8 @@ archives:
     files:
       - README.md
       - LICENSE*
+      - man/*.1
+      - completions/*
 
 checksum:
   name_template: checksums.txt
@@ -76,6 +84,15 @@ nfpms:
     description: Developer utilities in the terminal (JSON, JWT, Base64, hashes, regex, diff…) as a TUI and a CLI.
     license: MIT
     formats: [deb, rpm, apk]
+    contents:
+      - src: ./man/*.1
+        dst: /usr/share/man/man1/
+      - src: ./completions/devtooltui.bash
+        dst: /usr/share/bash-completion/completions/devtooltui
+      - src: ./completions/devtooltui.zsh
+        dst: /usr/share/zsh/vendor-completions/_devtooltui
+      - src: ./completions/devtooltui.fish
+        dst: /usr/share/fish/vendor_completions.d/devtooltui.fish
 
 homebrew_casks:
   - name: devtooltui
@@ -88,6 +105,12 @@ homebrew_casks:
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
+    manpages:
+      - man/devtooltui.1
+    completions:
+      bash: completions/devtooltui.bash
+      zsh: completions/devtooltui.zsh
+      fish: completions/devtooltui.fish
     # The binary is neither signed nor notarized: the macOS quarantine is not
     # removed automatically; the caveat explains how to do it.
     caveats: |

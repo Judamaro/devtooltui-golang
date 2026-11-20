@@ -197,7 +197,9 @@ order in `internal/tools/all.go`; 28 tools).
   archive (Syft), `.deb/.rpm/.apk`, a cask in `Judamaro/homebrew-tap`
   (`HOMEBREW_TAP_GITHUB_TOKEN`) and a Scoop manifest in
   `Judamaro/scoop-bucket` (`SCOOP_BUCKET_GITHUB_TOKEN`, falling back to the
-  tap's token). The CI snapshot skips publishing and signing.
+  tap's token). The CI snapshot skips publishing and signing. A `before`
+  hook writes `man/` (gendocs) and `completions/`; archives, packages and
+  the cask install them.
 - CI also runs `make fuzz` (30 s per target), a non-blocking benchstat job
   against the previous commit, and `.github/workflows/fuzz.yml` fuzzes every
   target for 5 minutes each night.

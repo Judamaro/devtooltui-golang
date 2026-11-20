@@ -130,7 +130,12 @@ pbpaste | devtooltui url decode --copy
   `--no-color` (or `NO_COLOR`) disables color, which is only used on terminals.
 - Exit codes: `0` OK, `1` invalid input (`file:line:col` on stderr), `2`
   usage error, `3` internal error.
-- Shell completion: `devtooltui completion bash|zsh|fish|powershell`.
+- Shell completion: `devtooltui completion bash|zsh|fish|powershell`. Homebrew
+  and the `.deb/.rpm/.apk` packages install the completions and the man pages
+  (`man devtooltui`, `man devtooltui-json-format`…); the archives carry them
+  in `completions/` and `man/`.
+- Every tool has a page with its options and examples on the
+  [documentation site](docs/index.md).
 
 ## Configuration
 
