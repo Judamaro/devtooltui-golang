@@ -29,5 +29,6 @@ func All() []tool.Tool {
 		encoders.HTML{},
 		encoders.Gzip{},
 		generators.Password{},
+		generators.Lorem{},
 	}
 }
