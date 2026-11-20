@@ -30,5 +30,6 @@ func All() []tool.Tool {
 		encoders.Gzip{},
 		generators.Password{},
 		generators.Lorem{},
+		text.Case{},
 	}
 }
