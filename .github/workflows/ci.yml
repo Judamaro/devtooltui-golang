@@ -23,6 +23,22 @@ jobs:
           go-version: stable
       - run: go test -race ./...
 
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - run: make fuzz FUZZTIME=30s
+      - name: Upload failing inputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-corpus
+          path: "**/testdata/fuzz/**"
+
   lint:
     runs-on: ubuntu-latest
     steps:

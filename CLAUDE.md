@@ -12,6 +12,7 @@ make test           # go test -race ./...
 make lint           # golangci-lint run && govulncheck ./...
 make golden-update  # regenerates testdata/**/*.golden (UPDATE_GOLDEN=1)
 make bench          # benchmarks (including the textarea spike)
+make fuzz           # every Fuzz* target for FUZZTIME (30s; CI runs it too)
 ```
 
 - Go ≥ 1.26 (required by the `charm.land/*` v2 modules). If `go` is not on the
