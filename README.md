@@ -13,6 +13,10 @@ with pipes. Works offline, with no telemetry. Inspired by
 # Homebrew (macOS and Linux)
 brew install --cask Judamaro/tap/devtooltui
 
+# Scoop (Windows)
+scoop bucket add judamaro https://github.com/Judamaro/scoop-bucket
+scoop install devtooltui
+
 # Go ≥ 1.26
 go install github.com/Judamaro/devtooltui-golang/cmd/devtooltui@latest
 ```
@@ -20,6 +24,17 @@ go install github.com/Judamaro/devtooltui-golang/cmd/devtooltui@latest
 Binaries for Linux, macOS and Windows (amd64 and arm64), plus `.deb`, `.rpm`
 and `.apk` packages, are available on
 [Releases](https://github.com/Judamaro/devtooltui-golang/releases).
+
+Each release has an SPDX SBOM per archive, and `checksums.txt` is signed with
+[cosign](https://github.com/sigstore/cosign) (keyless, from the release
+workflow). To check a download:
+
+```bash
+cosign verify-blob --bundle checksums.txt.sigstore.json \
+  --certificate-identity-regexp '^https://github.com/Judamaro/devtooltui-golang/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
+sha256sum --ignore-missing -c checksums.txt
+```
 
 On Linux, clipboard support needs `wl-clipboard` (Wayland) or `xclip`/`xsel`
 (X11). Without them, and over SSH, copying falls back to OSC 52.

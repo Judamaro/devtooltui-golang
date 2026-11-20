@@ -171,8 +171,15 @@ MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
 ## Release
 
 - `.goreleaser.yaml` (GoReleaser v2): linux/darwin/windows × amd64/arm64
-  binaries, `checksums.txt`, `.deb/.rpm/.apk` and a cask in
-  `Judamaro/homebrew-tap` (needs the `HOMEBREW_TAP_GITHUB_TOKEN` secret).
+  binaries, `checksums.txt` signed with cosign keyless
+  (`checksums.txt.sigstore.json`, needs `id-token: write`), an SPDX SBOM per
+  archive (Syft), `.deb/.rpm/.apk`, a cask in `Judamaro/homebrew-tap`
+  (`HOMEBREW_TAP_GITHUB_TOKEN`) and a Scoop manifest in
+  `Judamaro/scoop-bucket` (`SCOOP_BUCKET_GITHUB_TOKEN`, falling back to the
+  tap's token). The CI snapshot skips publishing and signing.
+- CI also runs `make fuzz` (30 s per target), a non-blocking benchstat job
+  against the previous commit, and `.github/workflows/fuzz.yml` fuzzes every
+  target for 5 minutes each night.
 - `.github/workflows/release.yml` publishes when a `v*` tag is pushed; CI runs
   `goreleaser check` and a snapshot. `make release-dry` runs the snapshot
   locally.
