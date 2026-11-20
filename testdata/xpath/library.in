@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<library>
+  <!-- prices in EUR -->
+  <book id="b1" lang="en">
+    <title>Sayings of the Century</title>
+    <price>8.95</price>
+  </book>
+  <book id="b2" lang="es">
+    <title>Cien años de soledad</title>
+    <price>12.99</price>
+  </book>
+  <book id="b3" lang="en">
+    <title>Moby Dick</title>
+    <price>8.99</price>
+  </book>
+</library>

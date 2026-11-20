@@ -70,14 +70,14 @@ func TestXMLFormat(t *testing.T) {
 
 func TestXMLFormatErrors(t *testing.T) {
 	tests := []struct {
-		name, in string
-		line     int
+		name, in  string
+		line, col int // col: where encoding/xml stopped (the end of the bad token)
 	}{
-		{"mismatched close", "<a>\n<b></c>\n</a>", 2},
-		{"unclosed", "<a>\n<b>", 2},
-		{"unquoted attribute", "<a x=1/>", 1},
-		{"text only", "hello", 1},
-		{"unknown entity", "<a>&nope;</a>", 1},
+		{"mismatched close", "<a>\n<b></c>\n</a>", 2, 8},
+		{"unclosed", "<a>\n<b>", 2, 4},
+		{"unquoted attribute", "<a x=1/>", 1, 7},
+		{"text only", "hello", 1, 1},
+		{"unknown entity", "<a>&nope;</a>", 1, 10},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -86,8 +86,8 @@ func TestXMLFormatErrors(t *testing.T) {
 			if !ok {
 				t.Fatalf("error = %v, want *InputError", err)
 			}
-			if ie.Line != tt.line {
-				t.Errorf("line = %d, want %d (%s)", ie.Line, tt.line, ie.Msg)
+			if ie.Line != tt.line || ie.Col != tt.col {
+				t.Errorf("position = %d:%d, want %d:%d (%s)", ie.Line, ie.Col, tt.line, tt.col, ie.Msg)
 			}
 		})
 	}

@@ -41,7 +41,7 @@ func (x XMLFormat) Run(ctx context.Context, req tool.Request) (tool.Result, erro
 	if strings.TrimSpace(in) == "" {
 		return tool.Result{Lang: "xml"}, nil
 	}
-	if err := validateXML(in); err != nil {
+	if err := ValidateXML(in); err != nil {
 		return tool.Result{}, err
 	}
 	toks := tokenizeXML(in)
@@ -64,7 +64,10 @@ func (x XMLFormat) Run(ctx context.Context, req tool.Request) (tool.Result, erro
 	}, nil
 }
 
-func validateXML(in string) error {
+// ValidateXML checks that in is well-formed XML with at least one element.
+// Errors are InputErrors with the line and, as far as encoding/xml tells,
+// the column where the decoder stopped. Other XML tools reuse it.
+func ValidateXML(in string) error {
 	dec := xml.NewDecoder(strings.NewReader(in))
 	dec.Strict = true
 	dec.Entity = dtdEntities(in)
@@ -75,10 +78,16 @@ func validateXML(in string) error {
 			break
 		}
 		if err != nil {
-			ie := &tool.InputError{Input: "input", Msg: err.Error()}
+			ie := &tool.InputError{Input: "input", Line: 1, Col: 1, Msg: err.Error()}
+			line, col := dec.InputPos()
 			var syn *xml.SyntaxError
 			if errors.As(err, &syn) {
 				ie.Line, ie.Msg = syn.Line, syn.Msg
+			}
+			if line == ie.Line {
+				ie.Col = max(col, 1) // bytes into the line: close enough for the caret
+			} else {
+				ie.Line, ie.Col = line, max(col, 1)
 			}
 			return ie
 		}
@@ -93,7 +102,7 @@ func validateXML(in string) error {
 		}
 	}
 	if roots == 0 {
-		return &tool.InputError{Input: "input", Line: 1, Msg: "there are no elements"}
+		return &tool.InputError{Input: "input", Line: 1, Col: 1, Msg: "there are no elements"}
 	}
 	return nil
 }

@@ -34,6 +34,7 @@ func All() []tool.Tool {
 		text.Inspect{},
 		encoders.Escape{},
 		testers.JSONPath{},
+		testers.XPath{},
 		encoders.QR{},
 		converters.Color{},
 		converters.Cron{},

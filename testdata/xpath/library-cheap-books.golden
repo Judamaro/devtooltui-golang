@@ -1,0 +1,8 @@
+<book id="b1" lang="en">
+  <title>Sayings of the Century</title>
+  <price>8.95</price>
+</book>
+<book id="b3" lang="en">
+  <title>Moby Dick</title>
+  <price>8.99</price>
+</book>

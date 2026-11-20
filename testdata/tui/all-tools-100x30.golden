@@ -23,8 +23,8 @@
 ▾ Testers                │
     RegEx                │
     JSONPath             │
+    XPath                │
 ▾ Text                   │
     Diff                 │
     Case converter       │
-    Text inspector       │
 ✓ 0 µs
