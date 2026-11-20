@@ -65,6 +65,10 @@ On Linux, clipboard support needs `wl-clipboard` (Wayland) or `xclip`/`xsel`
 | `jsonpath` | JSONPath | Query JSON with JSONPath; matches as a coloured JSON array |
 | `qr` | QR code | Draw a QR code in the terminal; save it as PNG with `Ctrl+S` or `--out` |
 | `color` | Color | HEX, RGB, HSL and HSV with a swatch, CSS names and WCAG contrast |
+| `cron` | Cron | Explain a cron expression and list its next runs in any time zone |
+| `xpath` | XPath | Query XML with XPath 1.0: nodes, attributes, counts and strings |
+| `csv-json` | CSV ↔ JSON | CSV to a JSON array (with or without a header row) and back |
+| `x509` | X.509 certificate | Subject, SAN, validity, key and fingerprints of PEM or DER certificates |
 
 ## TUI
 
@@ -109,6 +113,10 @@ devtooltui regex --pattern '\d{4}-\d{2}' log.txt
 devtooltui uuid --version v7 --count 5
 devtooltui jsonpath --path '$.items[?(@.price < 10)].name' data.json
 devtooltui qr --out site.png <<< 'https://example.com'
+devtooltui cron --tz Europe/Madrid <<< '30 9 * * 1-5'
+devtooltui xpath --expr '//book[price < 10]/title/text()' books.xml
+devtooltui csv-json --types data.csv
+devtooltui x509 cert.pem
 pbpaste | devtooltui url decode --copy
 ```
 

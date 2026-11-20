@@ -103,8 +103,9 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 `json-format`, `xml-format`, `base64`, `url`, `jwt`, `timestamp`,
 `number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (the 12 of the
 MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
-`inspect`, `escape`, `jsonpath`, `qr`, `color` (registered in that order in
-`internal/tools/all.go`; 22 tools).
+`inspect`, `escape`, `jsonpath`, `qr`, `color` and, from phase 3, `cron`,
+`xpath`, `csv-json`, `x509` (registered in that order in
+`internal/tools/all.go`; 26 tools).
 
 - `regex`: the pattern is the `pattern` option (like the CLI `--pattern`
   flag), not an input. `diff` and `jwt` (token + PEM) have two inputs.
@@ -115,6 +116,11 @@ MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
   JSON errors reuse `formatters.JSONInputError`.
 - `color` sets `Lang` to `"color"` and `Meta` `Hex`; `render.Swatch` draws the
   colour, the only style built outside `theme.go` (it is data, not theme).
+- `cron` explains expressions with its own describer (robfig/cron only
+  parses); a parse error is placed by replacing each field with `*` until
+  it parses. `xpath` validates with `formatters.ValidateXML` (line and
+  column) and re-indents matched elements with `xml-format`. `x509`
+  fixtures come from `testdata/x509/gencert` (Ed25519, fixed seeds).
 - Fuzz targets that find failures leave cases in
   `internal/tools/<cat>/testdata/fuzz/`: commit them as regressions.
 - `gzip` decompresses at most `GzipMaxOutput` (64 MB). `escape` encodes the
