@@ -59,6 +59,10 @@ func TestJSONFormat(t *testing.T) {
 		{"keeps numbers", `[1.50,1e10]`, tool.Values{"indent": 0}, `[1.50,1e10]`},
 		{"sorted keeps numbers", `[1.50,1e10]`, tool.Values{"indent": 0, "sort_keys": true}, `[1.50,1e10]`},
 		{"no html escaping when sorting", `{"a":"<&>"}`, tool.Values{"indent": 0, "sort_keys": true}, `{"a":"<&>"}`},
+		{"sorted duplicate keys keep the last", `{"b":1,"a":2,"b":3}`, tool.Values{"indent": 0, "sort_keys": true}, `{"a":2,"b":3}`},
+		{"sorted compares decoded keys", `{"\u0062":1,"a":2,"c":{"z":[{"y":1,"x":2}]}}`, tool.Values{"indent": 0, "sort_keys": true}, `{"a":2,"\u0062":1,"c":{"z":[{"x":2,"y":1}]}}`},
+		{"sorted keeps string escapes", `{"a":"\u00e9\n"}`, tool.Values{"indent": 0, "sort_keys": true}, `{"a":"\u00e9\n"}`},
+		{"sorted nested empty", `{"b":[],"a":{}}`, tool.Values{"sort_keys": true}, "{\n  \"a\": {},\n  \"b\": []\n}"},
 		{"indent 1", `{"a":[1]}`, tool.Values{"indent": 1}, "{\n \"a\": [\n  1\n ]\n}"},
 	}
 	for _, tt := range tests {

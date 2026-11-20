@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
@@ -77,31 +78,138 @@ func formatPreserving(in, indent string) ([]byte, error) {
 	return bytes.TrimSpace(buf.Bytes()), err
 }
 
-// formatSorted decodes and re-encodes: objects come out with sorted keys.
-// UseNumber keeps the precision of numbers.
+// formatSorted sorts object keys without decoding into maps: Compact
+// validates (with the exact error offset), sortCompact reorders the members
+// and Indent lays the result out. Numbers and strings keep their original
+// text; with repeated keys the last one wins, as encoding/json does.
 func formatSorted(in, indent string) ([]byte, error) {
-	dec := json.NewDecoder(strings.NewReader(in))
-	dec.UseNumber()
-	var v any
-	if err := dec.Decode(&v); err != nil {
+	var compact bytes.Buffer
+	compact.Grow(len(in))
+	if err := json.Compact(&compact, []byte(in)); err != nil {
 		return nil, err
 	}
-	if _, err := dec.Token(); !errors.Is(err, io.EOF) {
-		// Something follows the value: Compact validates it with the exact offset.
-		var discard bytes.Buffer
-		if cerr := json.Compact(&discard, []byte(in)); cerr != nil {
-			return nil, cerr
-		}
-		return nil, fmt.Errorf("data after the JSON value")
+	src := compact.Bytes()
+	out := make([]byte, 0, len(src))
+	out, _ = sortCompact(out, src, 0)
+	if indent == "" {
+		return out, nil
 	}
 	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	enc.SetIndent("", indent)
-	if err := enc.Encode(v); err != nil {
+	buf.Grow(len(out) + len(out)/2)
+	if err := json.Indent(&buf, out, "", indent); err != nil {
 		return nil, err
 	}
-	return bytes.TrimSpace(buf.Bytes()), nil
+	return buf.Bytes(), nil
+}
+
+type jsonMember struct {
+	key        string // decoded, for comparison
+	start, end int    // the whole "key":value in src
+}
+
+// sortCompact copies the value at src[i:] (compact, valid JSON) to out with
+// sorted object keys and returns the index right after the value.
+func sortCompact(out, src []byte, i int) ([]byte, int) {
+	switch src[i] {
+	case '{':
+		var members []jsonMember
+		j := i + 1
+		for src[j] != '}' {
+			kEnd := skipString(src, j)
+			vEnd := skipValue(src, kEnd+1) // +1 skips ':'
+			members = append(members, jsonMember{key: decodeKey(src[j:kEnd]), start: j, end: vEnd})
+			j = vEnd
+			if src[j] == ',' {
+				j++
+			}
+		}
+		slices.SortStableFunc(members, func(a, b jsonMember) int { return strings.Compare(a.key, b.key) })
+		out = append(out, '{')
+		first := true
+		for k, m := range members {
+			if k+1 < len(members) && members[k+1].key == m.key {
+				continue // a later duplicate wins
+			}
+			if !first {
+				out = append(out, ',')
+			}
+			first = false
+			kEnd := skipString(src, m.start)
+			out = append(out, src[m.start:kEnd+1]...) // "key":
+			out, _ = sortCompact(out, src, kEnd+1)
+		}
+		return append(out, '}'), j + 1
+	case '[':
+		out = append(out, '[')
+		j := i + 1
+		for src[j] != ']' {
+			if j > i+1 {
+				out = append(out, ',')
+			}
+			out, j = sortCompact(out, src, j)
+			if src[j] == ',' {
+				j++
+			}
+		}
+		return append(out, ']'), j + 1
+	default:
+		end := skipValue(src, i)
+		return append(out, src[i:end]...), end
+	}
+}
+
+// skipValue returns the index right after the compact value at src[i:].
+func skipValue(src []byte, i int) int {
+	switch src[i] {
+	case '"':
+		return skipString(src, i)
+	case '{', '[':
+		depth := 0
+		for j := i; j < len(src); j++ {
+			switch src[j] {
+			case '"':
+				j = skipString(src, j) - 1
+			case '{', '[':
+				depth++
+			case '}', ']':
+				depth--
+				if depth == 0 {
+					return j + 1
+				}
+			}
+		}
+		return len(src)
+	default: // number, true, false, null
+		j := i
+		for j < len(src) && src[j] != ',' && src[j] != '}' && src[j] != ']' {
+			j++
+		}
+		return j
+	}
+}
+
+// skipString returns the index right after the string that opens at src[i].
+func skipString(src []byte, i int) int {
+	for j := i + 1; j < len(src); j++ {
+		switch src[j] {
+		case '\\':
+			j++
+		case '"':
+			return j + 1
+		}
+	}
+	return len(src)
+}
+
+func decodeKey(raw []byte) string {
+	if !bytes.ContainsRune(raw, '\\') {
+		return string(raw[1 : len(raw)-1])
+	}
+	var k string
+	if err := json.Unmarshal(raw, &k); err != nil {
+		return string(raw)
+	}
+	return k
 }
 
 func jsonInputError(in string, err error) error {
