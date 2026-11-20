@@ -5,18 +5,18 @@
     Base64        │ › b64                                                        │
     URL           │                                                              │
     JWT           │ ▸ Base64                                            Encoders │
-▾ Converters      ╰──────────────────────────────────────────────────────────────╯
+    HTML entities ╰──────────────────────────────────────────────────────────────╯
+▾ Converters             │┃
     Timestamp            │┃
     Number bases         │┃
     JSON ↔ YAML          │┃
 ▾ Generators             │┃
     Hash                 │┃
     UUID / ULID          │┃
-▾ Testers                │┃
-    RegEx                │── Output ────────────────────────────────────────────────────────────────
+▾ Testers                │── Output ────────────────────────────────────────────────────────────────
+    RegEx                │
 ▾ Text                   │
     Diff                 │
-                         │
                          │
                          │
                          │

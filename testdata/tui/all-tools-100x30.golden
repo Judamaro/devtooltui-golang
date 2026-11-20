@@ -5,6 +5,7 @@
     Base64               │┃
     URL                  │┃
     JWT                  │┃
+    HTML entities        │┃
 ▾ Converters             │┃
     Timestamp            │┃
     Number bases         │┃
@@ -12,11 +13,10 @@
 ▾ Generators             │┃
     Hash                 │┃
     UUID / ULID          │┃
-▾ Testers                │┃
-    RegEx                │── Output ────────────────────────────────────────────────────────────────
+▾ Testers                │── Output ────────────────────────────────────────────────────────────────
+    RegEx                │
 ▾ Text                   │
     Diff                 │
-                         │
                          │
                          │
                          │

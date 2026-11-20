@@ -26,5 +26,6 @@ func All() []tool.Tool {
 		generators.UUID{},
 		testers.Regex{},
 		text.Diff{},
+		encoders.HTML{},
 	}
 }
