@@ -53,7 +53,7 @@ func (j JSONFormat) Run(ctx context.Context, req tool.Request) (tool.Result, err
 		out, err = formatPreserving(in, indent)
 	}
 	if err != nil {
-		return tool.Result{}, jsonInputError(in, err)
+		return tool.Result{}, JSONInputError(in, err)
 	}
 	return tool.Result{
 		Text: string(out),
@@ -212,7 +212,9 @@ func decodeKey(raw []byte) string {
 	return k
 }
 
-func jsonInputError(in string, err error) error {
+// JSONInputError turns an encoding/json error on in into an InputError with
+// the line and column of the culprit. Other JSON tools reuse it.
+func JSONInputError(in string, err error) error {
 	offset := len(in)
 	msg := err.Error()
 	var syn *json.SyntaxError

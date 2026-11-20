@@ -33,5 +33,6 @@ func All() []tool.Tool {
 		text.Case{},
 		text.Inspect{},
 		encoders.Escape{},
+		testers.JSONPath{},
 	}
 }
