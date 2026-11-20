@@ -28,5 +28,6 @@ func All() []tool.Tool {
 		text.Diff{},
 		encoders.HTML{},
 		encoders.Gzip{},
+		generators.Password{},
 	}
 }

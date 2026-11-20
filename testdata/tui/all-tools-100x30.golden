@@ -14,11 +14,11 @@
 ▾ Generators             │┃
     Hash                 │┃
     UUID / ULID          │── Output ────────────────────────────────────────────────────────────────
+    Password             │
 ▾ Testers                │
     RegEx                │
 ▾ Text                   │
     Diff                 │
-                         │
                          │
                          │
                          │
