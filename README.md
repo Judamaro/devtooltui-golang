@@ -53,7 +53,7 @@ On Linux, clipboard support needs `wl-clipboard` (Wayland) or `xclip`/`xsel`
 | `json-yaml` | JSON ↔ YAML | Keeps key order; supports anchors and merge keys |
 | `hash` | Hash | MD5, SHA-1, SHA-256, SHA-512 and HMAC |
 | `uuid` | UUID / ULID | Generates v4, v7 or ULID; inspects version and timestamp |
-| `regex` | RegEx | RE2 with highlighted matches and groups |
+| `regex` | RegEx | RE2 or regexp2 (.NET: lookaround, backreferences) with highlighted matches and groups |
 | `diff` | Diff | By lines (unified or side by side) or by words |
 | `html` | HTML entities | Escape and unescape, optionally non-ASCII as `&#N;` |
 | `gzip` | GZip | Compress to Base64 and back, with the compression ratio |
@@ -69,6 +69,8 @@ On Linux, clipboard support needs `wl-clipboard` (Wayland) or `xclip`/`xsel`
 | `xpath` | XPath | Query XML with XPath 1.0: nodes, attributes, counts and strings |
 | `csv-json` | CSV ↔ JSON | CSV to a JSON array (with or without a header row) and back |
 | `x509` | X.509 certificate | Subject, SAN, validity, key and fingerprints of PEM or DER certificates |
+| `markdown` | Markdown preview | Render Markdown in the terminal: headings, lists, tables, code |
+| `json-class` | JSON → classes | Go structs or C# records/classes inferred from a JSON sample |
 
 ## TUI
 
@@ -117,6 +119,9 @@ devtooltui cron --tz Europe/Madrid <<< '30 9 * * 1-5'
 devtooltui xpath --expr '//book[price < 10]/title/text()' books.xml
 devtooltui csv-json --types data.csv
 devtooltui x509 cert.pem
+devtooltui markdown README.md
+devtooltui json-class --lang csharp --name Order order.json
+devtooltui regex --engine regexp2 --pattern '(?<=\$)\d+' prices.txt
 pbpaste | devtooltui url decode --copy
 ```
 

@@ -104,8 +104,8 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 `number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (the 12 of the
 MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
 `inspect`, `escape`, `jsonpath`, `qr`, `color` and, from phase 3, `cron`,
-`xpath`, `csv-json`, `x509` (registered in that order in
-`internal/tools/all.go`; 26 tools).
+`xpath`, `csv-json`, `x509`, `markdown`, `json-class` (registered in that
+order in `internal/tools/all.go`; 28 tools).
 
 - `regex`: the pattern is the `pattern` option (like the CLI `--pattern`
   flag), not an input. `diff` and `jwt` (token + PEM) have two inputs.
@@ -121,6 +121,15 @@ MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
   it parses. `xpath` validates with `formatters.ValidateXML` (line and
   column) and re-indents matched elements with `xml-format`. `x509`
   fixtures come from `testdata/x509/gencert` (Ed25519, fixed seeds).
+- `markdown`: `Run` passes the text through with `Lang: "markdown"`;
+  `render.Result(…, width, …)` draws it with Glamour (`Styles.Markdown`).
+  The workspace remembers the width it rendered at and `Rewrap` reruns it
+  on resize; the CLI uses the terminal width (80 when unknown, 120 at most).
+- `json-class` emits Go through `go/format` (a format error is a bug) and
+  reuses `text.IdentWords`/`TitleWord` for names.
+- `regex` has two engines behind `matchSet` (byte offsets for both):
+  `re2` and `regexp2` with a 1 s `MatchTimeout`, which becomes an
+  InputError on `pattern`.
 - Fuzz targets that find failures leave cases in
   `internal/tools/<cat>/testdata/fuzz/`: commit them as regressions.
 - `gzip` decompresses at most `GzipMaxOutput` (64 MB). `escape` encodes the
