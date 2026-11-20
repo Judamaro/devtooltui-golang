@@ -39,6 +39,49 @@ jobs:
           name: fuzz-corpus
           path: "**/testdata/fuzz/**"
 
+  # Compares the benchmarks with the previous commit (or the PR base) and
+  # writes benchstat's table in the job summary. It informs; it does not
+  # block. The textarea spike (internal/tui/workspace) measures bubbles, not
+  # us, and is too slow to repeat.
+  bench:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - run: go install golang.org/x/perf/cmd/benchstat@latest
+      - name: Benchmark this commit and its base
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          bench() {
+            go test -run '^$' -bench . -benchmem -benchtime 200ms -count 6 \
+              $(go list ./... | grep -v '/internal/tui/workspace$')
+          }
+          bench > new.txt
+          if [ -z "$BASE" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ] || ! git cat-file -e "$BASE^{commit}"; then
+            echo "No base commit to compare with." >> "$GITHUB_STEP_SUMMARY"
+            benchstat new.txt >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git worktree add -q ../base "$BASE"
+          (cd ../base && bench) > old.txt || true
+          {
+            echo "### benchstat ${BASE::7} → ${GITHUB_SHA::7}"
+            echo '```text'
+            benchstat old.txt new.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bench
+          path: "*.txt"
+
   lint:
     runs-on: ubuntu-latest
     steps:
