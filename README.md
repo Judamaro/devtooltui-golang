@@ -136,6 +136,8 @@ pbpaste | devtooltui url decode --copy
   in `completions/` and `man/`.
 - Every tool has a page with its options and examples on the
   [documentation site](docs/index.md).
+- From v1.0.0, subcommands, flags, exit codes, the `--json` output and the
+  config keys follow SemVer ([ADR 0003](docs/adr/0003-v1-stability.md)).
 
 ## Configuration
 

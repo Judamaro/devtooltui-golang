@@ -71,3 +71,4 @@ CLI that composes with pipes. Install it and read the shortcuts in the
 
 - [ADR 0001: Bubble Tea v2](adr/0001-bubbletea-v2.md)
 - [ADR 0002: large inputs](adr/0002-live-max-bytes.md)
+- [ADR 0003: what v1.0.0 keeps stable](adr/0003-v1-stability.md)

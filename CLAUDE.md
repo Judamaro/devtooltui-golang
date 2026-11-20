@@ -82,7 +82,9 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 1. **`Run` does no I/O** (no files, network, clipboard or clock unless that is
    its purpose), keeps no global state and honours `ctx`: with an already
    cancelled `ctx` it returns `ctx.Err()`.
-2. Reversible tools use the `mode` option (Select) with `encode`/`decode`.
+2. Reversible tools use the `mode` option (Select) with `encode`/`decode`;
+   conversions between two formats name the target instead (`to-yaml`,
+   `to-json`, `to-csv`). See ADR 0003.
 3. Input errors are `*tool.InputError` with line and column (use
    `tool.Position`). Any other error is considered a bug.
 4. Binary outputs are shown as Base64 or hex (`output` option).
@@ -217,6 +219,9 @@ order in `internal/tools/all.go`; 28 tools).
   text, tool output, CLI help, tests and docs.
 - Do not change the `internal/tool` contract or the folder layout without
   proposing it first.
+- Since v1.0.0 the CLI, exit codes, `--json`, config keys and the tool
+  contract are stable under SemVer (ADR 0003): changing them is a breaking
+  change; adding to them is not.
 - Work by phases (see the roadmap): a phase does not start until the previous
   gate is approved.
 - Themes: `ThemeFor(dark)` builds both from `paletteFor` (16 ANSI colours,
