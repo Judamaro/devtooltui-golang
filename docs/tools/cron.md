@@ -21,7 +21,7 @@ devtooltui cron [file|-] [flags]
 | Flag | Values | Default | Description |
 | --- | --- | --- | --- |
 | `--seconds` | on/off | `false` | Seconds field. 6 fields: the first one is seconds |
-| `--tz` | text | `UTC` | Zone. Local, UTC or an IANA name (America/Bogota) |
+| `--tz` | text | `Local` | Zone. Local, UTC or an IANA name (America/Bogota) |
 | `--count` | 1–50 | `10` | Next runs. |
 
 ## Examples

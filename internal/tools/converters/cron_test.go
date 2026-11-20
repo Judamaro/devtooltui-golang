@@ -14,9 +14,25 @@ import (
 // cronNow is a Friday.
 var cronNow = func() time.Time { return time.Date(2026, 11, 20, 8, 15, 0, 0, time.UTC) }
 
+// runCron pins the zone to UTC unless the test sets it: the default is
+// the machine's (Local).
 func runCron(t *testing.T, in string, opts tool.Values) (tool.Result, error) {
 	t.Helper()
-	return converters.Cron{Now: cronNow}.Run(context.Background(), tool.Request{Inputs: map[string]string{"input": in}, Opts: opts})
+	o := tool.Values{"tz": "UTC"}
+	for k, v := range opts {
+		o[k] = v
+	}
+	return converters.Cron{Now: cronNow}.Run(context.Background(), tool.Request{Inputs: map[string]string{"input": in}, Opts: o})
+}
+
+func TestCronDefaultZoneIsLocal(t *testing.T) {
+	res, err := converters.Cron{Now: cronNow}.Run(context.Background(), tool.Request{Inputs: map[string]string{"input": "0 9 * * *"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := res.Meta[0].Value; got != time.Local.String() {
+		t.Errorf("Zone = %q, want %q (Local, like timestamp)", got, time.Local.String())
+	}
 }
 
 func TestCronGolden(t *testing.T) {

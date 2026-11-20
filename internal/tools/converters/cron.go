@@ -29,7 +29,7 @@ func (Cron) Spec() tool.Spec {
 		Inputs:      []tool.InputSpec{{Key: "input", Label: "Expression (min hour day month weekday)"}},
 		Options: []tool.Option{
 			{Key: "seconds", Label: "Seconds field", Help: "6 fields: the first one is seconds", Kind: tool.Toggle, Default: false},
-			{Key: "tz", Label: "Zone", Help: "Local, UTC or an IANA name (America/Bogota)", Kind: tool.String, Default: "UTC"},
+			{Key: "tz", Label: "Zone", Help: "Local, UTC or an IANA name (America/Bogota)", Kind: tool.String, Default: "Local"},
 			{Key: "count", Label: "Next runs", Kind: tool.Number, Min: 1, Max: 50, Default: 10},
 		},
 		Output: tool.PlainText,
