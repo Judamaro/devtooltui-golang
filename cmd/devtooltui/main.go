@@ -36,19 +36,20 @@ func run(args []string) int {
 	}
 	clip := clipboard.New(os.Getenv, os.Stderr)
 	return cli.Execute(args, cli.Deps{
-		Registry:      reg,
-		Stdin:         os.Stdin,
-		Stdout:        os.Stdout,
-		Stderr:        os.Stderr,
-		StdinTTY:      term.IsTerminal(os.Stdin.Fd()),
-		StdoutTTY:     term.IsTerminal(os.Stdout.Fd()),
-		Getenv:        os.Getenv,
-		RenderStyles:  tui.RenderStyles(),
-		RunTUI:        func(r cli.TUIRequest) error { return runTUI(reg, r) },
-		Clipboard:     clip,
-		UserConfigDir: os.UserConfigDir,
-		Version:       version,
-		Commit:        commit,
+		Registry:          reg,
+		Stdin:             os.Stdin,
+		Stdout:            os.Stdout,
+		Stderr:            os.Stderr,
+		StdinTTY:          term.IsTerminal(os.Stdin.Fd()),
+		StdoutTTY:         term.IsTerminal(os.Stdout.Fd()),
+		Getenv:            os.Getenv,
+		RenderStyles:      tui.RenderStyles(),
+		LightRenderStyles: tui.RenderStylesFor(false),
+		RunTUI:            func(r cli.TUIRequest) error { return runTUI(reg, r) },
+		Clipboard:         clip,
+		UserConfigDir:     os.UserConfigDir,
+		Version:           version,
+		Commit:            commit,
 	})
 }
 
@@ -61,6 +62,7 @@ func runTUI(reg *registry.Registry, r cli.TUIRequest) error {
 	opts.ToolDefaults = r.Config.Tools
 	opts.Limits = workspace.LimitsFor(r.Config.LiveMaxBytes)
 	opts.Warnings = r.Warnings
+	opts.Theme = r.Config.Theme
 
 	hist := r.Config.History
 	statePath, err := history.Path(os.UserCacheDir)

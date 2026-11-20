@@ -151,6 +151,17 @@ func (m *Model) SetInputs(in map[string]string) {
 	}
 }
 
+// SetStyles changes the styles (theme switch) and reruns the tool, since
+// the output was coloured with the old ones.
+func (m *Model) SetStyles(styles Styles) tea.Cmd {
+	m.styles = styles
+	m.opts.SetStyles(styles.Options)
+	for _, f := range m.inputs {
+		f.ta.SetStyles(styles.Textarea)
+	}
+	return m.runNow()
+}
+
 // SetLimits changes the large input thresholds (live_max_bytes).
 func (m *Model) SetLimits(l Limits) { m.limits = l }
 

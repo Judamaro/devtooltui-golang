@@ -49,6 +49,9 @@ type Options struct {
 	Limits workspace.Limits
 	// Warnings (config problems) are shown in the statusbar on start.
 	Warnings []string
+	// Theme is "dark" (also when empty), "light" or "auto", which asks the
+	// terminal for its background colour.
+	Theme string
 	// Restore is the previous session from the history: last tool, options
 	// (over ToolDefaults) and inputs.
 	Restore history.Session
@@ -88,7 +91,7 @@ type App struct {
 
 // New builds the App with the sidebar's first tool active.
 func New(reg *registry.Registry, opts Options) *App {
-	theme := DarkTheme()
+	theme := ThemeFor(opts.Theme != "light")
 	keys := DefaultKeyMap()
 	h := help.New()
 	h.Styles = theme.Help
@@ -121,10 +124,37 @@ func New(reg *registry.Registry, opts Options) *App {
 	return a
 }
 
-func (a *App) Init() tea.Cmd { return a.initCmd }
+func (a *App) Init() tea.Cmd {
+	if a.opts.Theme == "auto" {
+		return tea.Batch(a.initCmd, tea.RequestBackgroundColor)
+	}
+	return a.initCmd
+}
+
+// setTheme switches between the dark and light themes; workspaces rerun so
+// their output is coloured again.
+func (a *App) setTheme(dark bool) tea.Cmd {
+	if dark == a.theme.Dark {
+		return nil
+	}
+	a.theme = ThemeFor(dark)
+	a.help.Styles = a.theme.Help
+	a.sidebar.SetStyles(a.theme.Sidebar)
+	cmds := make([]tea.Cmd, 0, len(a.spaces))
+	for _, ws := range a.spaces {
+		cmds = append(cmds, ws.SetStyles(a.theme.Workspace))
+	}
+	return tea.Batch(cmds...)
+}
 
 func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.BackgroundColorMsg:
+		if a.opts.Theme == "auto" {
+			return a, a.setTheme(msg.IsDark())
+		}
+		return a, nil
+
 	case tea.WindowSizeMsg:
 		a.width, a.height = msg.Width, msg.Height
 		if wide := msg.Width >= sidebarMinWidth; wide != a.wide {

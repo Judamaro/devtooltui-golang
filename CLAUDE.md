@@ -185,6 +185,12 @@ MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
   proposing it first.
 - Work by phases (see the roadmap): a phase does not start until the previous
   gate is approved.
+- Themes: `ThemeFor(dark)` builds both from `paletteFor` (16 ANSI colours,
+  normal shades on light). `theme = "auto"` sends `tea.RequestBackgroundColor`
+  in `Init` and switches on `tea.BackgroundColorMsg`; `setTheme` restyles the
+  sidebar and every workspace and reruns them (their output was coloured
+  with the old theme). The CLI never queries the terminal: only
+  `theme = "light"` changes its colours.
 - TUI: no colours or inline styles outside `theme.go`. Dimensions are
   recomputed on `tea.WindowSizeMsg`. `q` only quits outside text fields.
 - Large inputs (ADR 0002, `workspace.DefaultLimits`): above 32 KB or 5,000

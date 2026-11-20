@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"image/color"
 	"regexp"
 	"slices"
 	"strings"
@@ -457,5 +458,56 @@ func TestRestoreSession(t *testing.T) {
 	}
 	if _, ok := s.Options["json-format"]; ok {
 		t.Error("Session includes a tool that was never opened")
+	}
+}
+
+func TestThemes(t *testing.T) {
+	newThemed := func(theme string) *App {
+		reg, err := registry.New(formatters.JSONFormat{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		a := New(reg, Options{Theme: theme})
+		send(a, tea.WindowSizeMsg{Width: 100, Height: 30})
+		testutil.RunCmds(a.Init(), func(msg tea.Msg) tea.Cmd { _, c := a.Update(msg); return c })
+		press(a, "tab", "tab", `{"a":1}`)
+		return a
+	}
+	// The statusbar shows the run time, which changes on each run.
+	noStatus := func(a *App) string {
+		c := a.View().Content
+		return c[:strings.LastIndex(c, "\n")]
+	}
+	white := tea.BackgroundColorMsg{Color: color.White}
+	black := tea.BackgroundColorMsg{Color: color.Black}
+
+	if a := newThemed("light"); a.theme.Dark {
+		t.Error(`theme "light" started dark`)
+	}
+	dark := newThemed("dark")
+	before := noStatus(dark)
+	send(dark, white)
+	if !dark.theme.Dark || noStatus(dark) != before {
+		t.Error(`theme "dark" followed the terminal background`)
+	}
+
+	auto := newThemed("auto")
+	if !auto.theme.Dark {
+		t.Fatal(`theme "auto" must start dark until the terminal answers`)
+	}
+	send(auto, white)
+	if auto.theme.Dark {
+		t.Fatal("auto did not switch to light on a white background")
+	}
+	light := noStatus(auto)
+	if light == before {
+		t.Error("the view did not change with the light theme")
+	}
+	if plainView(auto) != plainView(dark) {
+		t.Error("the theme changed the text, not only the colours")
+	}
+	send(auto, black)
+	if !auto.theme.Dark || noStatus(auto) != before {
+		t.Error("auto did not switch back to dark")
 	}
 }

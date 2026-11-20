@@ -93,8 +93,11 @@ func (m *Model) Select(id string) {
 }
 
 func (m *Model) SetSize(w, h int) { m.width, m.height = w, h }
-func (m *Model) Focus()           { m.focused = true }
-func (m *Model) Blur()            { m.focused, m.filtering = false, false }
+
+// SetStyles changes the styles (theme switch).
+func (m *Model) SetStyles(s Styles) { m.styles = s }
+func (m *Model) Focus()             { m.focused = true }
+func (m *Model) Blur()              { m.focused, m.filtering = false, false }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	k, ok := msg.(tea.KeyPressMsg)

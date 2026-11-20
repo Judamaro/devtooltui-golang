@@ -39,8 +39,12 @@ type Deps struct {
 	StdoutTTY      bool
 	Getenv         func(string) string
 	RenderStyles   render.Styles
-	RunTUI         func(TUIRequest) error // nil: no TUI available
-	Clipboard      clipboard.Clipboard    // for --copy
+	// LightRenderStyles colour the output when the config says
+	// theme = "light"; zero falls back to RenderStyles. The CLI never asks
+	// the terminal for its background, so "auto" means dark.
+	LightRenderStyles render.Styles
+	RunTUI            func(TUIRequest) error // nil: no TUI available
+	Clipboard         clipboard.Clipboard    // for --copy
 	// UserConfigDir locates the default config.toml; nil means no default
 	// file (tests), only --config or $DEVTOOLTUI_CONFIG.
 	UserConfigDir   func() (string, error)

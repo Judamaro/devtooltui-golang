@@ -297,7 +297,11 @@ func writeResult(w io.Writer, res tool.Result, kind tool.OutputKind, inputs map[
 	}
 	out := res.Text
 	if useColor(d, g) {
-		if colored, _ := render.Result(res, kind, inputs, d.RenderStyles); colored != "" {
+		styles := d.RenderStyles
+		if g.cfg.Theme == "light" && d.LightRenderStyles.Chroma != nil {
+			styles = d.LightRenderStyles
+		}
+		if colored, _ := render.Result(res, kind, inputs, styles); colored != "" {
 			out = colored
 		}
 	}

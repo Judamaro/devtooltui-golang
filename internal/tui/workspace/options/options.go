@@ -68,6 +68,16 @@ func New(spec tool.Spec, values tool.Values, styles Styles, keys KeyMap) Model {
 	return m
 }
 
+// SetStyles changes the styles (theme switch), text fields included.
+func (m *Model) SetStyles(styles Styles) {
+	m.styles = styles
+	for _, it := range m.items {
+		if it.input != nil {
+			it.input.SetStyles(styles.Input)
+		}
+	}
+}
+
 // Empty reports whether the tool has no options.
 func (m Model) Empty() bool { return len(m.items) == 0 }
 
