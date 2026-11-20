@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
+	"charm.land/glamour/v2/styles"
 	"charm.land/lipgloss/v2"
 	"github.com/alecthomas/chroma/v2"
 
@@ -85,7 +86,11 @@ func RenderStyles() render.Styles { return RenderStylesFor(true) }
 // RenderStylesFor returns the output colours of the dark or light theme.
 func RenderStylesFor(dark bool) render.Styles {
 	c := paletteFor(dark)
-	return render.Styles{Chroma: c.chroma, Match: lipgloss.NewStyle().Reverse(true), Diff: c.diff}
+	md := styles.DarkStyleConfig
+	if !dark {
+		md = styles.LightStyleConfig
+	}
+	return render.Styles{Chroma: c.chroma, Match: lipgloss.NewStyle().Reverse(true), Diff: c.diff, Markdown: &md}
 }
 
 // DarkTheme uses only the 16 ANSI colours.

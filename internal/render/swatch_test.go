@@ -11,7 +11,7 @@ import (
 
 func TestSwatch(t *testing.T) {
 	res := tool.Result{Text: "HEX:      #663399", Lang: "color", Meta: []tool.KV{{Key: "Hex", Value: "#663399"}}}
-	out, noColor := Result(res, tool.PlainText, nil, Styles{})
+	out, noColor := Result(res, tool.PlainText, nil, 80, Styles{})
 	if noColor {
 		t.Fatal("noColor for a swatch")
 	}
@@ -23,7 +23,7 @@ func TestSwatch(t *testing.T) {
 		t.Errorf("want two swatch rows and the text, got %q", lines)
 	}
 	// Without the Hex meta there is nothing to draw.
-	if out, _ := Result(tool.Result{Text: "x", Lang: "color"}, tool.PlainText, nil, Styles{}); out != "" {
+	if out, _ := Result(tool.Result{Text: "x", Lang: "color"}, tool.PlainText, nil, 80, Styles{}); out != "" {
 		t.Errorf("rendered %q without Hex", out)
 	}
 }

@@ -35,7 +35,7 @@ func TestResult(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			out, noColor := Result(tt.res, tt.kind, tt.inputs, s)
+			out, noColor := Result(tt.res, tt.kind, tt.inputs, 80, s)
 			if got := strings.Contains(out, "\x1b["); got != tt.wantColored {
 				t.Errorf("coloured = %v, want %v (%q)", got, tt.wantColored, out)
 			}

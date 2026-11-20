@@ -511,3 +511,31 @@ func TestThemes(t *testing.T) {
 		t.Error("auto did not switch back to dark")
 	}
 }
+
+func TestMarkdownRewraps(t *testing.T) {
+	a := newAppWith(t, 140, 30, text.Markdown{})
+	press(a, "tab")
+	send(a, tea.PasteMsg{Content: "# Title\n\n" + strings.Repeat("word ", 60)})
+	output := func() string { // the view below the output header
+		_, out, _ := strings.Cut(plainView(a), "── Output")
+		return out
+	}
+	wide := output()
+	if !strings.Contains(wide, "Title") || strings.Contains(wide, "# Title") {
+		t.Fatalf("the output is not rendered Markdown:\n%s", wide)
+	}
+	send(a, tea.WindowSizeMsg{Width: 100, Height: 30})
+	narrow := output()
+	longest := func(s string) int {
+		n := 0
+		for _, l := range strings.Split(s, "\n") {
+			if i := strings.Index(l, "word"); i >= 0 {
+				n = max(n, strings.Count(l[i:], "word"))
+			}
+		}
+		return n
+	}
+	if longest(narrow) >= longest(wide) {
+		t.Errorf("the output did not rewrap: %d words per line at 140 columns, %d at 100", longest(wide), longest(narrow))
+	}
+}

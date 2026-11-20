@@ -43,8 +43,11 @@ type Deps struct {
 	// theme = "light"; zero falls back to RenderStyles. The CLI never asks
 	// the terminal for its background, so "auto" means dark.
 	LightRenderStyles render.Styles
-	RunTUI            func(TUIRequest) error // nil: no TUI available
-	Clipboard         clipboard.Clipboard    // for --copy
+	// TermWidth gives the terminal width for wrapped outputs (Markdown);
+	// nil means 80 columns.
+	TermWidth func() int
+	RunTUI    func(TUIRequest) error // nil: no TUI available
+	Clipboard clipboard.Clipboard    // for --copy
 	// UserConfigDir locates the default config.toml; nil means no default
 	// file (tests), only --config or $DEVTOOLTUI_CONFIG.
 	UserConfigDir   func() (string, error)

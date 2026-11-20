@@ -40,5 +40,6 @@ func All() []tool.Tool {
 		converters.Cron{},
 		converters.CSVJSON{},
 		encoders.X509{},
+		text.Markdown{},
 	}
 }

@@ -71,14 +71,15 @@ type Model struct {
 	cancel   context.CancelFunc
 	running  bool
 
-	result  tool.Result
-	noColor bool
-	err     error
-	elapsed time.Duration
-	styles  Styles
-	width   int
-	height  int
-	focus   Focus
+	result      tool.Result
+	noColor     bool
+	renderWidth int // width the last run was rendered for (Markdown wraps)
+	err         error
+	elapsed     time.Duration
+	styles      Styles
+	width       int
+	height      int
+	focus       Focus
 }
 
 // Focus tells which workspace panel has focus.
@@ -133,6 +134,15 @@ func New(t tool.Tool, styles Styles, optKeys options.KeyMap, debounce time.Durat
 // that are missing take the Spec defaults. Call it before Init.
 func (m *Model) SetOptions(v tool.Values) {
 	m.opts = options.New(m.spec, v.WithDefaults(m.spec), m.styles.Options, m.optKeys)
+}
+
+// Rewrap reruns the tool when its output wraps to the width (Markdown) and
+// the width changed since it was rendered.
+func (m *Model) Rewrap() tea.Cmd {
+	if m.result.Lang != "markdown" || m.renderWidth == m.width {
+		return nil
+	}
+	return m.runNow()
 }
 
 // Values returns a copy of the current option values.
@@ -396,14 +406,15 @@ func (m *Model) launch(seq int) tea.Cmd {
 	m.stale = false
 
 	req := m.request()
-	t, id, kind, rs := m.tool, m.spec.ID, m.spec.Output, m.styles.Render
+	t, id, kind, rs, width := m.tool, m.spec.ID, m.spec.Output, m.styles.Render, m.width
+	m.renderWidth = width
 	return func() tea.Msg {
 		start := time.Now()
 		res, err := t.Run(ctx, req)
 		msg := ResultMsg{ToolID: id, Seq: seq, Result: res, Err: err, Elapsed: time.Since(start)}
 		// Colouring also runs outside the UI loop.
 		if err == nil && ctx.Err() == nil {
-			msg.Rendered, msg.NoColor = render.Result(res, kind, req.Inputs, rs)
+			msg.Rendered, msg.NoColor = render.Result(res, kind, req.Inputs, width, rs)
 		}
 		return msg
 	}

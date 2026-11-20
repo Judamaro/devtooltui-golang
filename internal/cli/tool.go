@@ -301,7 +301,11 @@ func writeResult(w io.Writer, res tool.Result, kind tool.OutputKind, inputs map[
 		if g.cfg.Theme == "light" && d.LightRenderStyles.Chroma != nil {
 			styles = d.LightRenderStyles
 		}
-		if colored, _ := render.Result(res, kind, inputs, styles); colored != "" {
+		width := 80
+		if d.TermWidth != nil {
+			width = d.TermWidth()
+		}
+		if colored, _ := render.Result(res, kind, inputs, width, styles); colored != "" {
 			out = colored
 		}
 	}

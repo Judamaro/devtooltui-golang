@@ -166,10 +166,14 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.showSidebar = wide
 		}
 		a.layout()
-		if !a.showSidebar && a.focus == focusSidebar {
-			return a, a.setFocus(focusInput)
+		var rewrap tea.Cmd
+		if ws := a.workspace(); ws != nil {
+			rewrap = ws.Rewrap()
 		}
-		return a, nil
+		if !a.showSidebar && a.focus == focusSidebar {
+			return a, tea.Batch(rewrap, a.setFocus(focusInput))
+		}
+		return a, rewrap
 
 	case sidebar.SelectedMsg:
 		return a, a.activate(msg.ID)
@@ -360,7 +364,11 @@ func (a *App) activate(id string) tea.Cmd {
 	}
 	a.active = id
 	a.layout()
-	return tea.Batch(initCmd, a.setFocus(a.focus))
+	var rewrap tea.Cmd
+	if initCmd == nil { // an existing workspace may have been laid out at another width
+		rewrap = a.spaces[id].Rewrap()
+	}
+	return tea.Batch(initCmd, rewrap, a.setFocus(a.focus))
 }
 
 func (a *App) layout() {

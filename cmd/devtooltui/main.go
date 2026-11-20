@@ -45,11 +45,17 @@ func run(args []string) int {
 		Getenv:            os.Getenv,
 		RenderStyles:      tui.RenderStyles(),
 		LightRenderStyles: tui.RenderStylesFor(false),
-		RunTUI:            func(r cli.TUIRequest) error { return runTUI(reg, r) },
-		Clipboard:         clip,
-		UserConfigDir:     os.UserConfigDir,
-		Version:           version,
-		Commit:            commit,
+		TermWidth: func() int {
+			if w, _, err := term.GetSize(os.Stdout.Fd()); err == nil && w > 0 {
+				return min(w, 120)
+			}
+			return 80
+		},
+		RunTUI:        func(r cli.TUIRequest) error { return runTUI(reg, r) },
+		Clipboard:     clip,
+		UserConfigDir: os.UserConfigDir,
+		Version:       version,
+		Commit:        commit,
 	})
 }
 

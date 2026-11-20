@@ -1,0 +1,22 @@
+   devtooltui
+
+  Everyday developer utilities in a single binary: a TUI
+  and a CLI.
+
+  ## Install
+
+    go install github.com/Judamaro/devtooltui-
+  golang/cmd/devtooltui@latest
+
+  • Works offline
+  • No telemetry
+    • Not even a little
+
+
+   Key                        │ Action
+  ────────────────────────────┼───────────────────────────
+    Ctrl+P                    │ Palette
+    ?                         │ Help
+
+  │ Inspired by DevToys https://github.com/DevToys-
+  │ app/DevToys.
