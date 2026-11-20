@@ -52,10 +52,12 @@ func indexPage(reg *registry.Registry) string {
 			fmt.Fprintf(&b, "| [%s](tools/%s.md) | %s |\n", s.Name, s.ID, escapeCell(s.Description))
 		}
 	}
+	b.WriteString("\n## Plugins\n\nAdd your own tools in any language: see [plugins](plugins.md).\n")
 	b.WriteString("\n## Design\n\n")
 	b.WriteString("- [ADR 0001: Bubble Tea v2](adr/0001-bubbletea-v2.md)\n")
 	b.WriteString("- [ADR 0002: large inputs](adr/0002-live-max-bytes.md)\n")
 	b.WriteString("- [ADR 0003: what v1.0.0 keeps stable](adr/0003-v1-stability.md)\n")
+	b.WriteString("- [ADR 0004: plugins as processes](adr/0004-plugins-as-processes.md)\n")
 	return b.String()
 }
 

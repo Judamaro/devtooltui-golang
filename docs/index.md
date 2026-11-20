@@ -67,8 +67,13 @@ CLI that composes with pipes. Install it and read the shortcuts in the
 | [Text inspector](tools/inspect.md) | Count characters, words and lines; sort, deduplicate or reverse lines |
 | [Markdown preview](tools/markdown.md) | Preview Markdown in the terminal (headings, lists, tables, code) |
 
+## Plugins
+
+Add your own tools in any language: see [plugins](plugins.md).
+
 ## Design
 
 - [ADR 0001: Bubble Tea v2](adr/0001-bubbletea-v2.md)
 - [ADR 0002: large inputs](adr/0002-live-max-bytes.md)
 - [ADR 0003: what v1.0.0 keeps stable](adr/0003-v1-stability.md)
+- [ADR 0004: plugins as processes](adr/0004-plugins-as-processes.md)

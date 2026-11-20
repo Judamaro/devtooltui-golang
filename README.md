@@ -139,6 +139,13 @@ pbpaste | devtooltui url decode --copy
 - From v1.0.0, subcommands, flags, exit codes, the `--json` output and the
   config keys follow SemVer ([ADR 0003](docs/adr/0003-v1-stability.md)).
 
+## Plugins
+
+Any `devtooltui-<name>` executable in the `PATH` that speaks the
+[plugin protocol](docs/plugins.md) (JSON over stdin/stdout, in any
+language) adds its tools to the TUI and the CLI. `devtooltui plugin list`
+shows what was found.
+
 ## Configuration
 
 Optional, in `~/.config/devtooltui/config.toml` (the user config directory of

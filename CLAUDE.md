@@ -44,6 +44,12 @@ make man            # man pages in man/ (GoReleaser ships them)
   `history.Merge(prev, tui.Run(...), cfg.History)` after it: last tool,
   options per tool and, only with `store_inputs = true`, inputs (also old
   ones are dropped when it is off). Loading validates against the registry.
+- `internal/plugin`: external tools (`devtooltui-<name>` in the PATH,
+  protocol in `docs/plugins.md`, ADR 0004). `plugin.Registry` builds the
+  registry with them after the built-in tools (main and the CLI's
+  testscript binary use it); `plugin.Tool` adapts each plugin tool and is
+  the only Tool that does I/O. Tests turn the test binary into a fake
+  plugin with `FAKE_PLUGIN`; `plugins.txtar` uses a shell plugin.
 - `internal/detect`: 64 KB sample, 0.5 threshold and a tie below 0.1.
 - `internal/clipboard`: atotto + OSC 52 (over SSH or without wl-clipboard/xclip).
 - `internal/render`: colouring shared by the TUI and the CLI (Chroma, diff, regex).
@@ -81,7 +87,8 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 
 1. **`Run` does no I/O** (no files, network, clipboard or clock unless that is
    its purpose), keeps no global state and honours `ctx`: with an already
-   cancelled `ctx` it returns `ctx.Err()`.
+   cancelled `ctx` it returns `ctx.Err()`. The plugin adapter is the one
+   exception: it starts the plugin's process.
 2. Reversible tools use the `mode` option (Select) with `encode`/`decode`;
    conversions between two formats name the target instead (`to-yaml`,
    `to-json`, `to-csv`). See ADR 0003.
