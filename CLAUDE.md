@@ -67,6 +67,9 @@ type Tool interface {
     Run(ctx context.Context, req Request) (Result, error)
 }
 type Detector interface { Detect(sample string) float64 } // optional, 0..1
+type Exporter interface {                                 // optional: binary output
+    Export(ctx context.Context, req Request) (data []byte, ext string, err error)
+}
 ```
 
 Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
@@ -82,6 +85,9 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
    Select→string ∈ Choices, Number→int in [Min, Max], String→string).
    `registry.New` validates it.
 6. Options are read with `req.Opts.WithDefaults(spec)`.
+7. `Export` follows the same rules as `Run` (no I/O, honours `ctx`). The CLI
+   adds `--out FILE` to exporting tools; `Ctrl+S` suggests `output<ext>` and
+   writes the export when the path has that extension, the text otherwise.
 
 ## Adding a tool
 
@@ -97,12 +103,18 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 `json-format`, `xml-format`, `base64`, `url`, `jwt`, `timestamp`,
 `number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (the 12 of the
 MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
-`inspect`, `escape` (registered in that order in `internal/tools/all.go`).
+`inspect`, `escape`, `jsonpath`, `qr`, `color` (registered in that order in
+`internal/tools/all.go`; 22 tools).
 
 - `regex`: the pattern is the `pattern` option (like the CLI `--pattern`
   flag), not an input. `diff` and `jwt` (token + PEM) have two inputs.
 - `diff` sets `Result.Lang` to `"diff"` (unified) or `"diff-side"` so the TUI
   knows how to colour it; by words it leaves `Lang` empty and colours `Diff`.
+- `jsonpath` decodes with ordered objects (`jsonObject`, a `jp.Keyed`), so
+  matches follow the document order; ojg gives no offsets, so no `Spans`.
+  JSON errors reuse `formatters.JSONInputError`.
+- `color` sets `Lang` to `"color"` and `Meta` `Hex`; `render.Swatch` draws the
+  colour, the only style built outside `theme.go` (it is data, not theme).
 - Fuzz targets that find failures leave cases in
   `internal/tools/<cat>/testdata/fuzz/`: commit them as regressions.
 - `gzip` decompresses at most `GzipMaxOutput` (64 MB). `escape` encodes the

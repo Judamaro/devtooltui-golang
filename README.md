@@ -47,6 +47,9 @@ On Linux, clipboard support needs `wl-clipboard` (Wayland) or `xclip`/`xsel`
 | `case` | Case converter | camelCase, PascalCase, snake_case, kebab-case, CONSTANT, Title… |
 | `inspect` | Text inspector | Count characters, words and lines; sort, dedupe or reverse lines |
 | `escape` | String escape | Escape and unescape literals for JSON, Go, C#, SQL and shell |
+| `jsonpath` | JSONPath | Query JSON with JSONPath; matches as a coloured JSON array |
+| `qr` | QR code | Draw a QR code in the terminal; save it as PNG with `Ctrl+S` or `--out` |
+| `color` | Color | HEX, RGB, HSL and HSV with a swatch, CSS names and WCAG contrast |
 
 ## TUI
 
@@ -89,6 +92,8 @@ devtooltui hash --algo sha256 file.bin
 devtooltui diff a.txt b.txt
 devtooltui regex --pattern '\d{4}-\d{2}' log.txt
 devtooltui uuid --version v7 --count 5
+devtooltui jsonpath --path '$.items[?(@.price < 10)].name' data.json
+devtooltui qr --out site.png <<< 'https://example.com'
 pbpaste | devtooltui url decode --copy
 ```
 
@@ -122,6 +127,10 @@ sort_keys = true
 
 Unknown keys or invalid values are reported as warnings and ignored.
 Command line flags always win over the file.
+
+The TUI remembers the last tool and each tool's options in
+`state.json` in the user cache directory (mode 0600). Inputs are only stored
+with `store_inputs = true`.
 
 ## Development
 
