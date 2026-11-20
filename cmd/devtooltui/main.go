@@ -63,6 +63,7 @@ func runTUI(reg *registry.Registry, r cli.TUIRequest) error {
 	opts.Limits = workspace.LimitsFor(r.Config.LiveMaxBytes)
 	opts.Warnings = r.Warnings
 	opts.Theme = r.Config.Theme
+	opts.Keys = r.Config.Keys
 
 	hist := r.Config.History
 	statePath, err := history.Path(os.UserCacheDir)

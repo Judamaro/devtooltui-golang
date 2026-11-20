@@ -158,6 +158,10 @@ MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
 - Overlays (`Ctrl+P` palette, `Ctrl+S` prompt, `?` help) live in
   `internal/tui/palette` and are drawn with `palette.Place` (lipgloss
   compositor). While open they receive every key.
+- `[keys]` overrides go through `KeyMap.Apply` (`keys.go`): action names are
+  `KeyMap.actions()`; every override applies first and conflicts are then
+  reverted to the default with a warning. A new global action must be added
+  to `actions()` and to the README list.
 - Shortcuts that must not fire while typing (`q`, `/`, `?`) are checked with
   `App.capturesText()` (input, text option or sidebar filter). `ctrl+l` clears
   the input and leaves large mode.

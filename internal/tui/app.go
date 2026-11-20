@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -52,6 +53,8 @@ type Options struct {
 	// Theme is "dark" (also when empty), "light" or "auto", which asks the
 	// terminal for its background colour.
 	Theme string
+	// Keys are the [keys] overrides from the config.
+	Keys map[string]string
 	// Restore is the previous session from the history: last tool, options
 	// (over ToolDefaults) and inputs.
 	Restore history.Session
@@ -93,6 +96,7 @@ type App struct {
 func New(reg *registry.Registry, opts Options) *App {
 	theme := ThemeFor(opts.Theme != "light")
 	keys := DefaultKeyMap()
+	opts.Warnings = append(slices.Clone(opts.Warnings), keys.Apply(opts.Keys)...)
 	h := help.New()
 	h.Styles = theme.Help
 	a := &App{

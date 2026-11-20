@@ -1,6 +1,11 @@
 package tui
 
 import (
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
+
 	"charm.land/bubbles/v2/key"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
@@ -84,4 +89,94 @@ func (k KeyMap) FullHelp() [][]key.Binding {
 		{k.UseOutput, k.EditInput, k.SaveOutput, k.Help},
 		{k.Options.Prev, k.Options.Next, k.Options.Decrease, k.Options.Increase, k.Options.Toggle},
 	}
+}
+
+// actions names the bindings that [keys] in the config can change.
+func (k *KeyMap) actions() map[string]*key.Binding {
+	return map[string]*key.Binding{
+		"next_focus":       &k.NextFocus,
+		"prev_focus":       &k.PrevFocus,
+		"toggle_sidebar":   &k.ToggleSidebar,
+		"run":              &k.Run,
+		"clear_input":      &k.ClearInput,
+		"copy_output":      &k.CopyOutput,
+		"paste_input":      &k.PasteInput,
+		"detect_clipboard": &k.DetectClip,
+		"open_palette":     &k.OpenPalette,
+		"use_output":       &k.UseOutput,
+		"edit_input":       &k.EditInput,
+		"save_output":      &k.SaveOutput,
+		"help":             &k.Help,
+		"quit":             &k.Quit,
+		"quit_outside":     &k.QuitOutside,
+		"sidebar_filter":   &k.Sidebar.Filter,
+	}
+}
+
+// KeyActions lists the action names [keys] accepts, sorted.
+func KeyActions() []string {
+	var k KeyMap
+	return slices.Sorted(maps.Keys(k.actions()))
+}
+
+// Apply overrides bindings with the config's [keys]: each value is one key
+// ("ctrl+y"), several separated by commas ("ctrl+y, alt+c") or "none" to
+// turn the action off. All overrides apply first, so actions can swap keys;
+// then an override whose key another action still uses goes back to its
+// default with a warning, as do unknown actions and empty values.
+func (k *KeyMap) Apply(over map[string]string) []string {
+	acts := k.actions()
+	var warns []string
+	defaults := map[string]key.Binding{}
+	var changed []string
+	for _, name := range slices.Sorted(maps.Keys(over)) {
+		b, ok := acts[name]
+		if !ok {
+			warns = append(warns, fmt.Sprintf("keys: unknown action %q (see the README for the list)", name))
+			continue
+		}
+		val := strings.ToLower(strings.TrimSpace(over[name]))
+		if val == "none" {
+			b.SetEnabled(false)
+			continue
+		}
+		var keys []string
+		for _, f := range strings.Split(val, ",") {
+			if f = strings.TrimSpace(f); f != "" {
+				keys = append(keys, f)
+			}
+		}
+		if len(keys) == 0 {
+			warns = append(warns, fmt.Sprintf("keys.%s is empty; use \"none\" to turn it off", name))
+			continue
+		}
+		defaults[name] = *b
+		b.SetKeys(keys...)
+		b.SetHelp(strings.Join(keys, "/"), b.Help().Desc)
+		changed = append(changed, name)
+	}
+	for _, name := range changed {
+		b := acts[name]
+		if other, taken := k.owner(b.Keys(), b); taken != "" {
+			warns = append(warns, fmt.Sprintf("keys.%s: %q is already used by %s", name, taken, other))
+			*b = defaults[name]
+		}
+	}
+	return warns
+}
+
+// owner finds an enabled action other than self that already uses one of
+// keys.
+func (k *KeyMap) owner(keys []string, self *key.Binding) (action, taken string) {
+	for name, b := range k.actions() {
+		if b == self || !b.Enabled() {
+			continue
+		}
+		for _, key := range keys {
+			if slices.Contains(b.Keys(), key) {
+				return name, key
+			}
+		}
+	}
+	return "", ""
 }

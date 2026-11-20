@@ -24,11 +24,17 @@ func (f *fakeClip) UseOSC52() bool        { return f.osc52 }
 
 func newClipApp(t *testing.T, clip *fakeClip, detectOnStart bool) *App {
 	t.Helper()
+	return newClipAppWith(t, clip, Options{DetectOnStart: detectOnStart})
+}
+
+func newClipAppWith(t *testing.T, clip *fakeClip, opts Options) *App {
+	t.Helper()
 	reg, err := registry.New(tools.All()...)
 	if err != nil {
 		t.Fatal(err)
 	}
-	a := New(reg, Options{Clipboard: clip, DetectOnStart: detectOnStart})
+	opts.Clipboard = clip
+	a := New(reg, opts)
 	send(a, tea.WindowSizeMsg{Width: 100, Height: 30})
 	testutil.RunCmds(a.Init(), func(msg tea.Msg) tea.Cmd { _, c := a.Update(msg); return c })
 	return a

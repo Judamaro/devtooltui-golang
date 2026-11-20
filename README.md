@@ -123,7 +123,17 @@ store_inputs = false      # inputs may hold secrets (JWT, HMAC)
 [tools.json-format]       # defaults per tool, same keys as its options
 indent = 4
 sort_keys = true
+
+[keys]                    # one key, several ("ctrl+y, alt+c") or "none"
+copy_output = "alt+c"
+quit_outside = "none"
 ```
+
+Actions for `[keys]`: `next_focus`, `prev_focus`, `toggle_sidebar`, `run`,
+`clear_input`, `copy_output`, `paste_input`, `detect_clipboard`,
+`open_palette`, `use_output`, `edit_input`, `save_output`, `help`, `quit`,
+`quit_outside` and `sidebar_filter`. A key already used by another action is
+reported and the default stays.
 
 Unknown keys or invalid values are reported as warnings and ignored.
 Command line flags always win over the file.
