@@ -1,5 +1,5 @@
-▾ Testers                │RegEx Test RE2 regular expressions (no lookaround nor backreferences)
-  ▸ RegEx                │Pattern: \d+   i: [ ]   m: [ ]   s: [ ]
+▾ Testers                │RegEx Test regular expressions with RE2 or regexp2 (.NET: lookaround, back
+  ▸ RegEx                │Pattern: \d+   Engine: ◀ re2 ▶   i: [ ]   m: [ ]   s: [ ]
                          │── Text ──────────────────────────────────────────────────────────────────
                          │┃  1 a1 b22
                          │┃  2 c333

@@ -122,14 +122,27 @@ func TestRegexErrors(t *testing.T) {
 	}
 }
 
+// FuzzRegex runs both engines: errors are InputErrors and every span is a
+// valid byte range of the text.
 func FuzzRegex(f *testing.F) {
-	f.Add(`(\w+)@(\w+)`, "ana@x bob@y")
-	f.Add(`(?<=a)`, "a")
-	f.Fuzz(func(t *testing.T, pattern, text string) {
-		_, err := runRegex(t, text, tool.Values{"pattern": pattern, "multiline": true})
+	f.Add(`(\w+)@(\w+)`, "ana@x bob@y", false)
+	f.Add(`(?<=a)`, "a", false)
+	f.Add(`(?<=ñ)\w(?!x)`, "ñaño", true)
+	f.Fuzz(func(t *testing.T, pattern, text string, regexp2 bool) {
+		engine := "re2"
+		if regexp2 {
+			engine = "regexp2"
+		}
+		res, err := runRegex(t, text, tool.Values{"pattern": pattern, "multiline": true, "engine": engine})
 		if err != nil {
 			if _, ok := tool.AsInputError(err); !ok {
 				t.Fatalf("error that is not *InputError: %v", err)
+			}
+			return
+		}
+		for _, sp := range res.Spans {
+			if sp.Start < 0 || sp.Start > sp.End || sp.End > len(text) {
+				t.Fatalf("%s: span %+v outside the %d bytes of the text", engine, sp, len(text))
 			}
 		}
 	})
