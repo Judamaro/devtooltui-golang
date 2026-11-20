@@ -27,5 +27,6 @@ func All() []tool.Tool {
 		testers.Regex{},
 		text.Diff{},
 		encoders.HTML{},
+		encoders.Gzip{},
 	}
 }

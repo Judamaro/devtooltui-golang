@@ -6,18 +6,18 @@
     URL                  │┃
     JWT                  │┃
     HTML entities        │┃
+    GZip                 │┃
 ▾ Converters             │┃
     Timestamp            │┃
     Number bases         │┃
     JSON ↔ YAML          │┃
 ▾ Generators             │┃
     Hash                 │┃
-    UUID / ULID          │┃
-▾ Testers                │── Output ────────────────────────────────────────────────────────────────
+    UUID / ULID          │── Output ────────────────────────────────────────────────────────────────
+▾ Testers                │
     RegEx                │
 ▾ Text                   │
     Diff                 │
-                         │
                          │
                          │
                          │
