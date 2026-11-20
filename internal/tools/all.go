@@ -36,5 +36,6 @@ func All() []tool.Tool {
 		testers.JSONPath{},
 		encoders.QR{},
 		converters.Color{},
+		converters.Cron{},
 	}
 }

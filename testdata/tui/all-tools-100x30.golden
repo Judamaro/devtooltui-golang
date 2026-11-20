@@ -14,6 +14,7 @@
     Number bases         │┃
     JSON ↔ YAML          │┃
     Color                │── Output ────────────────────────────────────────────────────────────────
+    Cron                 │
 ▾ Generators             │
     Hash                 │
     UUID / ULID          │
@@ -26,5 +27,4 @@
     Diff                 │
     Case converter       │
     Text inspector       │
-                         │
 ✓ 0 µs
