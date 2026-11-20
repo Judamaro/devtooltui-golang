@@ -34,6 +34,11 @@ make fuzz           # every Fuzz* target for FUZZTIME (30s; CI runs it too)
   values are validated against `Spec.Options` and only apply to flags not
   given on the command line. CLI tests leave `Deps.UserConfigDir` nil so
   they never read the developer's config.
+- `internal/history`: `<user cache dir>/devtooltui/state.json` (0600, written
+  atomically). `cmd/devtooltui` loads it before the TUI and saves
+  `history.Merge(prev, tui.Run(...), cfg.History)` after it: last tool,
+  options per tool and, only with `store_inputs = true`, inputs (also old
+  ones are dropped when it is off). Loading validates against the registry.
 - `internal/detect`: 64 KB sample, 0.5 threshold and a tie below 0.1.
 - `internal/clipboard`: atotto + OSC 52 (over SSH or without wl-clipboard/xclip).
 - `internal/render`: colouring shared by the TUI and the CLI (Chroma, diff, regex).

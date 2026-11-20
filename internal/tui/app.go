@@ -3,6 +3,7 @@ package tui
 
 import (
 	"fmt"
+	"maps"
 	"os/exec"
 	"strings"
 	"time"
@@ -12,6 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"github.com/Judamaro/devtooltui-golang/internal/history"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
@@ -47,6 +49,9 @@ type Options struct {
 	Limits workspace.Limits
 	// Warnings (config problems) are shown in the statusbar on start.
 	Warnings []string
+	// Restore is the previous session from the history: last tool, options
+	// (over ToolDefaults) and inputs.
+	Restore history.Session
 	// Editor builds the external editor command (Ctrl+E); nil uses
 	// $VISUAL/$EDITOR. Tests replace it.
 	Editor func(path string) *exec.Cmd
@@ -97,6 +102,9 @@ func New(reg *registry.Registry, opts Options) *App {
 		spaces:      map[string]*workspace.Model{},
 		showSidebar: true,
 		wide:        true,
+	}
+	if _, ok := reg.Get(opts.Restore.LastTool); ok {
+		a.sidebar.Select(opts.Restore.LastTool)
 	}
 	a.initCmd = a.activate(a.sidebar.Selected())
 	a.setFocus(focusSidebar)
@@ -301,11 +309,17 @@ func (a *App) activate(id string) tea.Cmd {
 	var initCmd tea.Cmd
 	if _, ok := a.spaces[id]; !ok {
 		ws := workspace.New(t, a.theme.Workspace, a.keys.Options, a.opts.Debounce)
-		if d, ok := a.opts.ToolDefaults[id]; ok {
-			ws.SetOptions(d)
-		}
 		if a.opts.Limits != (workspace.Limits{}) {
 			ws.SetLimits(a.opts.Limits)
+		}
+		vals := tool.Values{}
+		maps.Copy(vals, a.opts.ToolDefaults[id])
+		maps.Copy(vals, a.opts.Restore.Options[id]) // the last session wins
+		if len(vals) > 0 {
+			ws.SetOptions(vals)
+		}
+		if in := a.opts.Restore.Inputs[id]; len(in) > 0 {
+			ws.SetInputs(in)
 		}
 		a.spaces[id] = ws
 		initCmd = ws.Init()
@@ -380,7 +394,26 @@ func (a *App) setFocus(f focus) tea.Cmd {
 }
 
 // Run starts the Bubble Tea program.
-func Run(reg *registry.Registry, opts Options) error {
-	_, err := tea.NewProgram(New(reg, opts)).Run()
-	return err
+// Run runs the TUI and returns the session for the history.
+func Run(reg *registry.Registry, opts Options) (history.Session, error) {
+	m, err := tea.NewProgram(New(reg, opts)).Run()
+	if a, ok := m.(*App); ok && err == nil {
+		return a.Session(), nil
+	}
+	return history.Session{}, err
+}
+
+// Session returns the active tool and the options and inputs of every tool
+// opened in this session.
+func (a *App) Session() history.Session {
+	s := history.Session{
+		LastTool: a.active,
+		Options:  map[string]tool.Values{},
+		Inputs:   map[string]map[string]string{},
+	}
+	for id, ws := range a.spaces {
+		s.Options[id] = ws.Values()
+		s.Inputs[id] = ws.Inputs()
+	}
+	return s
 }

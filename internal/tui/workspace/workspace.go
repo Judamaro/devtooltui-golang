@@ -135,6 +135,22 @@ func (m *Model) SetOptions(v tool.Values) {
 	m.opts = options.New(m.spec, v.WithDefaults(m.spec), m.styles.Options, m.optKeys)
 }
 
+// Values returns a copy of the current option values.
+func (m *Model) Values() tool.Values { return maps.Clone(m.opts.Values()) }
+
+// Inputs returns the current inputs by key.
+func (m *Model) Inputs() map[string]string { return m.request().Inputs }
+
+// SetInputs loads saved inputs (history), honouring large input mode. Call
+// it before Init.
+func (m *Model) SetInputs(in map[string]string) {
+	for _, f := range m.inputs {
+		if v, ok := in[f.spec.Key]; ok {
+			f.setValue(v, m.limits)
+		}
+	}
+}
+
 // SetLimits changes the large input thresholds (live_max_bytes).
 func (m *Model) SetLimits(l Limits) { m.limits = l }
 

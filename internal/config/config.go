@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
+	"math"
 	"os"
 	"path/filepath"
 	"slices"
@@ -237,7 +238,7 @@ func (p *parser) tools(dst map[string]tool.Values, v any, reg *registry.Registry
 				p.warn("tools.%s: unknown option %q", id, k)
 				continue
 			}
-			if val, msg := convert(spec.Options[i], opts[k]); msg != "" {
+			if val, msg := OptionValue(spec.Options[i], opts[k]); msg != "" {
 				p.warn("tools.%s.%s: %s", id, k, msg)
 			} else {
 				vals[k] = val
@@ -249,9 +250,10 @@ func (p *parser) tools(dst map[string]tool.Values, v any, reg *registry.Registry
 	}
 }
 
-// convert checks v against the option kind, as registry.New does for
-// Spec defaults.
-func convert(o tool.Option, v any) (any, string) {
+// OptionValue checks v (decoded from TOML or JSON) against the option kind,
+// as registry.New does for Spec defaults, and returns it with the Go type
+// of that kind. On failure it returns a message.
+func OptionValue(o tool.Option, v any) (any, string) {
 	switch o.Kind {
 	case tool.Toggle:
 		if b, ok := v.(bool); ok {
@@ -259,8 +261,18 @@ func convert(o tool.Option, v any) (any, string) {
 		}
 		return nil, "must be true or false"
 	case tool.Number:
-		n, ok := v.(int64)
-		if !ok {
+		var n int64
+		switch x := v.(type) {
+		case int64:
+			n = x
+		case int:
+			n = int64(x)
+		case float64: // JSON
+			if x != math.Trunc(x) || math.Abs(x) > 1<<53 {
+				return nil, "must be an integer"
+			}
+			n = int64(x)
+		default:
 			return nil, "must be an integer"
 		}
 		if n < int64(o.Min) || n > int64(o.Max) {

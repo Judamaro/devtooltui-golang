@@ -12,6 +12,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/exp/teatest/v2"
 
+	"github.com/Judamaro/devtooltui-golang/internal/history"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/testutil"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
@@ -422,5 +423,39 @@ func TestConfigOptions(t *testing.T) {
 	send(a, tea.PasteMsg{Content: strings.Repeat("aG9s", 1300)})
 	if !a.workspace().Large() {
 		t.Error("the limits from the config were not applied")
+	}
+}
+
+func TestRestoreSession(t *testing.T) {
+	reg, err := registry.New(formatters.JSONFormat{}, encoders.Base64{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := New(reg, Options{
+		ToolDefaults: map[string]tool.Values{"base64": {"variant": "url", "mode": "encode"}},
+		Restore: history.Session{
+			LastTool: "base64",
+			Options:  map[string]tool.Values{"base64": {"mode": "decode"}},
+			Inputs:   map[string]map[string]string{"base64": {"input": "aG9sYQ=="}},
+		},
+	})
+	send(a, tea.WindowSizeMsg{Width: 100, Height: 30})
+	testutil.RunCmds(a.Init(), func(msg tea.Msg) tea.Cmd { _, c := a.Update(msg); return c })
+	if a.active != "base64" {
+		t.Fatalf("active = %q, want the last tool", a.active)
+	}
+	ws := a.workspace()
+	if got := ws.Values(); got["mode"] != "decode" || got["variant"] != "url" {
+		t.Errorf("options = %v: the session must win over the config, which fills the rest", got)
+	}
+	if ws.Output() != "hola" {
+		t.Errorf("output = %q: the restored input did not run", ws.Output())
+	}
+	s := a.Session()
+	if s.LastTool != "base64" || s.Inputs["base64"]["input"] != "aG9sYQ==" || s.Options["base64"]["mode"] != "decode" {
+		t.Errorf("Session = %+v", s)
+	}
+	if _, ok := s.Options["json-format"]; ok {
+		t.Error("Session includes a tool that was never opened")
 	}
 }
