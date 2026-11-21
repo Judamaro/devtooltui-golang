@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/rogpeppe/go-internal/testscript"
 
 	"github.com/Judamaro/devtooltui-golang/internal/cli"
+	"github.com/Judamaro/devtooltui-golang/internal/config"
 	"github.com/Judamaro/devtooltui-golang/internal/plugin"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
@@ -36,16 +38,41 @@ func deps(t testing.TB, stdin string) (cli.Deps, *bytes.Buffer, *bytes.Buffer) {
 func TestMain(m *testing.M) {
 	testscript.Main(m, map[string]func(){
 		"devtooltui": func() {
-			reg, plugins, err := plugin.Registry(context.Background(), os.Getenv("PATH"), "", tools.All())
+			// As cmd/devtooltui does, without the default config file.
+			pathList, off := os.Getenv("PATH"), false
+			if cfg, _, err := config.Path(cli.ConfigFlag(os.Args[1:]), os.Getenv, noConfigDir); err == nil && !config.PluginsEnabled(cfg) {
+				pathList, off = "", true
+			}
+			reg, plugins, err := plugin.Registry(context.Background(), pathList, "", tools.All())
 			if err != nil {
 				os.Exit(cli.ExitInternal)
 			}
 			os.Exit(cli.Execute(os.Args[1:], cli.Deps{
-				Registry: reg, Plugins: plugins, Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
+				Registry: reg, Plugins: plugins, PluginsOff: off, Stdin: os.Stdin, Stdout: os.Stdout, Stderr: os.Stderr,
 				Getenv: os.Getenv, RenderStyles: tui.RenderStyles(), Version: "test", Commit: "abc",
 			}))
 		},
 	})
+}
+
+func noConfigDir() (string, error) { return "", errors.New("no default config in tests") }
+
+func TestConfigFlag(t *testing.T) {
+	tests := []struct {
+		args []string
+		want string
+	}{
+		{[]string{"--config", "a.toml", "list"}, "a.toml"},
+		{[]string{"list", "--config=b.toml"}, "b.toml"},
+		{[]string{"json-format", "--", "--config", "x"}, ""},
+		{[]string{"--config"}, ""},
+		{nil, ""},
+	}
+	for _, tt := range tests {
+		if got := cli.ConfigFlag(tt.args); got != tt.want {
+			t.Errorf("ConfigFlag(%q) = %q, want %q", tt.args, got, tt.want)
+		}
+	}
 }
 
 func TestScripts(t *testing.T) {

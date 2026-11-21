@@ -26,6 +26,15 @@ stdout '^shout +Plugins +Shout the text$'
 ! exec devtooltui shout bad.txt
 stderr 'bad.txt:1:1: nothing to shout'
 
+# [plugins] enabled = false hides them.
+exec devtooltui --config off.toml plugin list
+stdout 'Plugins are turned off'
+! exec devtooltui --config off.toml shout in.txt
+stderr 'unknown command "shout"'
+
+-- off.toml --
+[plugins]
+enabled = false
 -- in.txt --
 hello
 -- bad.txt --

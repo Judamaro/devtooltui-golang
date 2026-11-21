@@ -37,8 +37,14 @@ type Config struct {
 	DebounceMS    int
 	LiveMaxBytes  int // above it, the input is read-only and runs with F5 (ADR 0002)
 	History       History
+	Plugins       Plugins
 	Tools         map[string]tool.Values // validated defaults per tool ID
 	Keys          map[string]string      // keymap overrides, validated by the TUI
+}
+
+// Plugins is the [plugins] table.
+type Plugins struct {
+	Enabled bool // look for devtooltui-<name> executables in the PATH
 }
 
 // History is the [history] table.
@@ -55,6 +61,7 @@ func Default() Config {
 		DebounceMS:   120,
 		LiveMaxBytes: 32 << 10,
 		History:      History{Enabled: true, RememberOptions: true},
+		Plugins:      Plugins{Enabled: true},
 		Tools:        map[string]tool.Values{},
 		Keys:         map[string]string{},
 	}
@@ -132,6 +139,8 @@ func Parse(data []byte, name string, reg *registry.Registry) (Config, []string) 
 			}
 		case "history":
 			p.history(&c.History, v)
+		case "plugins":
+			p.plugins(&c.Plugins, v)
 		case "tools":
 			p.tools(c.Tools, v, reg)
 		case "keys":
@@ -211,6 +220,42 @@ func (p *parser) history(h *History, v any) {
 			*dst = b
 		}
 	}
+}
+
+func (p *parser) plugins(pl *Plugins, v any) {
+	t, ok := p.table("plugins", v)
+	if !ok {
+		return
+	}
+	for _, k := range sortedKeys(t) {
+		if k != "enabled" {
+			p.warn("unknown key \"plugins.%s\"", k)
+			continue
+		}
+		if b, ok := p.boolean("plugins.enabled", t[k]); ok {
+			pl.Enabled = b
+		}
+	}
+}
+
+// PluginsEnabled reads only [plugins] enabled from the file at path. The
+// plugins must be known before the full config is parsed, since
+// [tools.<id>] is checked against every tool, theirs included. Any
+// problem means the default (true); Load reports it later.
+func PluginsEnabled(path string) bool {
+	data, err := os.ReadFile(path) //nolint:gosec // the user chooses the config file
+	if err != nil {
+		return true
+	}
+	var c struct {
+		Plugins struct {
+			Enabled *bool `toml:"enabled"`
+		} `toml:"plugins"`
+	}
+	if toml.Unmarshal(data, &c) != nil || c.Plugins.Enabled == nil {
+		return true
+	}
+	return *c.Plugins.Enabled
 }
 
 // tools validates [tools.<id>] against the Spec options; bad values are

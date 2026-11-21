@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -49,8 +50,10 @@ type Deps struct {
 	TermWidth func() int
 	RunTUI    func(TUIRequest) error // nil: no TUI available
 	Clipboard clipboard.Clipboard    // for --copy
-	// Plugins found at startup, for "devtooltui plugin list".
-	Plugins []plugin.Info
+	// Plugins found at startup, for "devtooltui plugin list";
+	// PluginsOff when the config turned them off.
+	Plugins    []plugin.Info
+	PluginsOff bool
 	// UserConfigDir locates the default config.toml; nil means no default
 	// file (tests), only --config or $DEVTOOLTUI_CONFIG.
 	UserConfigDir   func() (string, error)
@@ -127,6 +130,23 @@ func loadConfig(d Deps, g *globalFlags) {
 		return
 	}
 	g.cfg, g.cfgWarnings = config.Load(path, explicit, d.Registry)
+}
+
+// ConfigFlag finds the value of --config in args before cobra parses them:
+// main needs it to know whether to look for plugins.
+func ConfigFlag(args []string) string {
+	for i, a := range args {
+		if a == "--" {
+			break
+		}
+		if v, ok := strings.CutPrefix(a, "--config="); ok {
+			return v
+		}
+		if a == "--config" && i+1 < len(args) {
+			return args[i+1]
+		}
+	}
+	return ""
 }
 
 // NewRoot builds the command tree without running it (cmd/gendocs walks it

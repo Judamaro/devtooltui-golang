@@ -43,6 +43,10 @@ func newPlugin(d Deps, g *globalFlags) *cobra.Command {
 				enc.SetEscapeHTML(false)
 				return enc.Encode(all)
 			}
+			if d.PluginsOff {
+				fmt.Fprintln(out, "Plugins are turned off: [plugins] enabled = false in the config.")
+				return nil
+			}
 			if len(d.Plugins) == 0 {
 				fmt.Fprintf(out, "No plugins: put %s<name> executables in the PATH (see docs/plugins.md).\n", plugin.Prefix)
 				return nil

@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -48,6 +49,9 @@ enabled = true
 remember_options = false
 store_inputs = true
 
+[plugins]
+enabled = false
+
 [tools.json-format]
 indent = 4
 sort_keys = true
@@ -58,6 +62,7 @@ copy_output = "ctrl+y"
 			want := config.Config{
 				Theme: "dark", DetectOnStart: true, DebounceMS: 80, LiveMaxBytes: 65536,
 				History: config.History{Enabled: true, StoreInputs: true},
+				Plugins: config.Plugins{Enabled: false},
 				Tools:   map[string]tool.Values{"json-format": {"indent": 4, "sort_keys": true}},
 				Keys:    map[string]string{"copy_output": "ctrl+y"},
 			}
@@ -65,8 +70,8 @@ copy_output = "ctrl+y"
 				t.Errorf("got %+v\nwant %+v", c, want)
 			}
 		}, nil},
-		{"unknown keys warn", "colour = 1\n[history]\nforever = true\n", nil,
-			[]string{`unknown key "colour"`, `unknown key "history.forever"`}},
+		{"unknown keys warn", "colour = 1\n[history]\nforever = true\n[plugins]\npath = \"x\"\n", nil,
+			[]string{`unknown key "colour"`, `unknown key "history.forever"`, `unknown key "plugins.path"`}},
 		{"bad values keep defaults", "theme = \"pink\"\ndebounce_ms = 5000\nlive_max_bytes = \"big\"\ndetect_on_start = 1\n",
 			func(t *testing.T, c config.Config) {
 				if c.Theme != "auto" || c.DebounceMS != 120 || c.LiveMaxBytes != 32<<10 || c.DetectOnStart {
@@ -164,5 +169,31 @@ func TestLoad(t *testing.T) {
 	}
 	if c, w := config.Load(path, true, reg); len(w) != 0 || c.Theme != "light" {
 		t.Errorf("Load = %v, %v", c, w)
+	}
+}
+
+func TestPluginsEnabled(t *testing.T) {
+	dir := t.TempDir()
+	tests := []struct {
+		content string
+		want    bool
+	}{
+		{"[plugins]\nenabled = false\n", false},
+		{"[plugins]\nenabled = true\n", true},
+		{"theme = \"dark\"\n", true},
+		{"[plugins]\nenabled = \"no\"\n", true}, // invalid: Load warns, the default stays
+		{"broken = = toml", true},
+	}
+	for i, tt := range tests {
+		path := filepath.Join(dir, fmt.Sprintf("c%d.toml", i))
+		if err := os.WriteFile(path, []byte(tt.content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if got := config.PluginsEnabled(path); got != tt.want {
+			t.Errorf("PluginsEnabled(%q) = %v, want %v", tt.content, got, tt.want)
+		}
+	}
+	if !config.PluginsEnabled(filepath.Join(dir, "missing.toml")) {
+		t.Error("a missing file must keep plugins on")
 	}
 }

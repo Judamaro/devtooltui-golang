@@ -11,6 +11,7 @@ import (
 
 	"github.com/Judamaro/devtooltui-golang/internal/cli"
 	"github.com/Judamaro/devtooltui-golang/internal/clipboard"
+	"github.com/Judamaro/devtooltui-golang/internal/config"
 	"github.com/Judamaro/devtooltui-golang/internal/history"
 	"github.com/Judamaro/devtooltui-golang/internal/plugin"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
@@ -31,8 +32,13 @@ func main() {
 }
 
 func run(args []string) int {
+	pathList := os.Getenv("PATH")
+	pluginsOff := false
+	if cfg, _, err := config.Path(cli.ConfigFlag(args), os.Getenv, os.UserConfigDir); err == nil && !config.PluginsEnabled(cfg) {
+		pathList, pluginsOff = "", true
+	}
 	cacheFile, _ := plugin.CachePath(os.UserCacheDir) // "" without a cache dir: no cache
-	reg, plugins, err := plugin.Registry(context.Background(), os.Getenv("PATH"), cacheFile, tools.All())
+	reg, plugins, err := plugin.Registry(context.Background(), pathList, cacheFile, tools.All())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "devtooltui: invalid registry:", err)
 		return cli.ExitInternal
@@ -57,6 +63,7 @@ func run(args []string) int {
 		RunTUI:        func(r cli.TUIRequest) error { return runTUI(reg, r) },
 		Clipboard:     clip,
 		Plugins:       plugins,
+		PluginsOff:    pluginsOff,
 		UserConfigDir: os.UserConfigDir,
 		Version:       version,
 		Commit:        commit,
