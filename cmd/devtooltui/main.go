@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/charmbracelet/x/term"
@@ -21,13 +22,16 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
-// Injected with -ldflags at build time.
+// Injected with -ldflags at build time (make build, GoReleaser); without
+// them, buildVersion reads what Go recorded in the binary.
 var (
 	version = "dev"
 	commit  = "none"
 )
 
 func main() {
+	bi, _ := debug.ReadBuildInfo()
+	version, commit = buildVersion(version, commit, bi)
 	os.Exit(run(os.Args[1:]))
 }
 
