@@ -1,0 +1,19 @@
+# Stringify, then parse back (mode as the first argument).
+exec devtooltui json-string data.json
+stdout '^"\{\\"a\\":\[1,2\]\}"$'
+cp stdout str.txt
+exec devtooltui json-string decode --indent 0 str.txt
+stdout '^\{"a":\[1,2\]\}$'
+
+# Detection recognises stringified JSON.
+exec devtooltui detect str.txt
+stdout '^json-string'
+
+# Invalid JSON: exit 1 with file:line:col.
+! exec devtooltui json-string bad.json
+stderr 'bad.json:1:8: invalid character'
+
+-- data.json --
+{"a": [1, 2]}
+-- bad.json --
+{"a":1,}

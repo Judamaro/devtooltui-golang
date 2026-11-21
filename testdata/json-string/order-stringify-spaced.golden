@@ -1,0 +1,1 @@
+"{\n  \"id\": 1024,\n  \"customer\": \"Ana \\\"La Jefa\\\" Pérez\",\n  \"items\": [{\"sku\": \"A-1\", \"qty\": 2}],\n  \"note\": \"line one\\nline two\",\n  \"html\": \"<b>&</b>\"\n}"
