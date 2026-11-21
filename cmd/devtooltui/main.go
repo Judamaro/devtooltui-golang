@@ -31,7 +31,8 @@ func main() {
 }
 
 func run(args []string) int {
-	reg, plugins, err := plugin.Registry(context.Background(), os.Getenv("PATH"), tools.All())
+	cacheFile, _ := plugin.CachePath(os.UserCacheDir) // "" without a cache dir: no cache
+	reg, plugins, err := plugin.Registry(context.Background(), os.Getenv("PATH"), cacheFile, tools.All())
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "devtooltui: invalid registry:", err)
 		return cli.ExitInternal

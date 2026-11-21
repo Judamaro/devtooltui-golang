@@ -28,6 +28,12 @@ func TestMain(m *testing.M) {
 }
 
 func fakePlugin(mode, cmd string) int {
+	if log := os.Getenv("FAKE_LOG"); log != "" && cmd == "spec" {
+		if f, err := os.OpenFile(log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600); err == nil { //nolint:gosec // test log
+			_, _ = f.WriteString("spec\n")
+			_ = f.Close()
+		}
+	}
 	out := json.NewEncoder(os.Stdout)
 	switch {
 	case mode == "badjson":
@@ -114,7 +120,7 @@ func fake(t *testing.T, mode string) []Candidate {
 func builtin() []tool.Tool { return []tool.Tool{encoders.Base64{}} }
 
 func TestLoad(t *testing.T) {
-	tools, infos := Load(context.Background(), fake(t, "ok"), builtin())
+	tools, infos := Load(context.Background(), fake(t, "ok"), builtin(), nil)
 	if len(tools) != 2 || len(infos) != 1 {
 		t.Fatalf("tools = %d, infos = %+v", len(tools), infos)
 	}
@@ -145,7 +151,7 @@ func TestLoadProblems(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.mode, func(t *testing.T) {
-			tools, infos := Load(context.Background(), fake(t, tt.mode), builtin())
+			tools, infos := Load(context.Background(), fake(t, tt.mode), builtin(), nil)
 			if len(tools) != tt.tools {
 				t.Errorf("%d tools, want %d", len(tools), tt.tools)
 			}
@@ -163,7 +169,7 @@ func TestLoadProblems(t *testing.T) {
 func TestLoadTwoPluginsSameID(t *testing.T) {
 	c := fake(t, "ok")
 	c = append(c, Candidate{Name: "copy", Path: c[0].Path})
-	tools, infos := Load(context.Background(), c, nil)
+	tools, infos := Load(context.Background(), c, nil, nil)
 	if len(tools) != 2 || len(infos[1].Tools) != 0 || !strings.Contains(strings.Join(infos[1].Problems, " "), "taken by plugin fake") {
 		t.Errorf("tools = %d, second = %+v", len(tools), infos[1])
 	}
@@ -171,7 +177,7 @@ func TestLoadTwoPluginsSameID(t *testing.T) {
 
 func upper(t *testing.T) tool.Tool {
 	t.Helper()
-	tools, _ := Load(context.Background(), fake(t, "ok"), nil)
+	tools, _ := Load(context.Background(), fake(t, "ok"), nil, nil)
 	return tools[0]
 }
 
@@ -262,8 +268,9 @@ func TestDiscover(t *testing.T) {
 	}
 }
 
-func TestRegistry(t *testing.T) {
-	dir := t.TempDir()
+// installFake copies the test binary to dir as devtooltui-fake.
+func installFake(t *testing.T, dir string) string {
+	t.Helper()
 	exe, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -276,11 +283,104 @@ func TestRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, name), data, 0o755); err != nil { //nolint:gosec // a test executable
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, data, 0o755); err != nil { //nolint:gosec // a test executable
 		t.Fatal(err)
 	}
+	return path
+}
+
+func TestCache(t *testing.T) {
+	bin, cacheDir := t.TempDir(), t.TempDir()
+	exe := installFake(t, bin)
+	cacheFile := filepath.Join(cacheDir, "devtooltui", "plugins.json")
+	log := filepath.Join(cacheDir, "spec.log")
 	t.Setenv("FAKE_PLUGIN", "ok")
-	reg, infos, err := Registry(context.Background(), dir, builtin())
+	t.Setenv("FAKE_LOG", log)
+	specCalls := func() int {
+		data, _ := os.ReadFile(log) //nolint:gosec // test log
+		return strings.Count(string(data), "spec")
+	}
+	load := func() *Cache {
+		t.Helper()
+		reg, _, err := Registry(context.Background(), bin, cacheFile, builtin())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := reg.Get("fake-upper"); !ok {
+			t.Fatal("the plugin tool is missing")
+		}
+		return LoadCache(cacheFile)
+	}
+
+	load()
+	load()
+	if n := specCalls(); n != 1 {
+		t.Errorf("spec ran %d times, want 1: the second start must use the cache", n)
+	}
+	if runtime.GOOS != "windows" {
+		if info, err := os.Stat(cacheFile); err != nil || info.Mode().Perm() != 0o600 {
+			t.Errorf("cache file mode = %v, %v", info.Mode().Perm(), err)
+		}
+	}
+
+	// A new build of the plugin (another modification time) is asked again.
+	later := time.Now().Add(time.Hour)
+	if err := os.Chtimes(exe, later, later); err != nil {
+		t.Fatal(err)
+	}
+	load()
+	if n := specCalls(); n != 2 {
+		t.Errorf("spec ran %d times after the plugin changed, want 2", n)
+	}
+
+	// A plugin that left the PATH leaves the cache too.
+	other := t.TempDir()
+	moved := installFake(t, other)
+	if _, _, err := Registry(context.Background(), other, cacheFile, builtin()); err != nil {
+		t.Fatal(err)
+	}
+	c := LoadCache(cacheFile)
+	if _, stale := c.Entries[exe]; stale || len(c.Entries) != 1 {
+		t.Errorf("cache entries = %v, want only %s", c.Entries, moved)
+	}
+}
+
+func TestCacheSkipsFailures(t *testing.T) {
+	bin, cacheDir := t.TempDir(), t.TempDir()
+	installFake(t, bin)
+	cacheFile := filepath.Join(cacheDir, "plugins.json")
+	t.Setenv("FAKE_PLUGIN", "exit")
+	if _, infos, _ := Registry(context.Background(), bin, cacheFile, builtin()); len(infos[0].Problems) == 0 {
+		t.Fatal("expected the plugin to fail")
+	}
+	if c := LoadCache(cacheFile); len(c.Entries) != 0 {
+		t.Errorf("a failed spec was cached: %+v", c.Entries)
+	}
+	// Once fixed, it loads without clearing anything.
+	t.Setenv("FAKE_PLUGIN", "ok")
+	if _, infos, _ := Registry(context.Background(), bin, cacheFile, builtin()); len(infos[0].Tools) != 2 {
+		t.Errorf("infos = %+v", infos)
+	}
+}
+
+func TestCacheBrokenFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "plugins.json")
+	for _, content := range []string{"{", `{"version": 99, "entries": {"x": {}}}`} {
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if c := LoadCache(path); len(c.Entries) != 0 || c.Version != CacheVersion {
+			t.Errorf("LoadCache(%q) = %+v, want an empty cache", content, c)
+		}
+	}
+}
+
+func TestRegistry(t *testing.T) {
+	dir := t.TempDir()
+	installFake(t, dir)
+	t.Setenv("FAKE_PLUGIN", "ok")
+	reg, infos, err := Registry(context.Background(), dir, "", builtin())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +394,7 @@ func TestRegistry(t *testing.T) {
 }
 
 func TestDetectAndExport(t *testing.T) {
-	tools, _ := Load(context.Background(), fake(t, "ok"), nil)
+	tools, _ := Load(context.Background(), fake(t, "ok"), nil, nil)
 	up, magic := tools[0], tools[1]
 	if _, ok := magic.(tool.Detector); ok {
 		t.Error("a tool without detect implements Detector")

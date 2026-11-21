@@ -101,21 +101,35 @@ type Info struct {
 	Problems []string // why the plugin, or some of its tools, were skipped
 }
 
-// Load asks every candidate for its spec (in parallel) and returns the
-// tools that can join the built-in ones: valid specs whose IDs are free.
-func Load(ctx context.Context, cands []Candidate, builtin []tool.Tool) ([]tool.Tool, []Info) {
+// Load asks every candidate for its spec (in parallel; from cache when the
+// executable has not changed) and returns the tools that can join the
+// built-in ones: valid specs whose IDs are free. cache may be nil; Load
+// updates it.
+func Load(ctx context.Context, cands []Candidate, builtin []tool.Tool, cache *Cache) ([]tool.Tool, []Info) {
 	type loaded struct {
 		msg SpecMessage
 		err error
 	}
 	results := make([]loaded, len(cands))
+	stamps := make([]stamp, len(cands))
 	var wg sync.WaitGroup
 	for i, c := range cands {
+		stamps[i] = stampOf(c.Path)
+		if msg, ok := cache.get(c.Path, stamps[i]); ok {
+			results[i].msg = msg
+			continue
+		}
 		wg.Go(func() {
 			results[i].msg, results[i].err = readSpec(ctx, c.Path)
 		})
 	}
 	wg.Wait()
+	for i, c := range cands {
+		if results[i].err == nil {
+			cache.put(c.Path, stamps[i], results[i].msg)
+		}
+	}
+	cache.keep(cands)
 
 	taken := map[string]string{}
 	for _, t := range builtin {
@@ -385,10 +399,19 @@ func checkSpans(spans []tool.Span, inputs map[string]string) error {
 }
 
 // Registry builds the registry with the built-in tools and the plugins
-// found in pathList. Broken plugins never stop it: their problems are in
-// the returned Info.
-func Registry(ctx context.Context, pathList string, builtin []tool.Tool) (*registry.Registry, []Info, error) {
-	extra, infos := Load(ctx, Discover(pathList), builtin)
+// found in pathList. cacheFile ("" for none) keeps their specs between
+// runs. Broken plugins never stop it: their problems are in the returned
+// Info.
+func Registry(ctx context.Context, pathList, cacheFile string, builtin []tool.Tool) (*registry.Registry, []Info, error) {
+	cands := Discover(pathList)
+	var cache *Cache
+	if cacheFile != "" && len(cands) > 0 {
+		cache = LoadCache(cacheFile)
+	}
+	extra, infos := Load(ctx, cands, builtin, cache)
+	if cache != nil && cache.changed {
+		_ = cache.Save(cacheFile) // a cache that cannot be written only costs time
+	}
 	reg, err := registry.New(append(slices.Clone(builtin), extra...)...)
 	return reg, infos, err
 }

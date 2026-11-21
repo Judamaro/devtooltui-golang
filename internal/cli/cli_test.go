@@ -36,7 +36,7 @@ func deps(t testing.TB, stdin string) (cli.Deps, *bytes.Buffer, *bytes.Buffer) {
 func TestMain(m *testing.M) {
 	testscript.Main(m, map[string]func(){
 		"devtooltui": func() {
-			reg, plugins, err := plugin.Registry(context.Background(), os.Getenv("PATH"), tools.All())
+			reg, plugins, err := plugin.Registry(context.Background(), os.Getenv("PATH"), "", tools.All())
 			if err != nil {
 				os.Exit(cli.ExitInternal)
 			}
