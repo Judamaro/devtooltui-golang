@@ -156,3 +156,62 @@ func TestScrollMarkers(t *testing.T) {
 		t.Errorf("at the bottom:\n%s", strings.Join(got, "\n"))
 	}
 }
+
+func TestAt(t *testing.T) {
+	m := newSidebar(t) // ▾ Formatters / ▸ JSON / ▾ Encoders / Base64 / URL
+	tests := []struct {
+		row  int
+		id   string
+		want bool
+	}{
+		{0, "", false}, // category
+		{1, "json-format", true},
+		{3, "base64", true},
+		{4, "url", true},
+		{5, "", false}, // past the list
+		{-1, "", false},
+	}
+	for _, tt := range tests {
+		if id, ok := m.At(tt.row); id != tt.id || ok != tt.want {
+			t.Errorf("At(%d) = %q, %v; want %q, %v", tt.row, id, ok, tt.id, tt.want)
+		}
+	}
+	// With a filter, row 0 is the filter line.
+	m = press(m, "/", "u", "r")
+	if _, ok := m.At(0); ok {
+		t.Error("the filter line is not a tool")
+	}
+	if id, ok := m.At(2); !ok || id != "url" {
+		t.Errorf("At(2) with the filter = %q, %v; want url", id, ok)
+	}
+}
+
+func TestAtScrolled(t *testing.T) {
+	var tools []tool.Tool
+	for i := range 12 {
+		tools = append(tools, t1{id: string(rune('a'+i)) + "-tool", name: "Tool " + string(rune('A'+i)), cat: tool.Text})
+	}
+	reg, err := registry.New(tools...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := sidebar.New(reg.ByCategory(), sidebar.Styles{}, keys)
+	m.SetSize(25, 6)
+	m.Focus()
+	for range 11 {
+		m = press(m, "down")
+	}
+	// The window shows "↑ 8 more", then Tool I … Tool L.
+	if _, ok := m.At(0); ok {
+		t.Error("the ↑ marker is not a tool")
+	}
+	if id, ok := m.At(5); !ok || id != "l-tool" {
+		t.Errorf("At(5) = %q, %v; want the last tool", id, ok)
+	}
+	if cmd := m.Click(4); cmd == nil || m.Selected() != "k-tool" {
+		t.Errorf("Click(4) selected %q", m.Selected())
+	}
+	if cmd := m.Click(4); cmd != nil {
+		t.Error("clicking the selected tool again must not announce it")
+	}
+}

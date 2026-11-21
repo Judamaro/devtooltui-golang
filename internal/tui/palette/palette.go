@@ -58,6 +58,41 @@ type Model struct {
 	input    textinput.Model
 	styles   Styles
 	keys     KeyMap
+	box      geometry // where Overlay drew it, for clicks
+	first    int      // index of the first visible item
+	itemsTop int      // screen row of the first visible item
+	shown    int      // visible items
+}
+
+// geometry is a drawn box on screen.
+type geometry struct{ x, y, w, h int }
+
+func (g geometry) contains(x, y int) bool {
+	return x >= g.x && x < g.x+g.w && y >= g.y && y < g.y+g.h
+}
+
+// place returns where Place draws box.
+func place(box string, width, height int) geometry {
+	w, h := lipgloss.Width(box), lipgloss.Height(box)
+	return geometry{x: max((width-w)/2, 0), y: min(2, max(height-h, 0)), w: w, h: h}
+}
+
+// Contains reports whether (x, y) is on the palette as last drawn.
+func (m *Model) Contains(x, y int) bool { return m.box.contains(x, y) }
+
+// Click chooses the item at (x, y), as Enter does on it; it returns nil
+// when there is no item there.
+func (m *Model) Click(x, y int) tea.Cmd {
+	if !m.box.contains(x, y) {
+		return nil
+	}
+	i := y - m.itemsTop
+	if i < 0 || i >= m.shown {
+		return nil
+	}
+	m.cursor = m.first + i
+	it := m.filtered[m.cursor]
+	return func() tea.Msg { return ChosenMsg{Item: it} }
 }
 
 // New opens the palette with items, headed by title.
@@ -156,16 +191,20 @@ func (m *Model) Overlay(base string, width, height int) string {
 		lines = append(lines, m.styles.Detail.Render(fmt.Sprintf("  %d of %d", end-start, len(m.filtered))))
 	}
 	box := m.styles.Box.Width(boxW).Render(strings.Join(lines, "\n"))
+	m.box = place(box, width, height)
+	// Items start after the top border, the title, the search field and a
+	// blank line.
+	m.first, m.shown = start, end-start
+	m.itemsTop = m.box.y + m.styles.Box.GetBorderTopSize() + m.styles.Box.GetPaddingTop() + 3
 	return Place(base, box, width, height)
 }
 
 // Place draws box horizontally centred near the top edge of base, without
 // changing its size.
 func Place(base, box string, width, height int) string {
-	x := max((width-lipgloss.Width(box))/2, 0)
-	y := min(2, max(height-lipgloss.Height(box), 0))
+	g := place(box, width, height)
 	return lipgloss.NewCompositor(
 		lipgloss.NewLayer(base),
-		lipgloss.NewLayer(box).X(x).Y(y).Z(1),
+		lipgloss.NewLayer(box).X(g.x).Y(g.y).Z(1),
 	).Render()
 }

@@ -174,16 +174,25 @@ func (m *Model) move(delta int) {
 	}
 }
 
-func (m Model) View() string {
-	var lines []string
+// row is one visible line of the sidebar: its text and the entry it shows
+// (-1 for the filter, categories, "(no results)" and the more markers).
+type row struct {
+	text  string
+	entry int
+}
+
+// rows builds the visible lines: the filter, then the window around the
+// cursor. View draws them and At reads them, so a click lands on what is
+// on screen.
+func (m Model) rows() []row {
+	var head, body []row
 	if m.filtering || m.filter != "" {
 		cursor := ""
 		if m.filtering {
 			cursor = "▏"
 		}
-		lines = append(lines, m.styles.Filter.Render("/ "+m.filter+cursor))
+		head = append(head, row{m.styles.Filter.Render("/ " + m.filter + cursor), -1})
 	}
-	bodyStart := len(lines)
 	cursorLine := -1
 	for i, e := range m.entries {
 		if !m.visible[i] {
@@ -191,29 +200,58 @@ func (m Model) View() string {
 		}
 		switch {
 		case e.header != "":
-			lines = append(lines, m.styles.Category.Render("▾ "+e.header))
+			body = append(body, row{m.styles.Category.Render("▾ " + e.header), -1})
 		case i == m.cursor && m.focused:
-			cursorLine = len(lines)
-			lines = append(lines, m.styles.Selected.Render("  ▸ "+e.name))
+			cursorLine = len(body)
+			body = append(body, row{m.styles.Selected.Render("  ▸ " + e.name), i})
 		case i == m.cursor:
-			cursorLine = len(lines)
-			lines = append(lines, m.styles.SelectedBlurred.Render("  ▸ "+e.name))
+			cursorLine = len(body)
+			body = append(body, row{m.styles.SelectedBlurred.Render("  ▸ " + e.name), i})
 		default:
-			lines = append(lines, m.styles.Item.Render("    "+e.name))
+			body = append(body, row{m.styles.Item.Render("    " + e.name), i})
 		}
 	}
-	if len(lines) == bodyStart {
-		lines = append(lines, m.styles.Item.Render("  (no results)"))
+	if len(body) == 0 {
+		body = append(body, row{m.styles.Item.Render("  (no results)"), -1})
 	}
-	lines = append(lines[:bodyStart], m.window(lines[bodyStart:], cursorLine-bodyStart, m.height-bodyStart)...)
+	return append(head, m.window(body, cursorLine, m.height-len(head))...)
+}
+
+func (m Model) View() string {
+	rows := m.rows()
+	lines := make([]string, len(rows))
+	for i, r := range rows {
+		lines[i] = r.text
+	}
 	return lipgloss.NewStyle().Width(m.width).MaxWidth(m.width).Height(m.height).MaxHeight(m.height).
 		Render(strings.Join(lines, "\n"))
 }
 
-// window fits body into avail rows keeping the cursor visible (the filter
-// line above stays put). Rows cut above or below become "↑ N more" and
-// "↓ N more"; the cursor never lands on them.
-func (m Model) window(body []string, cursor, avail int) []string {
+// At returns the tool on visible row r (0 is the top line inside the
+// sidebar), or false for the filter, categories and markers.
+func (m Model) At(r int) (string, bool) {
+	rows := m.rows()
+	if r < 0 || r >= len(rows) || (m.height > 0 && r >= m.height) || rows[r].entry < 0 {
+		return "", false
+	}
+	return m.entries[rows[r].entry].id, true
+}
+
+// Click selects the tool on visible row r, like moving the cursor there; the
+// command announces it (SelectedMsg) when it changed.
+func (m *Model) Click(r int) tea.Cmd {
+	id, ok := m.At(r)
+	if !ok || id == m.Selected() {
+		return nil
+	}
+	m.Select(id)
+	return func() tea.Msg { return SelectedMsg{ID: id} }
+}
+
+// window fits body into avail rows keeping the cursor visible. Rows cut
+// above or below become "↑ N more" and "↓ N more"; the cursor never lands
+// on them.
+func (m Model) window(body []row, cursor, avail int) []row {
 	if m.height <= 0 || len(body) <= avail {
 		return body
 	}
@@ -225,10 +263,10 @@ func (m Model) window(body []string, cursor, avail int) []string {
 	start = min(start, len(body)-avail)
 	out := slices.Clone(body[start : start+avail])
 	if start > 0 {
-		out[0] = m.styles.More.Render(fmt.Sprintf("  ↑ %d more", start+1))
+		out[0] = row{m.styles.More.Render(fmt.Sprintf("  ↑ %d more", start+1)), -1}
 	}
 	if end := start + avail; end < len(body) {
-		out[avail-1] = m.styles.More.Render(fmt.Sprintf("  ↓ %d more", len(body)-end+1))
+		out[avail-1] = row{m.styles.More.Render(fmt.Sprintf("  ↓ %d more", len(body)-end+1)), -1}
 	}
 	return out
 }

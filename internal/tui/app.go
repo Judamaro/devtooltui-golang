@@ -53,6 +53,9 @@ type Options struct {
 	// Theme is "dark" (also when empty), "light" or "auto", which asks the
 	// terminal for its background colour.
 	Theme string
+	// Mouse turns on clicks and the wheel (config "mouse", on by default).
+	// The terminal then needs Shift to select text with the mouse.
+	Mouse bool
 	// Keys are the [keys] overrides from the config.
 	Keys map[string]string
 	// Restore is the previous session from the history: last tool, options
@@ -174,6 +177,15 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, tea.Batch(rewrap, a.setFocus(focusInput))
 		}
 		return a, rewrap
+
+	case tea.MouseClickMsg:
+		if msg.Mouse().Button == tea.MouseLeft {
+			return a, a.click(msg.Mouse().X, msg.Mouse().Y)
+		}
+		return a, nil
+
+	case tea.MouseWheelMsg:
+		return a, a.wheel(msg)
 
 	case sidebar.SelectedMsg:
 		return a, a.activate(msg.ID)
@@ -303,6 +315,9 @@ func (a *App) View() tea.View {
 	}
 	v := tea.NewView(content)
 	v.AltScreen = true
+	if a.opts.Mouse {
+		v.MouseMode = tea.MouseModeCellMotion // clicks and the wheel
+	}
 	return v
 }
 

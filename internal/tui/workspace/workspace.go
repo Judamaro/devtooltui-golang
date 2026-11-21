@@ -270,6 +270,83 @@ func (m *Model) resize() {
 	m.output.SetHeight(m.outH - 2)
 }
 
+// Click handles a click at (x, y) inside the workspace: the box under it
+// takes the focus, which Click returns with ok, and the click acts there
+// (an option, the cursor of an input). Clicks on the tool box of a tool
+// without options, or outside the boxes, change nothing.
+func (m *Model) Click(x, y int) (f Focus, ok bool, cmd tea.Cmd) {
+	inner := m.innerWidth()
+	in := func(top, h int) (int, int, bool) { // interior row and column of a box
+		r, c := y-top-1, x-1
+		return r, c, r >= 0 && r < h-2 && c >= 0 && c < inner
+	}
+	if y < m.headH {
+		if !m.HasOptions() {
+			return 0, false, nil
+		}
+		if r, c, inside := in(0, m.headH); inside {
+			changed, ocmd := m.opts.Click(r, c, inner)
+			cmd = ocmd
+			if changed {
+				m.resize() // a value may change the panel's height
+				cmd = tea.Batch(cmd, m.runNow())
+			}
+		}
+		return FocusOptions, true, cmd
+	}
+	top := m.headH
+	switch {
+	case m.split() && y < top+m.inH[0]:
+		i, left := 0, 0
+		if lw := m.width / 2; x >= lw {
+			i, left = 1, lw
+		}
+		m.active = i
+		if r, c := y-top-1, x-left-1; r >= 0 && c >= 0 {
+			m.inputs[i].clickAt(r, c)
+		}
+		return FocusInput, true, nil
+	case !m.split():
+		for i, h := range m.inH {
+			if y < top+h {
+				m.active = i
+				if r, c, inside := in(top, h); inside {
+					m.inputs[i].clickAt(r, c)
+				}
+				return FocusInput, true, nil
+			}
+			top += h
+		}
+	}
+	return FocusOutput, true, nil // the rest is the Output box
+}
+
+// Wheel scrolls the box under (x, y): the output viewport or an input.
+func (m *Model) Wheel(x, y int, msg tea.MouseWheelMsg) tea.Cmd {
+	if y < m.headH {
+		return nil
+	}
+	top := m.headH
+	if m.split() && y < top+m.inH[0] {
+		i := 0
+		if x >= m.width/2 {
+			i = 1
+		}
+		return m.inputs[i].wheel(msg)
+	}
+	if !m.split() {
+		for i, h := range m.inH {
+			if y < top+h {
+				return m.inputs[i].wheel(msg)
+			}
+			top += h
+		}
+	}
+	var cmd tea.Cmd
+	m.output, cmd = m.output.Update(msg)
+	return cmd
+}
+
 // innerWidth is the width inside the boxes.
 func (m *Model) innerWidth() int { return max(m.width-2, 1) }
 

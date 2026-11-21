@@ -18,7 +18,11 @@ type Prompt struct {
 	input     textinput.Model
 	styles    Styles
 	keys      KeyMap
+	box       geometry // where Overlay drew it
 }
+
+// Contains reports whether (x, y) is on the prompt as last drawn.
+func (p *Prompt) Contains(x, y int) bool { return p.box.contains(x, y) }
 
 // NewPrompt opens a prompt with an initial value.
 func NewPrompt(id, title, value string, styles Styles, keys KeyMap) *Prompt {
@@ -56,5 +60,7 @@ func (p *Prompt) Overlay(base string, width, height int) string {
 	p.input.SetWidth(boxW - 6)
 	body := p.styles.Title.Render(p.title) + "\n" + p.input.View() + "\n" +
 		p.styles.Detail.Render("enter confirm · esc cancel")
-	return Place(base, p.styles.Box.Width(boxW).Render(body), width, height)
+	box := p.styles.Box.Width(boxW).Render(body)
+	p.box = place(box, width, height)
+	return Place(base, box, width, height)
 }

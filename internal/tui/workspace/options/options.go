@@ -209,26 +209,90 @@ func (m Model) text(o tool.Option) string {
 	}
 }
 
-// Lines returns the panel split into lines at most width columns wide.
-func (m Model) Lines(width int) []string {
-	var lines []string
-	cur := ""
+// cell is one option on a line: its item and the columns it covers.
+type cell struct {
+	item       int
+	start, end int // [start, end) in columns
+	text       string
+}
+
+// layout packs the options into lines at most width columns wide. Lines
+// draws it and Click reads it.
+func (m Model) layout(width int) [][]cell {
+	var lines [][]cell
+	var cur []cell
+	col := 0
 	for i, it := range m.items {
-		cell := m.renderItem(i, it)
+		text := m.renderItem(i, it)
+		w := lipgloss.Width(text)
 		switch {
-		case cur == "":
-			cur = cell
-		case lipgloss.Width(cur)+len(separator)+lipgloss.Width(cell) <= width:
-			cur += separator + cell
+		case len(cur) == 0:
+		case col+len(separator)+w <= width:
+			col += len(separator)
 		default:
 			lines = append(lines, cur)
-			cur = cell
+			cur, col = nil, 0
 		}
+		cur = append(cur, cell{item: i, start: col, end: col + w, text: text})
+		col += w
 	}
-	if cur != "" {
+	if len(cur) > 0 {
 		lines = append(lines, cur)
 	}
 	return lines
+}
+
+// Lines returns the panel split into lines at most width columns wide.
+func (m Model) Lines(width int) []string {
+	var lines []string
+	for _, cells := range m.layout(width) {
+		parts := make([]string, len(cells))
+		for i, c := range cells {
+			parts[i] = c.text
+		}
+		lines = append(lines, strings.Join(parts, separator))
+	}
+	return lines
+}
+
+// Click handles a click at column col of line (as laid out for width): it
+// moves the cursor to that option and focuses the panel; on a Toggle it
+// flips the value, on the ◀ or ▶ of a Select it moves the choice, and on a
+// Number or String it focuses its text field. It reports whether a value
+// changed.
+func (m *Model) Click(line, col, width int) (changed bool, cmd tea.Cmd) {
+	lines := m.layout(width)
+	if line < 0 || line >= len(lines) {
+		return false, nil
+	}
+	i := slices.IndexFunc(lines[line], func(c cell) bool { return col >= c.start && col < c.end })
+	if i < 0 {
+		return false, nil
+	}
+	c := lines[line][i]
+	m.cursor, m.focused = c.item, true
+	cmd = m.focusCurrent()
+	o := m.items[c.item].opt
+	switch o.Kind {
+	case tool.Toggle:
+		m.values[o.Key] = !m.values.Bool(o.Key)
+		return true, cmd
+	case tool.Select:
+		left := lipgloss.Width(m.styles.Label.Render(o.Label + ": ")) // the ◀
+		d := 0
+		switch col - c.start {
+		case left, left + 1:
+			d = -1
+		case c.end - c.start - 1, c.end - c.start - 2: // the ▶
+			d = 1
+		}
+		if d != 0 {
+			idx := slices.Index(o.Choices, m.values.String(o.Key))
+			m.values[o.Key] = o.Choices[(idx+d+len(o.Choices))%len(o.Choices)]
+			return true, cmd
+		}
+	}
+	return false, cmd
 }
 
 func (m Model) renderItem(i int, it item) string {

@@ -112,3 +112,50 @@ func (f *field) update(msg tea.Msg, lim Limits) (changed, now bool, cmd tea.Cmd)
 func exceeds(s string, lim Limits) bool {
 	return len(s) > lim.MaxBytes || strings.Count(s, "\n")+1 > lim.MaxLines
 }
+
+// clickAt puts the cursor where the input was clicked: row and col are
+// inside the box. The textarea has no mouse support, so it walks there:
+// back to the start, down row visual rows (CursorDown follows soft wraps)
+// and to the column, past the line numbers. Past the text it stops at the
+// end of the line or at the last line. A large (read-only) input ignores it.
+func (f *field) clickAt(row, col int) {
+	if f.large {
+		return
+	}
+	target := f.ta.ScrollYOffset() + max(row, 0)
+	f.ta.MoveToBegin()
+	for range target {
+		line, off := f.ta.Line(), f.ta.LineInfo().RowOffset
+		f.ta.CursorDown()
+		if f.ta.Line() == line && f.ta.LineInfo().RowOffset == off {
+			break // the last visual row
+		}
+	}
+	gutter := 0
+	if f.ta.ShowLineNumbers {
+		gutter = lineNumberWidth
+	}
+	f.ta.SetCursorColumn(f.ta.LineInfo().StartColumn + max(col-gutter, 0))
+}
+
+// lineNumberWidth is the column the textarea's line numbers take (" 1 ").
+const lineNumberWidth = 3
+
+// wheel scrolls a large input's viewport, or moves the textarea's cursor
+// three lines, which scrolls it too.
+func (f *field) wheel(msg tea.MouseWheelMsg) tea.Cmd {
+	if f.large {
+		var cmd tea.Cmd
+		f.largeView, cmd = f.largeView.Update(msg)
+		return cmd
+	}
+	for range 3 {
+		switch msg.Mouse().Button {
+		case tea.MouseWheelUp:
+			f.ta.CursorUp()
+		case tea.MouseWheelDown:
+			f.ta.CursorDown()
+		}
+	}
+	return nil
+}
