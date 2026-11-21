@@ -6,7 +6,6 @@ import (
 	"maps"
 	"os/exec"
 	"slices"
-	"strings"
 	"time"
 
 	"charm.land/bubbles/v2/help"
@@ -17,6 +16,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/history"
 	"github.com/Judamaro/devtooltui-golang/internal/registry"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/frame"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	sidebarWidth    = 26  // includes the separator column
+	sidebarWidth    = 26  // the Tools box, border included
 	sidebarMinWidth = 90  // below this, the sidebar collapses
 	splitMinWidth   = 120 // from here on, two inputs sit side by side
 )
@@ -315,9 +315,8 @@ func (a *App) render() string {
 		body = ws.View()
 	}
 	if a.showSidebar {
-		h := a.height - 1
-		sep := a.theme.Separator.Render(strings.TrimSuffix(strings.Repeat("│\n", h), "\n"))
-		body = lipgloss.JoinHorizontal(lipgloss.Top, a.sidebar.View(), sep, body)
+		tools := frame.Box("Tools", a.sidebar.View(), sidebarWidth, a.height-1, a.focus == focusSidebar, a.theme.Frame)
+		body = lipgloss.JoinHorizontal(lipgloss.Top, tools, body)
 	}
 	var st statusbar.Status
 	if ws := a.workspace(); ws != nil {
@@ -375,7 +374,7 @@ func (a *App) layout() {
 	h := max(a.height-1, 1) // last line: statusbar
 	w := a.width
 	if a.showSidebar {
-		a.sidebar.SetSize(sidebarWidth-1, h)
+		a.sidebar.SetSize(sidebarWidth-2, max(h-2, 1)) // inside the Tools box
 		w -= sidebarWidth
 	}
 	a.help.SetWidth(a.width)

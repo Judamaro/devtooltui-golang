@@ -26,7 +26,7 @@ func (m *Model) errorExcerpt() []string {
 	if !ok {
 		return nil
 	}
-	return excerpt(line, ie.Line, ie.Col, ie.Msg, m.width, m.styles)
+	return excerpt(line, ie.Line, ie.Col, ie.Msg, m.innerWidth(), m.styles)
 }
 
 // inputValue returns the content of the input with that key; an empty key
@@ -90,7 +90,7 @@ func excerpt(line string, lineNo, col int, msg string, width int, st Styles) []s
 		tail += "…"
 	}
 
-	src := st.Section.Render(gutter) + head + st.ErrorMark.Render(mark) + tail
+	src := st.Gutter.Render(gutter) + head + st.ErrorMark.Render(mark) + tail
 	pad := lipgloss.Width(head)
 	note := st.ErrorText.Render("^ " + msg)
 	if room := avail - pad; room < 2+lipgloss.Width(msg) && pad > lipgloss.Width(msg) {
@@ -98,6 +98,6 @@ func excerpt(line string, lineNo, col int, msg string, width int, st Styles) []s
 		pad -= lipgloss.Width(msg) + 1
 		note = st.ErrorText.Render(msg + " ^")
 	}
-	caret := st.Section.Render(blank) + strings.Repeat(" ", pad) + note
+	caret := st.Gutter.Render(blank) + strings.Repeat(" ", pad) + note
 	return []string{clip(src, width), clip(caret, width)}
 }

@@ -1,30 +1,30 @@
-▾ Formatters             │JSON Indent, minify and sort the keys of JSON
-  ▸ JSON                 │Indent: 2   Sort keys: [ ]
-    XML           ╭──────────────────────────────────────────────────────────────╮──────────────────
-    SQL           │ Command palette                                              │
-▾ Encoders        │ › b64                                                        │
-    Base64        │                                                              │
-    URL           │ ▸ Base64                                            Encoders │
-    JWT           ╰──────────────────────────────────────────────────────────────╯
-    HTML entities        │┃
-    GZip                 │┃
-    String escape        │┃
-    QR code              │┃
-    X.509 certificate    │┃
-▾ Converters             │┃
-    Timestamp            │┃
-    Number bases         │── Output ────────────────────────────────────────────────────────────────
-    JSON ↔ YAML          │
-    Color                │
-    Cron                 │
-    CSV ↔ JSON           │
-    JSON → classes       │
-▾ Generators             │
-    Hash                 │
-    UUID / ULID          │
-    Password             │
-    Lorem Ipsum          │
-▾ Testers                │
-    RegEx                │
-  ↓ 7 more               │
+┌Tools───────────────────┐┌JSON · Indent, minify and sort the keys of JSON─────────────────────────┐
+│▾ Formatters            ││Indent: 2   Sort keys: [ ]                                              │
+│  ▸ JSON         ╭──────────────────────────────────────────────────────────────╮─────────────────┘
+│    XML          │ Command palette                                              │─────────────────┐
+│    SQL          │ › b64                                                        │                 │
+│▾ Encoders       │                                                              │                 │
+│    Base64       │ ▸ Base64                                            Encoders │                 │
+│    URL          ╰──────────────────────────────────────────────────────────────╯                 │
+│    JWT                 ││                                                                        │
+│    HTML entities       ││                                                                        │
+│    GZip                ││                                                                        │
+│    String escape       ││                                                                        │
+│    QR code             ││                                                                        │
+│    X.509 certificate   ││                                                                        │
+│▾ Converters            ││                                                                        │
+│    Timestamp           │└────────────────────────────────────────────────────────────────────────┘
+│    Number bases        │┌Output──────────────────────────────────────────────────────────────────┐
+│    JSON ↔ YAML         ││                                                                        │
+│    Color               ││                                                                        │
+│    Cron                ││                                                                        │
+│    CSV ↔ JSON          ││                                                                        │
+│    JSON → classes      ││                                                                        │
+│▾ Generators            ││                                                                        │
+│    Hash                ││                                                                        │
+│    UUID / ULID         ││                                                                        │
+│    Password            ││                                                                        │
+│    Lorem Ipsum         ││                                                                        │
+│  ↓ 9 more              ││                                                                        │
+└────────────────────────┘└────────────────────────────────────────────────────────────────────────┘
 ✓ 0 µs

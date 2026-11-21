@@ -15,8 +15,8 @@ import (
 type pair struct{}
 
 func (pair) Spec() tool.Spec {
-	return tool.Spec{ID: "pair", Name: "Pair", Category: tool.Text, Description: "Une A y B", Live: true,
-		Inputs: []tool.InputSpec{{Key: "a", Label: "Texto A"}, {Key: "b", Label: "Texto B"}}}
+	return tool.Spec{ID: "pair", Name: "Pair", Category: tool.Text, Description: "Joins A and B", Live: true,
+		Inputs: []tool.InputSpec{{Key: "a", Label: "Text A"}, {Key: "b", Label: "Text B"}}}
 }
 
 func (pair) Run(_ context.Context, req tool.Request) (tool.Result, error) {

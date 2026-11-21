@@ -23,6 +23,7 @@ type field struct {
 func newField(spec tool.InputSpec, styles textarea.Styles) *field {
 	ta := textarea.New()
 	ta.Placeholder = "Type or paste here…"
+	ta.Prompt = "" // the box border shows the focus
 	ta.CharLimit = 0
 	ta.MaxHeight = 0
 	ta.MaxWidth = 0

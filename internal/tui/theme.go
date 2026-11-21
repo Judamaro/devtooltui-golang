@@ -11,6 +11,7 @@ import (
 	"github.com/alecthomas/chroma/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/render"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/frame"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
@@ -22,7 +23,7 @@ import (
 // styles (the colour swatch of render.Swatch is data, not theme).
 type Theme struct {
 	Dark      bool
-	Separator lipgloss.Style
+	Frame     frame.Styles // the boxes: Tools here, the rest in the workspace
 	Palette   palette.Styles
 	Status    statusbar.Styles
 	Sidebar   sidebar.Styles
@@ -80,6 +81,16 @@ func paletteFor(dark bool) colors {
 	}
 }
 
+// frameStyles: muted lines, accent and bold title when the box has focus.
+func frameStyles(accent, muted color.Color) frame.Styles {
+	return frame.Styles{
+		Border:        lipgloss.NewStyle().Foreground(muted),
+		BorderFocused: lipgloss.NewStyle().Foreground(accent),
+		Title:         lipgloss.NewStyle().Bold(true),
+		TitleFocused:  lipgloss.NewStyle().Foreground(accent).Bold(true),
+	}
+}
+
 // RenderStyles are the dark output colours; the CLI uses them.
 func RenderStyles() render.Styles { return RenderStylesFor(true) }
 
@@ -104,8 +115,8 @@ func ThemeFor(dark bool) Theme {
 	c := paletteFor(dark)
 	accent, muted, errC, ok, warn := c.accent, c.muted, c.err, c.ok, c.warn
 	return Theme{
-		Dark:      dark,
-		Separator: lipgloss.NewStyle().Foreground(muted),
+		Dark:  dark,
+		Frame: frameStyles(accent, muted),
 		Palette: palette.Styles{
 			Box:      lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(accent).Padding(0, 1),
 			Title:    lipgloss.NewStyle().Bold(true).Foreground(accent),
@@ -139,13 +150,13 @@ func ThemeFor(dark bool) Theme {
 				Invalid: lipgloss.NewStyle().Foreground(errC),
 				Input:   textinput.DefaultStyles(dark),
 			},
-			Section:        lipgloss.NewStyle().Foreground(muted),
-			SectionFocused: lipgloss.NewStyle().Foreground(accent),
-			OutputStale:    lipgloss.NewStyle().Faint(true),
-			ErrorText:      lipgloss.NewStyle().Foreground(errC),
-			ErrorMark:      lipgloss.NewStyle().Foreground(errC).Underline(true).Bold(true),
-			Render:         RenderStylesFor(dark),
-			Textarea:       textarea.DefaultStyles(dark),
+			Gutter:      lipgloss.NewStyle().Foreground(muted),
+			Frame:       frameStyles(accent, muted),
+			OutputStale: lipgloss.NewStyle().Faint(true),
+			ErrorText:   lipgloss.NewStyle().Foreground(errC),
+			ErrorMark:   lipgloss.NewStyle().Foreground(errC).Underline(true).Bold(true),
+			Render:      RenderStylesFor(dark),
+			Textarea:    textarea.DefaultStyles(dark),
 		},
 		Help: help.DefaultStyles(dark),
 	}

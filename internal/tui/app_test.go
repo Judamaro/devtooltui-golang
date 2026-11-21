@@ -120,6 +120,8 @@ func TestViewGolden(t *testing.T) {
 			send(a, tea.PasteMsg{Content: strings.Repeat("hello world\n", 3500)})
 		}},
 		{"narrow-80x20", 80, 20, func(a *App) { press(a, "hola") }},
+		{"medium-120x24", 120, 24, func(a *App) { press(a, "tab", "tab", "hola") }},
+		{"short-90x14", 90, 14, func(a *App) { press(a, "tab", "tab", "hola") }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -517,7 +519,7 @@ func TestMarkdownRewraps(t *testing.T) {
 	press(a, "tab")
 	send(a, tea.PasteMsg{Content: "# Title\n\n" + strings.Repeat("word ", 60)})
 	output := func() string { // the view below the output header
-		_, out, _ := strings.Cut(plainView(a), "── Output")
+		_, out, _ := strings.Cut(plainView(a), "┌Output")
 		return out
 	}
 	wide := output()

@@ -16,17 +16,20 @@ import (
 
 	"github.com/Judamaro/devtooltui-golang/internal/render"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/frame"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
 // Styles are defined by tui/theme.go.
 type Styles struct {
-	Title, Description, Section, SectionFocused, OutputStale lipgloss.Style
-	ErrorText, ErrorMark                                     lipgloss.Style // InputError excerpt
-	Textarea                                                 textarea.Styles
-	Options                                                  options.Styles
-	Render                                                   render.Styles // output colours
+	Title, Description, OutputStale lipgloss.Style
+	Gutter                          lipgloss.Style // line numbers of the error excerpt
+	Frame                           frame.Styles   // the boxes of each section
+	ErrorText, ErrorMark            lipgloss.Style // InputError excerpt
+	Textarea                        textarea.Styles
+	Options                         options.Styles
+	Render                          render.Styles // output colours
 }
 
 // Limits defines when the input stops being edited live (ADR 0002).
@@ -70,6 +73,10 @@ type Model struct {
 	seq      int
 	cancel   context.CancelFunc
 	running  bool
+
+	// Box heights (borders included) from the last resize.
+	headH, outH int
+	inH         []int
 
 	result      tool.Result
 	noColor     bool
@@ -139,7 +146,7 @@ func (m *Model) SetOptions(v tool.Values) {
 // Rewrap reruns the tool when its output wraps to the width (Markdown) and
 // the width changed since it was rendered.
 func (m *Model) Rewrap() tea.Cmd {
-	if m.result.Lang != "markdown" || m.renderWidth == m.width {
+	if m.result.Lang != "markdown" || m.renderWidth == m.innerWidth() {
 		return nil
 	}
 	return m.runNow()
@@ -224,39 +231,47 @@ func (m *Model) SetSize(w, h int, wide bool) {
 	m.resize()
 }
 
+// resize splits the height between the boxes: the tool (title and
+// options), the inputs and the output. Each box takes 2 rows and 2 columns
+// of border; the inputs get half of what is left, the output the rest.
 func (m *Model) resize() {
 	w, h := m.width, m.height
-	// title, output separator and options (the statusbar belongs to the App)
-	chrome := 2 + len(m.opts.Lines(w))
-	switch {
-	case m.split():
-		chrome++ // one header row for both inputs
-	default:
-		chrome += len(m.inputs) // one header per input
+	inner := max(w-2, 1)
+	m.headH = max(len(m.opts.Lines(inner)), 1) + 2
+	inputBorders := 2 * len(m.inputs)
+	if m.split() {
+		inputBorders = 2
 	}
-	avail := max(h-chrome, 2)
-	inH := 0
+	avail := max(h-m.headH-inputBorders-2, 1+len(m.inputs))
+	inBody := 0
 	if m.HasInput() {
-		inH = avail / 2
+		inBody = avail / 2
 	}
+	m.outH = avail - inBody + 2
+	m.inH = m.inH[:0]
 	switch {
 	case m.split():
-		lw := (w - 1) / 2
-		m.inputs[0].setSize(lw, inH)
-		m.inputs[1].setSize(w-1-lw, inH)
+		lw := w / 2
+		m.inputs[0].setSize(max(lw-2, 1), inBody)
+		m.inputs[1].setSize(max(w-lw-2, 1), inBody)
+		m.inH = append(m.inH, inBody+2)
 	case len(m.inputs) > 0:
-		each := inH / len(m.inputs)
+		each := inBody / len(m.inputs)
 		for i, f := range m.inputs {
-			fh := each
+			fh := max(each, 1)
 			if i == len(m.inputs)-1 {
-				fh = inH - each*(len(m.inputs)-1)
+				fh = max(inBody-each*(len(m.inputs)-1), 1)
 			}
-			f.setSize(w, fh)
+			f.setSize(inner, fh)
+			m.inH = append(m.inH, fh+2)
 		}
 	}
-	m.output.SetWidth(w)
-	m.output.SetHeight(avail - inH)
+	m.output.SetWidth(inner)
+	m.output.SetHeight(m.outH - 2)
 }
+
+// innerWidth is the width inside the boxes.
+func (m *Model) innerWidth() int { return max(m.width-2, 1) }
 
 // SetFocus changes the focused panel.
 func (m *Model) SetFocus(f Focus) tea.Cmd {
@@ -406,7 +421,7 @@ func (m *Model) launch(seq int) tea.Cmd {
 	m.stale = false
 
 	req := m.request()
-	t, id, kind, rs, width := m.tool, m.spec.ID, m.spec.Output, m.styles.Render, m.width
+	t, id, kind, rs, width := m.tool, m.spec.ID, m.spec.Output, m.styles.Render, m.innerWidth()
 	m.renderWidth = width
 	return func() tea.Msg {
 		start := time.Now()
@@ -469,35 +484,37 @@ func (m *Model) Output() string { return m.result.Text }
 func (m *Model) Err() error { return m.err }
 
 func (m *Model) View() string {
-	var b strings.Builder
-	title := m.styles.Title.Render(m.spec.Name)
-	desc := m.styles.Description.Render(" " + m.spec.Description)
-	b.WriteString(clip(title+desc, m.width) + "\n")
-	for _, line := range m.opts.Lines(m.width) {
-		b.WriteString(clip(line, m.width) + "\n")
+	w, fs := m.width, m.styles.Frame
+	title := m.styles.Title.Render(m.spec.Name) + m.styles.Description.Render(" · "+m.spec.Description)
+	head := strings.Join(m.opts.Lines(m.innerWidth()), "\n")
+	if m.opts.Empty() {
+		head = m.styles.Description.Render(m.spec.Description)
 	}
-	if m.split() {
-		lw := (m.width - 1) / 2
-		heads := m.sectionW(m.inputs[0].spec.Label, m.inputFocused(0), lw) + " " +
-			m.sectionW(m.inputs[1].spec.Label, m.inputFocused(1), m.width-1-lw)
-		b.WriteString(heads + "\n")
-		left := lipgloss.NewStyle().Width(lw).MaxWidth(lw).Render(m.inputs[0].view())
-		sep := m.styles.Section.Render(strings.TrimSuffix(strings.Repeat("│\n", lipgloss.Height(left)), "\n"))
-		b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, left, sep, m.inputs[1].view()) + "\n")
-	} else {
+	parts := []string{frame.Box(title, head, w, m.headH, m.focus == FocusOptions, fs)}
+	switch {
+	case m.split():
+		lw := w / 2
+		left := frame.Box(m.inputs[0].spec.Label, m.inputs[0].view(), lw, m.inH[0], m.inputFocused(0), fs)
+		right := frame.Box(m.inputs[1].spec.Label, m.inputs[1].view(), w-lw, m.inH[0], m.inputFocused(1), fs)
+		parts = append(parts, lipgloss.JoinHorizontal(lipgloss.Top, left, right))
+	default:
 		for i, f := range m.inputs {
-			b.WriteString(m.section(f.spec.Label, m.inputFocused(i)) + "\n")
-			b.WriteString(f.view() + "\n")
+			parts = append(parts, frame.Box(f.spec.Label, f.view(), w, m.inH[i], m.inputFocused(i), fs))
 		}
 	}
-	b.WriteString(m.section("Output", m.focus == FocusOutput) + "\n")
+	parts = append(parts, frame.Box("Output", m.outputBody(), w, m.outH, m.focus == FocusOutput, fs))
+	lines := strings.Split(strings.Join(parts, "\n"), "\n")
+	return strings.Join(lines[:min(len(lines), max(m.height, 1))], "\n")
+}
+
+// outputBody is the output viewport or, after an error, the excerpt above
+// the previous output, dimmed. The excerpt takes rows from the top, so the
+// box keeps its height.
+func (m *Model) outputBody() string {
 	out := m.output.View()
 	if m.err == nil {
-		b.WriteString(out)
-		return b.String()
+		return out
 	}
-	// The excerpt takes rows from the top of the output, so the layout
-	// keeps its height; the previous output stays below, dimmed.
 	h := m.output.Height()
 	ex := m.errorExcerpt()
 	ex = ex[:min(len(ex), h)]
@@ -507,8 +524,7 @@ func (m *Model) View() string {
 	if len(lines) > 0 {
 		rows = append(rows, m.styles.OutputStale.Render(strings.Join(lines, "\n")))
 	}
-	b.WriteString(strings.Join(rows, "\n"))
-	return b.String()
+	return strings.Join(rows, "\n")
 }
 
 // Status is the state for the statusbar.
@@ -535,23 +551,6 @@ func (m *Model) Status() statusbar.Status {
 }
 
 func (m *Model) inputFocused(i int) bool { return m.focus == FocusInput && m.active == i }
-
-func (m *Model) section(label string, focused bool) string {
-	return m.sectionW(label, focused, m.width)
-}
-
-func (m *Model) sectionW(label string, focused bool, width int) string {
-	st := m.styles.Section
-	if focused {
-		st = m.styles.SectionFocused
-	}
-	head := "── " + label + " "
-	if w := lipgloss.Width(head); w > width {
-		return st.Render(lipgloss.NewStyle().MaxWidth(width).Render(head))
-	}
-	fill := max(width-lipgloss.Width(head), 0)
-	return st.Render(head + strings.Repeat("─", fill))
-}
 
 func clip(s string, w int) string {
 	return lipgloss.NewStyle().MaxWidth(w).Render(s)
