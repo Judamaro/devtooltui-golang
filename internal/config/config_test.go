@@ -43,6 +43,7 @@ theme = "dark"
 detect_on_start = true
 debounce_ms = 80
 live_max_bytes = 65536
+mouse = false
 
 [history]
 enabled = true
@@ -60,7 +61,7 @@ sort_keys = true
 copy_output = "ctrl+y"
 `, func(t *testing.T, c config.Config) {
 			want := config.Config{
-				Theme: "dark", DetectOnStart: true, DebounceMS: 80, LiveMaxBytes: 65536,
+				Theme: "dark", DetectOnStart: true, DebounceMS: 80, LiveMaxBytes: 65536, Mouse: false,
 				History: config.History{Enabled: true, StoreInputs: true},
 				Plugins: config.Plugins{Enabled: false},
 				Tools:   map[string]tool.Values{"json-format": {"indent": 4, "sort_keys": true}},
@@ -72,13 +73,13 @@ copy_output = "ctrl+y"
 		}, nil},
 		{"unknown keys warn", "colour = 1\n[history]\nforever = true\n[plugins]\npath = \"x\"\n", nil,
 			[]string{`unknown key "colour"`, `unknown key "history.forever"`, `unknown key "plugins.path"`}},
-		{"bad values keep defaults", "theme = \"pink\"\ndebounce_ms = 5000\nlive_max_bytes = \"big\"\ndetect_on_start = 1\n",
+		{"bad values keep defaults", "theme = \"pink\"\ndebounce_ms = 5000\nlive_max_bytes = \"big\"\ndetect_on_start = 1\nmouse = \"no\"\n",
 			func(t *testing.T, c config.Config) {
-				if c.Theme != "auto" || c.DebounceMS != 120 || c.LiveMaxBytes != 32<<10 || c.DetectOnStart {
+				if c.Theme != "auto" || c.DebounceMS != 120 || c.LiveMaxBytes != 32<<10 || c.DetectOnStart || !c.Mouse {
 					t.Errorf("defaults changed: %+v", c)
 				}
 			},
-			[]string{"debounce_ms = 5000 is outside", "detect_on_start must be true or false", "live_max_bytes must be an integer", `theme "pink"`}},
+			[]string{"debounce_ms = 5000 is outside", "detect_on_start must be true or false", "live_max_bytes must be an integer", "mouse must be true or false", `theme "pink"`}},
 		{"tool options are validated", `
 [tools.json-format]
 indent = 99

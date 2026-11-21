@@ -35,7 +35,8 @@ type Config struct {
 	Theme         string // auto | dark | light
 	DetectOnStart bool
 	DebounceMS    int
-	LiveMaxBytes  int // above it, the input is read-only and runs with F5 (ADR 0002)
+	LiveMaxBytes  int  // above it, the input is read-only and runs with F5 (ADR 0002)
+	Mouse         bool // clicks and the wheel in the TUI
 	History       History
 	Plugins       Plugins
 	Tools         map[string]tool.Values // validated defaults per tool ID
@@ -60,6 +61,7 @@ func Default() Config {
 		Theme:        "auto",
 		DebounceMS:   120,
 		LiveMaxBytes: 32 << 10,
+		Mouse:        true,
 		History:      History{Enabled: true, RememberOptions: true},
 		Plugins:      Plugins{Enabled: true},
 		Tools:        map[string]tool.Values{},
@@ -132,6 +134,10 @@ func Parse(data []byte, name string, reg *registry.Registry) (Config, []string) 
 		case "debounce_ms":
 			if n, ok := p.integer(k, v, 0, MaxDebounceMS); ok {
 				c.DebounceMS = n
+			}
+		case "mouse":
+			if b, ok := p.boolean(k, v); ok {
+				c.Mouse = b
 			}
 		case "live_max_bytes":
 			if n, ok := p.integer(k, v, MinLiveMaxBytes, MaxLiveMaxBytes); ok {
