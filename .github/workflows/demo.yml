@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+      - run: make build # the tape runs bin/devtooltui
       - uses: charmbracelet/vhs-action@v2
         with:
           path: docs/demo.tape
