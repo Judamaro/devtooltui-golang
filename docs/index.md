@@ -6,7 +6,7 @@ Everyday developer utilities in a single binary: a keyboard-driven TUI and a
 CLI that composes with pipes. Install it and read the shortcuts in the
 [README](https://github.com/Judamaro/devtooltui-golang#readme).
 
-## Tools (29)
+## Tools (30)
 
 ### Formatters
 
@@ -28,6 +28,7 @@ CLI that composes with pipes. Install it and read the shortcuts in the
 | [String escape](tools/escape.md) | Escape and unescape string literals for JSON, Go, C#, SQL and shell |
 | [QR code](tools/qr.md) | Draw a QR code in the terminal; save it as PNG (Ctrl+S, --out) |
 | [X.509 certificate](tools/x509.md) | Decode X.509 certificates: subject, SAN, validity, key and fingerprints |
+| [JSON stringify](tools/json-string.md) | Turn JSON into an escaped string (stringify) and back (parse) |
 
 ### Converters
 

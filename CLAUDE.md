@@ -124,9 +124,9 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 `number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (the 12 of the
 MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
 `inspect`, `escape`, `jsonpath`, `qr`, `color` and, from phase 3, `cron`,
-`xpath`, `csv-json`, `x509`, `markdown`, `json-class`, `sql-format`
-(registered in that order in `internal/tools/all.go`; 29 tools, plus any
-plugins).
+`xpath`, `csv-json`, `x509`, `markdown`, `json-class`, `sql-format` and,
+since v1.4, `json-string` (registered in that order in
+`internal/tools/all.go`; 30 tools, plus any plugins).
 
 - `regex`: the pattern is the `pattern` option (like the CLI `--pattern`
   flag), not an input. `diff` and `jwt` (token + PEM) have two inputs.
@@ -156,6 +156,11 @@ plugins).
   InputError on `pattern`.
 - Fuzz targets that find failures leave cases in
   `internal/tools/<cat>/testdata/fuzz/`: commit them as regressions.
+- `json-string` reuses `escape`'s JSON helpers (`escapeC`, `unescape`):
+  encode validates and (by default) compacts, then quotes; decode unwraps
+  strings that hold JSON up to 10 levels (Meta `Levels`) and indents. An
+  error in the decoded JSON is reported at 1:1 with its position inside the
+  decoded text in the message.
 - `gzip` decompresses at most `GzipMaxOutput` (64 MB). `escape` encodes the
   inside of the literal (shell: a whole quoted word) and decodes with or
   without the quotes; an encoded value always decodes back as it is.

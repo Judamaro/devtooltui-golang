@@ -82,6 +82,7 @@ On Linux, clipboard support needs `wl-clipboard` (Wayland) or `xclip`/`xsel`
 | `case` | Case converter | camelCase, PascalCase, snake_case, kebab-case, CONSTANT, Title… |
 | `inspect` | Text inspector | Count characters, words and lines; sort, dedupe or reverse lines |
 | `escape` | String escape | Escape and unescape literals for JSON, Go, C#, SQL and shell |
+| `json-string` | JSON stringify | JSON to an escaped string (`JSON.stringify`) and back, unwrapping nested strings |
 | `jsonpath` | JSONPath | Query JSON with JSONPath; matches as a coloured JSON array |
 | `qr` | QR code | Draw a QR code in the terminal; save it as PNG with `Ctrl+S` or `--out` |
 | `color` | Color | HEX, RGB, HSL and HSV with a swatch, CSS names and WCAG contrast |
@@ -145,6 +146,8 @@ devtooltui cron --tz Europe/Madrid <<< '30 9 * * 1-5'
 devtooltui xpath --expr '//book[price < 10]/title/text()' books.xml
 devtooltui csv-json --types data.csv
 devtooltui x509 cert.pem
+devtooltui json-string <<< '{"a": [1, 2]}'          # → "{\"a\":[1,2]}"
+devtooltui json-string decode < stringified.txt
 devtooltui markdown README.md
 devtooltui json-class --lang csharp --name Order order.json
 devtooltui regex --engine regexp2 --pattern '(?<=\$)\d+' prices.txt
