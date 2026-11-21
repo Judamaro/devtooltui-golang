@@ -36,6 +36,29 @@ type ToolSpec struct {
 	Options     []OptionSpec `json:"options,omitempty"`
 	Output      string       `json:"output,omitempty"` // plain (default), highlighted, diff, matches, image
 	Live        *bool        `json:"live,omitempty"`   // default true
+	Detect      *DetectSpec  `json:"detect,omitempty"` // smart detection without running the plugin
+	Export      bool         `json:"export,omitempty"` // it answers "export" (binary output)
+}
+
+// DetectSpec is declarative detection: devtooltui matches Regex (RE2)
+// against the sample itself and scores Score (0..1] on a match, because
+// starting a process takes longer than a detector may.
+type DetectSpec struct {
+	Regex string  `json:"regex"`
+	Score float64 `json:"score"`
+}
+
+// ExportResponse is the output of "export": exactly one of Export and
+// Error.
+type ExportResponse struct {
+	Export *ExportData `json:"export,omitempty"`
+	Error  *InputError `json:"error,omitempty"`
+}
+
+// ExportData is the binary output in Base64 and its extension (".png").
+type ExportData struct {
+	Data string `json:"data"`
+	Ext  string `json:"ext"`
 }
 
 // InputSpec is tool.InputSpec in JSON.

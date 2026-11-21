@@ -3,6 +3,7 @@ package plugin
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -130,20 +132,20 @@ func Load(ctx context.Context, cands []Candidate, builtin []tool.Tool) ([]tool.T
 			info.Problems = append(info.Problems, fmt.Sprintf("speaks protocol %d; this devtooltui speaks %d", results[i].msg.Protocol, Protocol))
 		default:
 			for _, ts := range results[i].msg.Tools {
-				spec, err := ts.toSpec()
+				t, err := newTool(ts, c)
 				if err == nil {
 					// The registry checks IDs, kinds and defaults.
-					_, err = registry.New(&Tool{spec: spec})
+					_, err = registry.New(t)
 				}
 				switch {
 				case err != nil:
 					info.Problems = append(info.Problems, err.Error())
-				case taken[spec.ID] != "":
-					info.Problems = append(info.Problems, fmt.Sprintf("%s: the ID is taken by %s", spec.ID, taken[spec.ID]))
+				case taken[ts.ID] != "":
+					info.Problems = append(info.Problems, fmt.Sprintf("%s: the ID is taken by %s", ts.ID, taken[ts.ID]))
 				default:
-					taken[spec.ID] = "plugin " + c.Name
-					tools = append(tools, &Tool{spec: spec, path: c.Path, plugin: c.Name})
-					info.Tools = append(info.Tools, spec.ID)
+					taken[ts.ID] = "plugin " + c.Name
+					tools = append(tools, t)
+					info.Tools = append(info.Tools, ts.ID)
 				}
 			}
 		}
@@ -230,25 +232,9 @@ func (t *Tool) Spec() tool.Spec { return t.spec }
 func (t *Tool) Plugin() (name, path string) { return t.plugin, t.path }
 
 func (t *Tool) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
-	if err := ctx.Err(); err != nil {
-		return tool.Result{}, err
-	}
-	body, err := json.Marshal(RunRequest{
-		Protocol: Protocol, Tool: t.spec.ID,
-		Inputs:  req.Inputs,
-		Options: req.Opts.WithDefaults(t.spec),
-	})
+	out, err := t.request(ctx, "run", req)
 	if err != nil {
 		return tool.Result{}, err
-	}
-	rctx, cancel := context.WithTimeout(ctx, runTimeout)
-	defer cancel()
-	out, err := call(rctx, t.path, "run", body)
-	if err != nil {
-		if ctx.Err() != nil {
-			return tool.Result{}, ctx.Err()
-		}
-		return tool.Result{}, fmt.Errorf("plugin %s: %w", t.plugin, err)
 	}
 	var resp RunResponse
 	if err := json.Unmarshal(out, &resp); err != nil {
@@ -256,11 +242,7 @@ func (t *Tool) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 	}
 	switch {
 	case resp.Error != nil && resp.Result == nil:
-		ie := &tool.InputError{Input: resp.Error.Input, Line: resp.Error.Line, Col: resp.Error.Col, Msg: resp.Error.Message}
-		if ie.Input == "" && len(t.spec.Inputs) > 0 {
-			ie.Input = t.spec.Inputs[0].Key
-		}
-		return tool.Result{}, ie
+		return tool.Result{}, t.inputError(resp.Error)
 	case resp.Result != nil && resp.Error == nil:
 		res, err := resp.Result.toResult()
 		if err != nil {
@@ -272,6 +254,122 @@ func (t *Tool) Run(ctx context.Context, req tool.Request) (tool.Result, error) {
 		return res, nil
 	}
 	return tool.Result{}, fmt.Errorf("plugin %s: run must answer exactly one of result and error", t.plugin)
+}
+
+// newTool builds the adapter for one tool of a plugin: a *Tool, wrapped so
+// that it implements tool.Detector and tool.Exporter only when the plugin
+// declares them (the registry looks at the interfaces).
+func newTool(ts ToolSpec, c Candidate) (tool.Tool, error) {
+	spec, err := ts.toSpec()
+	if err != nil {
+		return nil, err
+	}
+	base := &Tool{spec: spec, path: c.Path, plugin: c.Name}
+	var det *detectTool
+	if ts.Detect != nil {
+		re, err := regexp.Compile(ts.Detect.Regex)
+		if err != nil {
+			return nil, fmt.Errorf("%s: detect.regex: %w", ts.ID, err)
+		}
+		if ts.Detect.Score <= 0 || ts.Detect.Score > 1 {
+			return nil, fmt.Errorf("%s: detect.score must be in (0, 1], got %v", ts.ID, ts.Detect.Score)
+		}
+		det = &detectTool{Tool: base, re: re, score: ts.Detect.Score}
+	}
+	switch {
+	case det != nil && ts.Export:
+		return &detectExportTool{det}, nil
+	case det != nil:
+		return det, nil
+	case ts.Export:
+		return &exportTool{base}, nil
+	}
+	return base, nil
+}
+
+type detectTool struct {
+	*Tool
+	re    *regexp.Regexp
+	score float64
+}
+
+// Detect matches the declared regex in-process.
+func (t *detectTool) Detect(sample string) float64 {
+	if t.re.MatchString(sample) {
+		return t.score
+	}
+	return 0
+}
+
+type exportTool struct{ *Tool }
+
+func (t *exportTool) Export(ctx context.Context, req tool.Request) ([]byte, string, error) {
+	return t.export(ctx, req)
+}
+
+type detectExportTool struct{ *detectTool }
+
+func (t *detectExportTool) Export(ctx context.Context, req tool.Request) ([]byte, string, error) {
+	return t.export(ctx, req)
+}
+
+// request runs one command of the protocol with the request on stdin.
+func (t *Tool) request(ctx context.Context, arg string, req tool.Request) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	body, err := json.Marshal(RunRequest{
+		Protocol: Protocol, Tool: t.spec.ID,
+		Inputs:  req.Inputs,
+		Options: req.Opts.WithDefaults(t.spec),
+	})
+	if err != nil {
+		return nil, err
+	}
+	rctx, cancel := context.WithTimeout(ctx, runTimeout)
+	defer cancel()
+	out, err := call(rctx, t.path, arg, body)
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		return nil, fmt.Errorf("plugin %s: %w", t.plugin, err)
+	}
+	return out, nil
+}
+
+func (t *Tool) inputError(e *InputError) error {
+	ie := &tool.InputError{Input: e.Input, Line: e.Line, Col: e.Col, Msg: e.Message}
+	if ie.Input == "" && len(t.spec.Inputs) > 0 {
+		ie.Input = t.spec.Inputs[0].Key
+	}
+	return ie
+}
+
+func (t *Tool) export(ctx context.Context, req tool.Request) ([]byte, string, error) {
+	out, err := t.request(ctx, "export", req)
+	if err != nil {
+		return nil, "", err
+	}
+	var resp ExportResponse
+	if err := json.Unmarshal(out, &resp); err != nil {
+		return nil, "", fmt.Errorf("plugin %s: export did not answer valid JSON: %w", t.plugin, err)
+	}
+	switch {
+	case resp.Error != nil && resp.Export == nil:
+		return nil, "", t.inputError(resp.Error)
+	case resp.Export != nil && resp.Error == nil:
+		data, err := base64.StdEncoding.DecodeString(resp.Export.Data)
+		if err != nil {
+			return nil, "", fmt.Errorf("plugin %s: export data is not Base64: %w", t.plugin, err)
+		}
+		ext := resp.Export.Ext
+		if !strings.HasPrefix(ext, ".") || len(ext) < 2 || strings.ContainsAny(ext, `/\`) {
+			return nil, "", fmt.Errorf("plugin %s: export ext %q must look like \".png\"", t.plugin, ext)
+		}
+		return data, ext, nil
+	}
+	return nil, "", fmt.Errorf("plugin %s: export must answer exactly one of export and error", t.plugin)
 }
 
 // checkSpans refuses spans outside their input: render slices the input

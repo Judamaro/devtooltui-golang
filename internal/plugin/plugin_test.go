@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,6 +47,7 @@ func fakePlugin(mode, cmd string) int {
 		}
 		tools := []map[string]any{
 			{"id": "fake-upper", "name": "Upper", "category": "Text", "description": "Upper-case the text",
+				"detect": map[string]any{"regex": "^shout:", "score": 0.7}, "export": true,
 				"inputs":  []map[string]any{{"key": "text", "label": "Text", "multiline": true}},
 				"options": []map[string]any{{"key": "prefix", "label": "Prefix", "kind": "string", "default": ">"}, {"key": "times", "label": "Times", "kind": "number", "min": 1, "max": 3, "default": 1}}},
 			{"id": "fake-magic", "name": "Magic", "category": "Wizardry", "description": "Unknown category"},
@@ -56,7 +58,9 @@ func fakePlugin(mode, cmd string) int {
 		case "invalid":
 			tools = append(tools, map[string]any{"id": "Bad ID", "name": "Bad", "category": "Text", "description": "x"},
 				map[string]any{"id": "fake-kind", "name": "K", "category": "Text", "description": "x",
-					"options": []map[string]any{{"key": "n", "label": "N", "kind": "number", "min": 1, "max": 2, "default": "two"}}})
+					"options": []map[string]any{{"key": "n", "label": "N", "kind": "number", "min": 1, "max": 2, "default": "two"}}},
+				map[string]any{"id": "fake-re", "name": "R", "category": "Text", "description": "x", "detect": map[string]any{"regex": "(", "score": 0.5}},
+				map[string]any{"id": "fake-score", "name": "S", "category": "Text", "description": "x", "detect": map[string]any{"regex": "a", "score": 2}})
 		}
 		_ = out.Encode(map[string]any{"protocol": protocol, "tools": tools})
 		return 0
@@ -67,6 +71,17 @@ func fakePlugin(mode, cmd string) int {
 		return 1
 	}
 	text := req.Inputs["text"]
+	if cmd == "export" {
+		switch {
+		case mode == "badext":
+			_ = out.Encode(ExportResponse{Export: &ExportData{Data: "eA==", Ext: "png"}})
+		case text == "":
+			_ = out.Encode(ExportResponse{Error: &InputError{Line: 1, Col: 1, Message: "nothing to export"}})
+		default:
+			_ = out.Encode(ExportResponse{Export: &ExportData{Data: base64.StdEncoding.EncodeToString([]byte(strings.ToUpper(text))), Ext: ".txt"}})
+		}
+		return 0
+	}
 	switch {
 	case mode == "twoanswers":
 		_ = out.Encode(map[string]any{"result": map[string]any{"text": "x"}, "error": map[string]any{"message": "y"}})
@@ -125,6 +140,8 @@ func TestLoadProblems(t *testing.T) {
 		{"proto2", "speaks protocol 2; this devtooltui speaks 1", 0},
 		{"collide", "base64: the ID is taken by a built-in tool", 2},
 		{"invalid", "lowercase kebab-case", 2},
+		{"invalid", "fake-re: detect.regex", 2},
+		{"invalid", "fake-score: detect.score must be in (0, 1]", 2},
 	}
 	for _, tt := range tests {
 		t.Run(tt.mode, func(t *testing.T) {
@@ -273,5 +290,44 @@ func TestRegistry(t *testing.T) {
 	groups := reg.ByCategory()
 	if last := groups[len(groups)-1]; last.Category != tool.Plugins {
 		t.Errorf("last category = %q, want Plugins", last.Category)
+	}
+}
+
+func TestDetectAndExport(t *testing.T) {
+	tools, _ := Load(context.Background(), fake(t, "ok"), nil)
+	up, magic := tools[0], tools[1]
+	if _, ok := magic.(tool.Detector); ok {
+		t.Error("a tool without detect implements Detector")
+	}
+	if _, ok := magic.(tool.Exporter); ok {
+		t.Error("a tool without export implements Exporter")
+	}
+	d, ok := up.(tool.Detector)
+	if !ok {
+		t.Fatal("fake-upper declares detect but is no Detector")
+	}
+	if d.Detect("shout: hi") != 0.7 || d.Detect("whisper") != 0 {
+		t.Errorf("Detect = %v / %v", d.Detect("shout: hi"), d.Detect("whisper"))
+	}
+	e, ok := up.(tool.Exporter)
+	if !ok {
+		t.Fatal("fake-upper declares export but is no Exporter")
+	}
+	data, ext, err := e.Export(context.Background(), tool.Request{Inputs: map[string]string{"text": "abc"}})
+	if err != nil || string(data) != "ABC" || ext != ".txt" {
+		t.Errorf("Export = %q, %q, %v", data, ext, err)
+	}
+	_, _, err = e.Export(context.Background(), tool.Request{Inputs: map[string]string{"text": ""}})
+	if ie, ok := tool.AsInputError(err); !ok || ie.Input != "text" || ie.Msg != "nothing to export" {
+		t.Errorf("Export(empty) = %v, want an InputError on the first input", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, _, err := e.Export(ctx, tool.Request{}); !errors.Is(err, context.Canceled) {
+		t.Errorf("Export with a cancelled ctx = %v", err)
+	}
+	t.Setenv("FAKE_PLUGIN", "badext")
+	if _, _, err := e.Export(context.Background(), tool.Request{Inputs: map[string]string{"text": "x"}}); err == nil || !strings.Contains(err.Error(), "must look like") {
+		t.Errorf("a bad extension = %v", err)
 	}
 }
