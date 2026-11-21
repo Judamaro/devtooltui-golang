@@ -119,8 +119,9 @@ Rules (checked by `internal/registry/contract_test.go` over `tools.All()`):
 `number-base`, `json-yaml`, `hash`, `uuid`, `regex`, `diff` (the 12 of the
 MVP) and, from phase 2, `html`, `gzip`, `password`, `lorem`, `case`,
 `inspect`, `escape`, `jsonpath`, `qr`, `color` and, from phase 3, `cron`,
-`xpath`, `csv-json`, `x509`, `markdown`, `json-class` (registered in that
-order in `internal/tools/all.go`; 28 tools).
+`xpath`, `csv-json`, `x509`, `markdown`, `json-class`, `sql-format`
+(registered in that order in `internal/tools/all.go`; 29 tools, plus any
+plugins).
 
 - `regex`: the pattern is the `pattern` option (like the CLI `--pattern`
   flag), not an input. `diff` and `jwt` (token + PEM) have two inputs.
@@ -142,6 +143,9 @@ order in `internal/tools/all.go`; 28 tools).
   on resize; the CLI uses the terminal width (80 when unknown, 120 at most).
 - `json-class` emits Go through `go/format` (a format error is a bug) and
   reuses `text.IdentWords`/`TitleWord` for names.
+- `sql-format` has its own tokenizer; `merges` keeps a space wherever
+  gluing two tokens would read as other tokens. Its fuzz targets check
+  idempotence and that every token survives.
 - `regex` has two engines behind `matchSet` (byte offsets for both):
   `re2` and `regexp2` with a 1 s `MatchTimeout`, which becomes an
   InputError on `pattern`.
