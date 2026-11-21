@@ -66,8 +66,8 @@ make man            # man pages in man/ (GoReleaser ships them)
 - `internal/tools/<category>/<id>.go`: one tool per file.
 - `internal/tui`: `app.go` (root model), `keys.go` (central keymap),
   `theme.go` (**all** styles), and the `sidebar/`, `workspace/`,
-  `workspace/options/` (panel generated from `Spec.Options`), `statusbar/` and
-  `palette/` subpackages. Subpackages expose `Styles` and `KeyMap` structs that
+  `workspace/options/` (panel generated from `Spec.Options`), `statusbar/`,
+  `palette/` and `frame/` (the section boxes) subpackages. Subpackages expose `Styles` and `KeyMap` structs that
   `theme.go` and `keys.go` fill in.
 - `internal/testutil`: golden file helpers (`ReadInput`, `Golden`) and
   `RunCmds` for Bubble Tea commands.
@@ -171,6 +171,12 @@ plugins).
 
 ## TUI
 
+- Every section is a `frame.Box` (square border, title in the top edge,
+  accent border when focused): Tools (the sidebar, 26 columns), the tool
+  (`Name · Description` with the options), each input and Output. Sizes
+  passed to the sidebar, textareas and viewports are the box interiors
+  (2 columns and 2 rows less); `workspace.resize` keeps the box heights in
+  `headH`, `inH` and `outH`. Only the statusbar is outside the boxes.
 - Tab focus: sidebar → options → input → output (panels that do not apply
   are skipped).
 - Options: ↑/↓ changes option, ←/→ changes value, space flips a Toggle.
