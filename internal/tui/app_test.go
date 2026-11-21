@@ -541,3 +541,13 @@ func TestMarkdownRewraps(t *testing.T) {
 		t.Errorf("the output did not rewrap: %d words per line at 140 columns, %d at 100", longest(wide), longest(narrow))
 	}
 }
+
+// The hints must not use bubbles' dim 24-bit greys: keys in the accent
+// (bright blue, 94 in the dark theme), descriptions in the default colour.
+func TestHelpHintsAreReadable(t *testing.T) {
+	a := newApp(t, 120, 30)
+	last := a.View().Content[strings.LastIndex(a.View().Content, "\n")+1:]
+	if !strings.Contains(last, "94") || strings.Contains(last, "38;2;") {
+		t.Errorf("the help line colours are %q", last)
+	}
+}

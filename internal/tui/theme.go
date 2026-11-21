@@ -81,6 +81,21 @@ func paletteFor(dark bool) colors {
 	}
 }
 
+// helpStyles colour the shortcut hints (the statusbar and the ? overlay)
+// with the theme's ANSI colours: bubbles' defaults are dim 24-bit greys
+// that are hard to read on many backgrounds. Keys in the accent, the
+// descriptions in the terminal's own text colour.
+func helpStyles(accent, muted color.Color) help.Styles {
+	key := lipgloss.NewStyle().Foreground(accent).Bold(true)
+	desc := lipgloss.NewStyle()
+	sep := lipgloss.NewStyle().Foreground(muted)
+	return help.Styles{
+		ShortKey: key, ShortDesc: desc, ShortSeparator: sep,
+		FullKey: key, FullDesc: desc, FullSeparator: sep,
+		Ellipsis: sep,
+	}
+}
+
 // frameStyles: muted lines, accent and bold title when the box has focus.
 func frameStyles(accent, muted color.Color) frame.Styles {
 	return frame.Styles{
@@ -130,7 +145,7 @@ func ThemeFor(dark bool) Theme {
 			Error:   lipgloss.NewStyle().Foreground(errC),
 			Warning: lipgloss.NewStyle().Foreground(warn),
 			Running: lipgloss.NewStyle().Foreground(muted),
-			Help:    lipgloss.NewStyle().Foreground(muted),
+			Help:    lipgloss.NewStyle(), // the hints bring their own colours
 		},
 		Sidebar: sidebar.Styles{
 			Category:        lipgloss.NewStyle().Bold(true),
@@ -158,6 +173,6 @@ func ThemeFor(dark bool) Theme {
 			Render:      RenderStylesFor(dark),
 			Textarea:    textarea.DefaultStyles(dark),
 		},
-		Help: help.DefaultStyles(dark),
+		Help: helpStyles(accent, muted),
 	}
 }
