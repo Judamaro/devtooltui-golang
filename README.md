@@ -115,6 +115,12 @@ devtooltui --clipboard  # open the tool that matches the clipboard
 | `?` | Show all shortcuts |
 | `q` / `Ctrl+C` | Quit (`q` only outside text fields) |
 
+The mouse works too: click a box to focus it, a tool to open it, an option
+to select it (on `◀`/`▶` or a toggle, to change it), inside an input to move
+the cursor, and an item of the palette to run it; the wheel scrolls the box
+under the pointer. While the TUI uses the mouse, hold **Shift** to select
+text with the terminal; `mouse = false` in the config turns it off.
+
 Inputs over 32 KB switch to read-only mode (rerun with `F5`, edit with
 `Ctrl+E`); see [ADR 0002](docs/adr/0002-live-max-bytes.md).
 
@@ -177,6 +183,7 @@ theme = "auto"            # auto | dark | light
 detect_on_start = false   # read the clipboard when the TUI opens
 debounce_ms = 120
 live_max_bytes = 32768    # above it, the input is read-only and runs with F5
+mouse = true              # clicks and the wheel (hold Shift to select text)
 
 [plugins]
 enabled = true            # look for devtooltui-<name> plugins in the PATH

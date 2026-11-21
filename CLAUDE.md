@@ -177,6 +177,14 @@ plugins).
   passed to the sidebar, textareas and viewports are the box interiors
   (2 columns and 2 rows less); `workspace.resize` keeps the box heights in
   `headH`, `inH` and `outH`. Only the statusbar is outside the boxes.
+- Mouse (`tui.Options.Mouse`, config `mouse`, on by default →
+  `tea.MouseModeCellMotion`): `mouse.go` routes `tea.MouseClickMsg` (left
+  button) and `tea.MouseWheelMsg` to the box under the pointer. Hit tests
+  reuse the drawing code so a click lands on what is on screen:
+  `sidebar.rows()`/`At`, `options.layout`/`Click`, `workspace.Click`/`Wheel`
+  (box heights from `resize`), `field.clickAt` (walks the textarea cursor:
+  it has no mouse support) and the geometry the palette and the prompt keep
+  from their last `Overlay`. Tests click on text found in the rendered view.
 - Tab focus: sidebar → options → input → output (panels that do not apply
   are skipped).
 - Options: ↑/↓ changes option, ←/→ changes value, space flips a Toggle.
