@@ -9,6 +9,9 @@ with pipes. Works offline, with no telemetry. Inspired by
 
 ## Installation
 
+These put `devtooltui` in the `PATH` with its man pages and shell
+completions, so `devtooltui` opens the TUI right away:
+
 ```bash
 # Homebrew (macOS and Linux)
 brew install --cask Judamaro/tap/devtooltui
@@ -17,8 +20,25 @@ brew install --cask Judamaro/tap/devtooltui
 scoop bucket add judamaro https://github.com/Judamaro/scoop-bucket
 scoop install devtooltui
 
-# Go ≥ 1.26
+# Debian / Ubuntu (use the .rpm or .apk of the release on Fedora or Alpine)
+VERSION=1.1.1 ARCH=amd64   # or arm64
+curl -LO "https://github.com/Judamaro/devtooltui-golang/releases/download/v$VERSION/devtooltui_${VERSION}_linux_$ARCH.deb"
+sudo apt install "./devtooltui_${VERSION}_linux_$ARCH.deb"
+```
+
+With Go ≥ 1.26:
+
+```bash
 go install github.com/Judamaro/devtooltui-golang/cmd/devtooltui@latest
+```
+
+`go install` writes the binary to `$(go env GOPATH)/bin`, usually
+`~/go/bin`. If `devtooltui` then says "command not found", add that
+directory to your `PATH` once (in `~/.profile`, `~/.bashrc` or `~/.zshrc`)
+and open a new terminal:
+
+```bash
+export PATH="$PATH:$(go env GOPATH)/bin"
 ```
 
 Binaries for Linux, macOS and Windows (amd64 and arm64), plus `.deb`, `.rpm`
