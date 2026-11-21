@@ -144,7 +144,8 @@ pbpaste | devtooltui url decode --copy
 Any `devtooltui-<name>` executable in the `PATH` that speaks the
 [plugin protocol](docs/plugins.md) (JSON over stdin/stdout, in any
 language) adds its tools to the TUI and the CLI. `devtooltui plugin list`
-shows what was found.
+shows what was found; [`examples/devtooltui-rot13`](examples/devtooltui-rot13)
+is a complete one in Go.
 
 ## Configuration
 
@@ -156,6 +157,9 @@ theme = "auto"            # auto | dark | light
 detect_on_start = false   # read the clipboard when the TUI opens
 debounce_ms = 120
 live_max_bytes = 32768    # above it, the input is read-only and runs with F5
+
+[plugins]
+enabled = true            # look for devtooltui-<name> plugins in the PATH
 
 [history]
 enabled = true

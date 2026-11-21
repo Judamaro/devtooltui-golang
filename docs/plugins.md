@@ -14,6 +14,16 @@ devtooltui plugin list --json
 devtooltui never downloads plugins: it runs what you put in your `PATH`,
 with the same trust as a git subcommand. See
 [ADR 0004](adr/0004-plugins-as-processes.md) for why processes and not WASM.
+`[plugins] enabled = false` in the [config](https://github.com/Judamaro/devtooltui-golang#configuration)
+turns them off.
+
+A complete example in Go, with tests, is
+[`examples/devtooltui-rot13`](https://github.com/Judamaro/devtooltui-golang/tree/main/examples/devtooltui-rot13):
+
+```bash
+go build -o ~/bin/devtooltui-rot13 ./examples/devtooltui-rot13
+echo 'Hello' | devtooltui rot13 --variant rot47
+```
 
 ## Protocol 1
 
@@ -58,6 +68,15 @@ Prints the tools it offers (5 s at most):
 - `output`: `plain` (default), `highlighted` (coloured by `result.lang`),
   `diff`, `matches` or `image`.
 - `live`: `false` runs only with F5 in the TUI. Default `true`.
+- `detect` (optional): `{"regex": "^-----BEGIN FOO", "score": 0.8}`. Smart
+  detection (`devtooltui detect`, `Ctrl+D`, `--clipboard`) matches the RE2
+  regex against the sample itself and scores `score` (0 < score ≤ 1) on a
+  match: the plugin is not run, since a detector has 20 ms.
+- `export` (optional): `true` when the tool answers `export` (below).
+
+devtooltui keeps the answer in `<user cache dir>/devtooltui/plugins.json`
+and asks again only when the executable changes (size or modification
+time), so `spec` should not depend on anything else.
 
 ### `devtooltui-<name> run`
 
@@ -87,6 +106,24 @@ It prints exactly one of:
 - Anything else (invalid JSON, both or neither key, a non-zero exit, more
   than 64 MB of output, more than 10 s) is an internal error. Write
   diagnostics to stderr: devtooltui shows its last lines.
+
+### `devtooltui-<name> export` (optional)
+
+For tools that declare `"export": true`: a binary form of the result, which
+`Ctrl+S` saves when the path has its extension and the CLI writes with
+`--out FILE`. It reads the same request as `run` and prints one of:
+
+```json
+{"export": {"data": "iVBORw0KGgo…", "ext": ".png"}}
+```
+
+```json
+{"error": {"input": "input", "line": 1, "col": 1, "message": "nothing to export"}}
+```
+
+`data` is Base64; `ext` starts with a dot.
+
+### Lifetime
 
 The process gets a new request per run. When the user keeps typing,
 devtooltui kills the run that is no longer needed, so `run` should be

@@ -29,8 +29,9 @@ protocol 1 in [docs/plugins.md](../plugins.md). WASM is not adopted now.
 ## Consequences
 
 - A run costs a process start (a few ms), fine with the 120 ms debounce.
-  Detection cannot afford it (20 ms per detector), so plugins do not take
-  part in it until a declarative form exists (phase 4, stage 2).
+  Detection cannot afford it (20 ms per detector): plugins declare a regex
+  and a score instead, which devtooltui evaluates itself. Specs are cached
+  (`plugins.json`) so starting the CLI does not run every plugin.
 - Plugins are not sandboxed: they run with the user's permissions. If a
   need appears to run untrusted tools, WASM is the way to isolate them and
   the protocol messages stay the same.

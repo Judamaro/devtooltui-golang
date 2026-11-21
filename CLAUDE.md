@@ -48,8 +48,13 @@ make man            # man pages in man/ (GoReleaser ships them)
   protocol in `docs/plugins.md`, ADR 0004). `plugin.Registry` builds the
   registry with them after the built-in tools (main and the CLI's
   testscript binary use it); `plugin.Tool` adapts each plugin tool and is
-  the only Tool that does I/O. Tests turn the test binary into a fake
-  plugin with `FAKE_PLUGIN`; `plugins.txtar` uses a shell plugin.
+  the only Tool that does I/O; it implements Detector (declarative regex)
+  and Exporter only when the plugin declares them. Specs are cached in
+  `plugins.json` (by path, size and mtime). `[plugins] enabled` is read by
+  `config.PluginsEnabled` before the registry exists (`cli.ConfigFlag`
+  finds `--config`). Tests turn the test binary into a fake plugin with
+  `FAKE_PLUGIN`; `plugins.txtar` uses a shell plugin;
+  `examples/devtooltui-rot13` is the reference plugin (stdlib only).
 - `internal/detect`: 64 KB sample, 0.5 threshold and a tie below 0.1.
 - `internal/clipboard`: atotto + OSC 52 (over SSH or without wl-clipboard/xclip).
 - `internal/render`: colouring shared by the TUI and the CLI (Chroma, diff, regex).
