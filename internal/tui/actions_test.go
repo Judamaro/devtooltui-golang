@@ -121,7 +121,7 @@ func TestSidebarFilterInApp(t *testing.T) {
 func TestSaveExport(t *testing.T) {
 	a := newAppWith(t, 100, 30, encoders.QR{})
 	press(a, "tab", "tab", "hola")
-	send(a, keyCtrl('s'))
+	sendSlow(a, keyCtrl('s'))
 	if !isOpen[*palette.Prompt](a) || !strings.Contains(ansi.Strip(a.View().Content), "output.png") {
 		t.Fatal("ctrl+s did not suggest output.png")
 	}
@@ -137,7 +137,7 @@ func TestSaveExport(t *testing.T) {
 
 	// Another extension saves the text art.
 	txt := filepath.Join(dir, "code.txt")
-	send(a, keyCtrl('s'))
+	sendSlow(a, keyCtrl('s'))
 	send(a, keyCtrl('u'))
 	press(a, txt)
 	send(a, keyEnter())
@@ -158,7 +158,7 @@ func TestUpdateDoesNoIO(t *testing.T) {
 	if isOpen[*palette.Prompt](a) || cmd == nil {
 		t.Fatal("the prompt must wait for the export, which runs in a Cmd")
 	}
-	testutil.RunCmds(cmd, func(m tea.Msg) tea.Cmd { _, c := a.Update(m); return c })
+	send(a, cmd()) // the export, waited for however long it takes
 	if !isOpen[*palette.Prompt](a) || a.exportExt != ".png" {
 		t.Fatalf("after the export: prompt = %v, ext = %q", isOpen[*palette.Prompt](a), a.exportExt)
 	}

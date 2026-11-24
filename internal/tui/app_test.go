@@ -59,6 +59,15 @@ func send(a *App, msg tea.Msg) {
 	})
 }
 
+// sendSlow is send for a message whose command does real work, like the
+// export behind ctrl+s: it waits for that command however long it takes
+// (RunCmds drops those over testutil.CmdTimeout, and -race slows them).
+func sendSlow(a *App, msg tea.Msg) {
+	if _, cmd := a.Update(msg); cmd != nil {
+		send(a, cmd())
+	}
+}
+
 func press(a *App, keys ...string) {
 	for _, k := range keys {
 		var msg tea.KeyPressMsg
