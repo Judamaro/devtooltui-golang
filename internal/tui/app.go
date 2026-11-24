@@ -164,6 +164,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		a.width, a.height = msg.Width, msg.Height
+		if a.palette != nil {
+			a.palette.SetSize(a.width, a.height)
+		}
+		if a.prompt != nil {
+			a.prompt.SetSize(a.width, a.height)
+		}
 		if wide := msg.Width >= sidebarMinWidth; wide != a.wide {
 			a.wide = wide
 			a.showSidebar = wide
@@ -321,9 +327,9 @@ func (a *App) View() tea.View {
 	case a.showHelp:
 		content = a.helpOverlay(content)
 	case a.prompt != nil:
-		content = a.prompt.Overlay(content, a.width, a.height)
+		content = a.prompt.Overlay(content)
 	case a.palette != nil:
-		content = a.palette.Overlay(content, a.width, a.height)
+		content = a.palette.Overlay(content)
 	}
 	v := tea.NewView(content)
 	v.AltScreen = true

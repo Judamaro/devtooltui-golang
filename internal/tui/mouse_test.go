@@ -144,8 +144,7 @@ func TestClickPalette(t *testing.T) {
 		t.Errorf("palette open = %v, active = %q; want json-yaml", a.palette != nil, a.active)
 	}
 	send(a, keyCtrl('p'))
-	a.View() // the palette records where it is drawn
-	click(a, 1, 28)
+	click(a, 1, 28) // no View needed: the layout comes from SetSize
 	if a.palette != nil {
 		t.Error("a click outside did not close the palette")
 	}
@@ -160,7 +159,6 @@ func TestClickClosesOverlays(t *testing.T) {
 	}
 	press(a, "tab", "tab", "x")
 	send(a, keyCtrl('s'))
-	a.View()
 	click(a, 1, 28)
 	if a.prompt != nil {
 		t.Error("a click outside did not close the save prompt")

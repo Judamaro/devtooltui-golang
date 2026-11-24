@@ -191,6 +191,7 @@ func (a *App) openSavePrompt(ext string) tea.Cmd {
 		}
 	}
 	a.prompt = palette.NewPrompt("save", "Save the output to", "output"+ext, a.theme.Palette, a.keys.Palette)
+	a.prompt.SetSize(a.width, a.height)
 	return a.prompt.Init()
 }
 

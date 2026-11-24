@@ -63,6 +63,7 @@ func (a *App) paletteItems() []palette.Item {
 
 func (a *App) openPalette(title string, items []palette.Item) tea.Cmd {
 	a.palette = palette.New(title, items, a.theme.Palette, a.keys.Palette)
+	a.palette.SetSize(a.width, a.height)
 	return a.palette.Init()
 }
 

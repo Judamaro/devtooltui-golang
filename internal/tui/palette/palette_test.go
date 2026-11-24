@@ -74,7 +74,8 @@ func TestChooseAndClose(t *testing.T) {
 func TestOverlay(t *testing.T) {
 	base := strings.TrimSuffix(strings.Repeat(strings.Repeat(".", 80)+"\n", 24), "\n")
 	m := palette.New("Palette", items, palette.Styles{}, keys)
-	out := ansi.Strip(m.Overlay(base, 80, 24))
+	m.SetSize(80, 24)
+	out := ansi.Strip(m.Overlay(base))
 	lines := strings.Split(out, "\n")
 	if len(lines) != 24 {
 		t.Fatalf("the view changed height: %d", len(lines))
