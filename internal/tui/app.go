@@ -21,6 +21,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/sidebar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/statusbar"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
 
 const (
@@ -196,6 +197,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case sidebar.SelectedMsg:
 		return a, a.activate(msg.ID)
 
+	case options.ChangedMsg:
+		if ws, ok := a.spaces[msg.ToolID]; ok {
+			return a, ws.OptionsChanged()
+		}
+		return a, nil
+
 	case palette.ClosedMsg:
 		a.palette, a.prompt, a.pendingText = nil, nil, ""
 		return a, nil
@@ -303,9 +310,7 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return a, a.toggleSidebar()
 		}
 		if a.focus == focusSidebar {
-			var cmd tea.Cmd
-			a.sidebar, cmd = a.sidebar.Update(msg)
-			return a, cmd
+			return a, a.sidebar.Update(msg)
 		}
 	}
 
@@ -412,7 +417,8 @@ func (a *App) layout() {
 	}
 	a.help.SetWidth(a.width)
 	if ws := a.workspace(); ws != nil {
-		ws.SetSize(max(w, 1), h, a.width >= splitMinWidth)
+		ws.SetSplit(a.width >= splitMinWidth)
+		ws.SetSize(max(w, 1), h)
 	}
 }
 

@@ -67,9 +67,7 @@ func (a *App) wheel(msg tea.MouseWheelMsg) tea.Cmd {
 			if m.Button == tea.MouseWheelUp {
 				k = tea.KeyPressMsg{Code: tea.KeyUp}
 			}
-			var cmd tea.Cmd
-			a.sidebar, cmd = a.sidebar.Update(k)
-			return cmd
+			return a.sidebar.Update(k)
 		}
 		x0 = sidebarWidth
 	}

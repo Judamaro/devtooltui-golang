@@ -102,10 +102,10 @@ func (m *Model) SetStyles(s Styles) { m.styles = s }
 func (m *Model) Focus()             { m.focused = true }
 func (m *Model) Blur()              { m.focused, m.filtering = false, false }
 
-func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	k, ok := msg.(tea.KeyPressMsg)
 	if !ok || m.cursor < 0 {
-		return m, nil
+		return nil
 	}
 	prev := m.cursor
 	switch {
@@ -130,10 +130,10 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		m.filtering = true
 	}
 	if m.cursor == prev {
-		return m, nil
+		return nil
 	}
 	id := m.Selected()
-	return m, func() tea.Msg { return SelectedMsg{ID: id} }
+	return func() tea.Msg { return SelectedMsg{ID: id} }
 }
 
 // applyFilter recomputes which entries are visible and leaves the cursor on

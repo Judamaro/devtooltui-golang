@@ -226,8 +226,15 @@ func (m *Model) CapturesText() bool {
 // SetSize splits the height between options, inputs and output. wide tells
 // whether two inputs sit side by side (the App decides from the terminal
 // width).
-func (m *Model) SetSize(w, h int, wide bool) {
-	m.width, m.height, m.wide = w, h, wide
+func (m *Model) SetSize(w, h int) {
+	m.width, m.height = w, h
+	m.resize()
+}
+
+// SetSplit says whether two inputs may sit side by side: the App decides
+// from the terminal width, not the workspace's.
+func (m *Model) SetSplit(wide bool) {
+	m.wide = wide
 	m.resize()
 }
 
@@ -285,12 +292,8 @@ func (m *Model) Click(x, y int) (f Focus, ok bool, cmd tea.Cmd) {
 			return 0, false, nil
 		}
 		if r, c, inside := in(0, m.headH); inside {
-			changed, ocmd := m.opts.Click(r, c, inner)
-			cmd = ocmd
-			if changed {
-				m.resize() // a value may change the panel's height
-				cmd = tea.Batch(cmd, m.runNow())
-			}
+			cmd = m.opts.Click(r, c, inner)
+			m.resize() // the panel may change height
 		}
 		return FocusOptions, true, cmd
 	}
@@ -366,17 +369,20 @@ func (m *Model) SetFocus(f Focus) tea.Cmd {
 	return nil
 }
 
+// OptionsChanged reruns the tool after an option changed (ChangedMsg),
+// without debounce.
+func (m *Model) OptionsChanged() tea.Cmd {
+	m.resize()
+	return m.runNow()
+}
+
 // Update receives messages while the workspace has focus.
 func (m *Model) Update(msg tea.Msg) tea.Cmd {
 	var cmd tea.Cmd
 	switch m.focus {
 	case FocusOptions:
-		var changed bool
-		changed, cmd = m.opts.Update(msg)
+		cmd = m.opts.Update(msg)
 		m.resize() // the panel may change height while editing a value
-		if changed {
-			cmd = tea.Batch(cmd, m.runNow())
-		}
 	case FocusInput:
 		if !m.HasInput() {
 			return nil

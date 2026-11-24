@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/Judamaro/devtooltui-golang/internal/testutil"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace/options"
 )
@@ -77,7 +78,7 @@ func TestUpdate(t *testing.T) {
 			m := newModel()
 			var changed bool
 			for _, s := range tt.keys {
-				changed, _ = m.Update(k(s))
+				changed = emitsChanged(m.Update(k(s)))
 			}
 			if got := m.Values()[tt.key]; got != tt.want {
 				t.Errorf("%s = %v, want %v", tt.key, got, tt.want)
@@ -120,7 +121,19 @@ func TestEmpty(t *testing.T) {
 	if !m.Empty() || len(m.Lines(80)) != 0 || m.CapturesText() {
 		t.Error("panel without options is not empty")
 	}
-	if changed, _ := m.Update(k("right")); changed {
+	if emitsChanged(m.Update(k("right"))) {
 		t.Error("Update on an empty panel changed something")
 	}
+}
+
+// emitsChanged runs cmd and reports whether it answered ChangedMsg.
+func emitsChanged(cmd tea.Cmd) bool {
+	var changed bool
+	testutil.RunCmds(cmd, func(msg tea.Msg) tea.Cmd {
+		if _, ok := msg.(options.ChangedMsg); ok {
+			changed = true
+		}
+		return nil
+	})
+	return changed
 }

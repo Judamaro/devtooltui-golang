@@ -62,11 +62,11 @@ func press(m sidebar.Model, keys ...string) sidebar.Model {
 			msg = tea.KeyPressMsg{Code: tea.KeyBackspace}
 		default:
 			for _, r := range k {
-				m, _ = m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
+				m.Update(tea.KeyPressMsg{Code: r, Text: string(r)})
 			}
 			continue
 		}
-		m, _ = m.Update(msg)
+		m.Update(msg)
 	}
 	return m
 }

@@ -40,8 +40,13 @@ type item struct {
 	invalid bool
 }
 
+// ChangedMsg says that an option of tool ToolID changed value (by key or
+// by click); the App routes it to that tool's workspace, which reruns it.
+type ChangedMsg struct{ ToolID string }
+
 // Model is the options panel.
 type Model struct {
+	toolID  string
 	items   []item
 	values  tool.Values
 	cursor  int
@@ -52,7 +57,7 @@ type Model struct {
 
 // New builds the panel with the initial values from values.
 func New(spec tool.Spec, values tool.Values, styles Styles, keys KeyMap) Model {
-	m := Model{values: values, styles: styles, keys: keys}
+	m := Model{toolID: spec.ID, values: values, styles: styles, keys: keys}
 	for _, o := range spec.Options {
 		it := item{opt: o}
 		if o.Kind == tool.Number || o.Kind == tool.String {
@@ -120,8 +125,21 @@ func (m *Model) focusCurrent() tea.Cmd {
 	return cmd
 }
 
-// Update handles a message and reports whether any value changed.
-func (m *Model) Update(msg tea.Msg) (changed bool, cmd tea.Cmd) {
+// Update handles a message; a change of value answers ChangedMsg.
+func (m *Model) Update(msg tea.Msg) tea.Cmd {
+	changed, cmd := m.update(msg)
+	if changed {
+		return tea.Batch(cmd, m.changedCmd())
+	}
+	return cmd
+}
+
+func (m *Model) changedCmd() tea.Cmd {
+	id := m.toolID
+	return func() tea.Msg { return ChangedMsg{ToolID: id} }
+}
+
+func (m *Model) update(msg tea.Msg) (changed bool, cmd tea.Cmd) {
 	if len(m.items) == 0 {
 		return false, nil
 	}
@@ -258,9 +276,16 @@ func (m Model) Lines(width int) []string {
 // Click handles a click at column col of line (as laid out for width): it
 // moves the cursor to that option and focuses the panel; on a Toggle it
 // flips the value, on the ◀ or ▶ of a Select it moves the choice, and on a
-// Number or String it focuses its text field. It reports whether a value
-// changed.
-func (m *Model) Click(line, col, width int) (changed bool, cmd tea.Cmd) {
+// Number or String it focuses its text field. A change answers ChangedMsg.
+func (m *Model) Click(line, col, width int) tea.Cmd {
+	changed, cmd := m.click(line, col, width)
+	if changed {
+		return tea.Batch(cmd, m.changedCmd())
+	}
+	return cmd
+}
+
+func (m *Model) click(line, col, width int) (changed bool, cmd tea.Cmd) {
 	lines := m.layout(width)
 	if line < 0 || line >= len(lines) {
 		return false, nil

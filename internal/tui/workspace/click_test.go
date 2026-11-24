@@ -57,7 +57,7 @@ func TestClickNumberOption(t *testing.T) {
 		{Key: "s", Label: "S", Kind: tool.String, Default: ""},
 	}}
 	m := New(stub{spec}, Styles{}, clickKeys, 0)
-	m.SetSize(80, 24, false)
+	m.SetSize(80, 24)
 	f, ok, _ := m.Click(1, 1) // inside the tool box, on "N: 3"
 	if !ok || f != FocusOptions {
 		t.Fatalf("Click = %v, %v", f, ok)

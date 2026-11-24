@@ -43,7 +43,7 @@ var optKeys = options.KeyMap{
 
 func newWS(c tool.Tool) *workspace.Model {
 	m := workspace.New(c, workspace.Styles{}, optKeys, 0)
-	m.SetSize(80, 24, false)
+	m.SetSize(80, 24)
 	m.SetFocus(workspace.FocusInput)
 	run(m, m.Init())
 	return m
@@ -225,7 +225,7 @@ func runBatch(cmd tea.Cmd) tea.Msg {
 func TestDebounce(t *testing.T) {
 	c := &counter{live: true}
 	m := workspace.New(c, workspace.Styles{}, optKeys, 50*time.Millisecond)
-	m.SetSize(80, 24, false)
+	m.SetSize(80, 24)
 	m.SetFocus(workspace.FocusInput)
 	runs := c.runs
 
@@ -289,7 +289,7 @@ func TestSetInput(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &counter{live: true}
 			m := workspace.New(c, workspace.Styles{}, optKeys, 0)
-			m.SetSize(80, 24, false)
+			m.SetSize(80, 24)
 			if tt.focused {
 				m.SetFocus(workspace.FocusInput)
 				typeText(m, "previo")
@@ -305,7 +305,7 @@ func TestSetInput(t *testing.T) {
 func TestLiveDebounceIsNotStale(t *testing.T) {
 	c := &counter{live: true}
 	m := workspace.New(c, workspace.Styles{}, optKeys, time.Hour) // the tick never arrives
-	m.SetSize(80, 24, false)
+	m.SetSize(80, 24)
 	m.SetFocus(workspace.FocusInput)
 	m.Update(tea.KeyPressMsg{Code: 'a', Text: "a"})
 	if m.Status().Stale {
