@@ -23,6 +23,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/testers"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/text"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
@@ -550,4 +551,20 @@ func TestHelpHintsAreReadable(t *testing.T) {
 	if !strings.Contains(last, "94") || strings.Contains(last, "38;2;") {
 		t.Errorf("the help line colours are %q", last)
 	}
+}
+
+// isOpen reports whether the top overlay is a T.
+func isOpen[T overlay](a *App) bool {
+	_, ok := topAs[T](a)
+	return ok
+}
+
+// paletteOf returns the open palette.
+func paletteOf(t *testing.T, a *App) *palette.Model {
+	t.Helper()
+	p, ok := topAs[*palette.Model](a)
+	if !ok {
+		t.Fatal("the palette is not open")
+	}
+	return p
 }

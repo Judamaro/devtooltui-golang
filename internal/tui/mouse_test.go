@@ -9,6 +9,7 @@ import (
 
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 )
 
 // find returns the screen cell where text first appears on the view
@@ -140,12 +141,12 @@ func TestClickPalette(t *testing.T) {
 	press(a, "json")
 	x, y := find(t, a, "JSON ↔ YAML")
 	click(a, x, y)
-	if a.palette != nil || a.active != "json-yaml" {
-		t.Errorf("palette open = %v, active = %q; want json-yaml", a.palette != nil, a.active)
+	if isOpen[*palette.Model](a) || a.active != "json-yaml" {
+		t.Errorf("palette open = %v, active = %q; want json-yaml", isOpen[*palette.Model](a), a.active)
 	}
 	send(a, keyCtrl('p'))
 	click(a, 1, 28) // no View needed: the layout comes from SetSize
-	if a.palette != nil {
+	if isOpen[*palette.Model](a) {
 		t.Error("a click outside did not close the palette")
 	}
 }
@@ -154,13 +155,13 @@ func TestClickClosesOverlays(t *testing.T) {
 	a := newApp(t, 100, 30)
 	press(a, "?")
 	click(a, 50, 15)
-	if a.showHelp {
+	if isOpen[*helpOverlay](a) {
 		t.Error("a click did not close the help")
 	}
 	press(a, "tab", "tab", "x")
 	send(a, keyCtrl('s'))
 	click(a, 1, 28)
-	if a.prompt != nil {
+	if isOpen[*palette.Prompt](a) {
 		t.Error("a click outside did not close the save prompt")
 	}
 }

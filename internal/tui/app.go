@@ -83,13 +83,11 @@ type App struct {
 	active  string
 	focus   focus
 
-	flash       string          // transient notice in the statusbar
-	palette     *palette.Model  // nil: closed
-	prompt      *palette.Prompt // nil: closed
-	showHelp    bool
-	pendingText string // text to load when choosing in the detection picker
-	export      []byte // binary export offered by the save prompt (Exporter)
-	exportExt   string // its extension; other paths save the text output
+	flash       string    // transient notice in the statusbar
+	overlays    []overlay // open overlays; the last one is on top
+	pendingText string    // text to load when choosing in the detection picker
+	export      []byte    // binary export offered by the save prompt (Exporter)
+	exportExt   string    // its extension; other paths save the text output
 
 	width, height int
 	wide          bool // width ≥ sidebarMinWidth on the last resize
@@ -165,11 +163,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.WindowSizeMsg:
 		a.width, a.height = msg.Width, msg.Height
-		if a.palette != nil {
-			a.palette.SetSize(a.width, a.height)
-		}
-		if a.prompt != nil {
-			a.prompt.SetSize(a.width, a.height)
+		for _, o := range a.overlays {
+			o.SetSize(a.width, a.height)
 		}
 		if wide := msg.Width >= sidebarMinWidth; wide != a.wide {
 			a.wide = wide
@@ -204,11 +199,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 
 	case palette.ClosedMsg:
-		a.palette, a.prompt, a.pendingText = nil, nil, ""
+		a.popOverlay()
 		return a, nil
 
 	case palette.PromptDoneMsg:
-		a.prompt = nil
+		a.popOverlay()
 		if msg.ID == "save" {
 			return a, a.saveOutput(msg.Value)
 		}
@@ -261,19 +256,12 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyPressMsg:
 		a.flash = ""
-		switch {
-		case a.showHelp:
-			a.showHelp = false // any key closes the help
-			return a, nil
-		case a.prompt != nil:
-			return a, a.prompt.Update(msg)
-		case a.palette != nil:
-			return a, a.palette.Update(msg)
+		if o := a.topOverlay(); o != nil {
+			return a, o.Update(msg)
 		}
 		switch {
 		case key.Matches(msg, a.keys.Help) && !a.capturesText():
-			a.showHelp = true
-			return a, nil
+			return a, a.openHelp()
 		case key.Matches(msg, a.keys.UseOutput):
 			return a, a.useOutput()
 		case key.Matches(msg, a.keys.EditInput):
@@ -314,11 +302,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	switch { // cursor blink of the palette or the prompt
-	case a.prompt != nil:
-		return a, a.prompt.Update(msg)
-	case a.palette != nil:
-		return a, a.palette.Update(msg)
+	if o := a.topOverlay(); o != nil { // e.g. the cursor blink of its input
+		return a, o.Update(msg)
 	}
 	if ws := a.workspace(); ws != nil {
 		return a, ws.Update(msg)
@@ -328,13 +313,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (a *App) View() tea.View {
 	content := a.render()
-	switch {
-	case a.showHelp:
-		content = a.helpOverlay(content)
-	case a.prompt != nil:
-		content = a.prompt.Overlay(content)
-	case a.palette != nil:
-		content = a.palette.Overlay(content)
+	for _, o := range a.overlays {
+		content = o.Overlay(content)
 	}
 	v := tea.NewView(content)
 	v.AltScreen = true

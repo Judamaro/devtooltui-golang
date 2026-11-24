@@ -10,6 +10,7 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/testutil"
 	"github.com/Judamaro/devtooltui-golang/internal/tool"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 )
 
 func keyEsc() tea.KeyPressMsg   { return tea.KeyPressMsg{Code: tea.KeyEscape} }
@@ -18,14 +19,14 @@ func keyEnter() tea.KeyPressMsg { return tea.KeyPressMsg{Code: tea.KeyEnter} }
 func TestPaletteJumpsToTool(t *testing.T) {
 	a := newAppWith(t, 100, 30, tools.All()...)
 	send(a, keyCtrl('p'))
-	if a.palette == nil {
+	if !isOpen[*palette.Model](a) {
 		t.Fatal("ctrl+p did not open the palette")
 	}
 	press(a, "b64")
 	testutil.Golden(t, "tui", "palette-b64-100x30", plainView(a))
 	send(a, keyEnter())
-	if a.palette != nil || a.active != "base64" || a.sidebar.Selected() != "base64" {
-		t.Errorf("palette open = %v, active = %q, sidebar = %q", a.palette != nil, a.active, a.sidebar.Selected())
+	if isOpen[*palette.Model](a) || a.active != "base64" || a.sidebar.Selected() != "base64" {
+		t.Errorf("palette open = %v, active = %q, sidebar = %q", isOpen[*palette.Model](a), a.active, a.sidebar.Selected())
 	}
 }
 
@@ -45,12 +46,12 @@ func TestPaletteClose(t *testing.T) {
 	a := newAppWith(t, 100, 30, tools.All()...)
 	send(a, keyCtrl('p'))
 	press(a, "q") // with the palette open, "q" is typed into the search
-	if a.palette == nil {
+	if !isOpen[*palette.Model](a) {
 		t.Fatal("q closed the palette or the app")
 	}
 	send(a, keyEsc())
-	if a.palette != nil || a.active != "json-format" {
-		t.Errorf("Esc did not close without switching tool: %v %q", a.palette != nil, a.active)
+	if isOpen[*palette.Model](a) || a.active != "json-format" {
+		t.Errorf("Esc did not close without switching tool: %v %q", isOpen[*palette.Model](a), a.active)
 	}
 }
 
@@ -77,7 +78,7 @@ func TestDetectTieOpensPicker(t *testing.T) {
 	a := New(reg, Options{Clipboard: &fakeClip{data: "dato"}})
 	send(a, tea.WindowSizeMsg{Width: 100, Height: 30})
 	send(a, keyCtrl('d'))
-	if a.palette == nil || len(a.palette.Filtered()) != 2 {
+	if !isOpen[*palette.Model](a) || len(paletteOf(t, a).Filtered()) != 2 {
 		t.Fatalf("the picker did not open with the 2 candidates")
 	}
 	send(a, tea.KeyPressMsg{Code: tea.KeyDown})

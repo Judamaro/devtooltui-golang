@@ -6,27 +6,17 @@ import (
 	"github.com/Judamaro/devtooltui-golang/internal/tui/workspace"
 )
 
-// click handles a left click at screen cell (x, y). An open overlay gets it
-// first: the help closes, the palette runs the clicked item, and a click
-// outside the palette or the prompt closes them. Otherwise the box under
-// the pointer takes the focus and the click acts inside it.
+// click handles a left click at screen cell (x, y). The top overlay gets it
+// first: a click outside it closes it (the help has no inside). Otherwise
+// the box under the pointer takes the focus and the click acts inside it.
 func (a *App) click(x, y int) tea.Cmd {
 	a.flash = ""
-	switch {
-	case a.showHelp:
-		a.showHelp = false
-		return nil
-	case a.prompt != nil:
-		if !a.prompt.Contains(x, y) {
-			a.prompt = nil
-		}
-		return nil
-	case a.palette != nil:
-		if !a.palette.Contains(x, y) {
-			a.palette, a.pendingText = nil, ""
+	if o := a.topOverlay(); o != nil {
+		if !o.Contains(x, y) {
+			a.popOverlay()
 			return nil
 		}
-		return a.palette.Click(x, y)
+		return o.Click(x, y)
 	}
 	if y >= a.height-1 { // the statusbar
 		return nil
@@ -57,7 +47,7 @@ func (a *App) click(x, y int) tea.Cmd {
 // moves the selection, as ↑/↓ do: the list follows its cursor.
 func (a *App) wheel(msg tea.MouseWheelMsg) tea.Cmd {
 	m := msg.Mouse()
-	if a.palette != nil || a.prompt != nil || a.showHelp || m.Y >= a.height-1 {
+	if len(a.overlays) > 0 || m.Y >= a.height-1 {
 		return nil
 	}
 	x0 := 0

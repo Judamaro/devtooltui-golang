@@ -59,6 +59,9 @@ func NewPrompt(id, title, value string, styles Styles, keys KeyMap) *Prompt {
 
 func (p *Prompt) Init() tea.Cmd { return textinput.Blink }
 
+// Click inside the prompt does nothing: the field already has the focus.
+func (p *Prompt) Click(_, _ int) tea.Cmd { return nil }
+
 func (p *Prompt) Update(msg tea.Msg) tea.Cmd {
 	if k, ok := msg.(tea.KeyPressMsg); ok {
 		switch {

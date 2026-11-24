@@ -36,7 +36,7 @@ func (a *App) actions() []action {
 		{"use-output", "Use the output as input", k.UseOutput, (*App).useOutput},
 		{"edit", "Edit the input in $EDITOR", k.EditInput, (*App).editInput},
 		{"save", "Save the output to a file", k.SaveOutput, (*App).askSave},
-		{"help", "Help: all shortcuts", k.Help, func(a *App) tea.Cmd { a.showHelp = true; return nil }},
+		{"help", "Help: all shortcuts", k.Help, func(a *App) tea.Cmd { return a.openHelp() }},
 		{"sidebar", "Show or hide the sidebar", k.ToggleSidebar, (*App).toggleSidebar},
 		{"quit", "Quit", k.Quit, func(*App) tea.Cmd { return tea.Quit }},
 	}
@@ -62,15 +62,13 @@ func (a *App) paletteItems() []palette.Item {
 }
 
 func (a *App) openPalette(title string, items []palette.Item) tea.Cmd {
-	a.palette = palette.New(title, items, a.theme.Palette, a.keys.Palette)
-	a.palette.SetSize(a.width, a.height)
-	return a.palette.Init()
+	return a.pushOverlay(palette.New(title, items, a.theme.Palette, a.keys.Palette))
 }
 
 // choose closes the palette and runs what was chosen.
 func (a *App) choose(it palette.Item) tea.Cmd {
 	text := a.pendingText
-	a.palette, a.pendingText = nil, ""
+	a.popOverlay()
 	if it.Kind == palette.ActionItem {
 		for _, ac := range a.actions() {
 			if ac.id == it.ID {

@@ -10,7 +10,6 @@ import (
 	"runtime"
 	"strings"
 
-	"charm.land/bubbles/v2/help"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
@@ -190,9 +189,7 @@ func (a *App) openSavePrompt(ext string) tea.Cmd {
 			ext = ".txt"
 		}
 	}
-	a.prompt = palette.NewPrompt("save", "Save the output to", "output"+ext, a.theme.Palette, a.keys.Palette)
-	a.prompt.SetSize(a.width, a.height)
-	return a.prompt.Init()
+	return a.pushOverlay(palette.NewPrompt("save", "Save the output to", "output"+ext, a.theme.Palette, a.keys.Palette))
 }
 
 // saveOutput writes the export, when the path has its extension, or the
@@ -242,14 +239,5 @@ func (a *App) handleSaved(msg savedMsg) tea.Cmd {
 	return flash(fmt.Sprintf("%s %s (%s)", verb, msg.path, statusbar.HumanBytes(msg.size)))
 }
 
-// helpOverlay draws the full help over the view (?).
-func (a *App) helpOverlay(base string) string {
-	h := help.New()
-	h.Styles = a.theme.Help
-	h.ShowAll = true
-	h.SetWidth(max(a.width-8, 20))
-	body := a.theme.Palette.Title.Render("Shortcuts") + "\n\n" + h.View(a.keys) + "\n\n" +
-		a.theme.Palette.Detail.Render("press any key to close")
-	box := a.theme.Palette.Box.Render(body)
-	return palette.Place(base, box, a.width, a.height)
-}
+// openHelp shows the full help over the view (?).
+func (a *App) openHelp() tea.Cmd { return a.pushOverlay(&helpOverlay{app: a}) }

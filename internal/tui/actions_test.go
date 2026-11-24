@@ -74,7 +74,7 @@ func TestSaveOutput(t *testing.T) {
 	a := newAppWith(t, 100, 30, formatters.JSONFormat{})
 	press(a, "tab", "tab", "[1]")
 	send(a, keyCtrl('s'))
-	if a.prompt == nil || !strings.Contains(ansi.Strip(a.View().Content), "output.json") {
+	if !isOpen[*palette.Prompt](a) || !strings.Contains(ansi.Strip(a.View().Content), "output.json") {
 		t.Fatal("ctrl+s did not open the prompt with output.json")
 	}
 	path := filepath.Join(t.TempDir(), "out.json")
@@ -85,23 +85,23 @@ func TestSaveOutput(t *testing.T) {
 	if err != nil || string(data) != "[\n  1\n]\n" {
 		t.Fatalf("file = %q, %v", data, err)
 	}
-	if a.prompt != nil || !strings.HasPrefix(a.flash, "saved ") {
-		t.Errorf("prompt open = %v, flash = %q", a.prompt != nil, a.flash)
+	if isOpen[*palette.Prompt](a) || !strings.HasPrefix(a.flash, "saved ") {
+		t.Errorf("prompt open = %v, flash = %q", isOpen[*palette.Prompt](a), a.flash)
 	}
 }
 
 func TestHelpOverlay(t *testing.T) {
 	a := newApp(t, 100, 30)
 	press(a, "?")
-	if !a.showHelp || !strings.Contains(ansi.Strip(a.View().Content), "Shortcuts") {
+	if !isOpen[*helpOverlay](a) || !strings.Contains(ansi.Strip(a.View().Content), "Shortcuts") {
 		t.Fatal("? did not show the help")
 	}
 	press(a, "x")
-	if a.showHelp {
+	if isOpen[*helpOverlay](a) {
 		t.Error("a key did not close the help")
 	}
 	press(a, "tab", "tab", "?") // inside the input, "?" is text
-	if a.showHelp || a.workspace().ActiveValue() != "?" {
+	if isOpen[*helpOverlay](a) || a.workspace().ActiveValue() != "?" {
 		t.Errorf("in the input '?' opened the help or was not typed")
 	}
 }
@@ -122,7 +122,7 @@ func TestSaveExport(t *testing.T) {
 	a := newAppWith(t, 100, 30, encoders.QR{})
 	press(a, "tab", "tab", "hola")
 	send(a, keyCtrl('s'))
-	if a.prompt == nil || !strings.Contains(ansi.Strip(a.View().Content), "output.png") {
+	if !isOpen[*palette.Prompt](a) || !strings.Contains(ansi.Strip(a.View().Content), "output.png") {
 		t.Fatal("ctrl+s did not suggest output.png")
 	}
 	dir := t.TempDir()
@@ -155,12 +155,12 @@ func TestUpdateDoesNoIO(t *testing.T) {
 
 	// Ctrl+S on an exporting tool: Update only returns the export Cmd.
 	_, cmd := a.Update(keyCtrl('s'))
-	if a.prompt != nil || cmd == nil {
+	if isOpen[*palette.Prompt](a) || cmd == nil {
 		t.Fatal("the prompt must wait for the export, which runs in a Cmd")
 	}
 	testutil.RunCmds(cmd, func(m tea.Msg) tea.Cmd { _, c := a.Update(m); return c })
-	if a.prompt == nil || a.exportExt != ".png" {
-		t.Fatalf("after the export: prompt = %v, ext = %q", a.prompt != nil, a.exportExt)
+	if !isOpen[*palette.Prompt](a) || a.exportExt != ".png" {
+		t.Fatalf("after the export: prompt = %v, ext = %q", isOpen[*palette.Prompt](a), a.exportExt)
 	}
 
 	path := filepath.Join(t.TempDir(), "code.png")
