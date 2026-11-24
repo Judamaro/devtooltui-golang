@@ -176,6 +176,13 @@ since v1.4, `json-string` (registered in that order in
 
 ## TUI
 
+- TEA rules (ADR 0005): `Update` does no I/O (effects are `tea.Cmd`s that
+  answer typed messages), `View` does not mutate, sections implement
+  `component` (`component.go`: pointer `Update(msg) tea.Cmd`, `View`,
+  `SetSize`) and report to parents with messages (`sidebar.SelectedMsg`,
+  `options.ChangedMsg{ToolID}`), and overlays (help, palette, prompt)
+  implement `overlay` (`overlay.go`) in the `App.overlays` stack, whose
+  top gets keys, clicks and leftover messages.
 - Every section is a `frame.Box` (square border, title in the top edge,
   accent border when focused): Tools (the sidebar, 26 columns), the tool
   (`Name · Description` with the options), each input and Output. Sizes

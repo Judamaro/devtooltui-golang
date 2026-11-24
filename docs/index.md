@@ -78,3 +78,4 @@ Add your own tools in any language: see [plugins](plugins.md).
 - [ADR 0002: large inputs](adr/0002-live-max-bytes.md)
 - [ADR 0003: what v1.0.0 keeps stable](adr/0003-v1-stability.md)
 - [ADR 0004: plugins as processes](adr/0004-plugins-as-processes.md)
+- [ADR 0005: TUI TEA conventions](adr/0005-tui-tea-conventions.md)
