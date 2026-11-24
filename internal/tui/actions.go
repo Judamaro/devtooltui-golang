@@ -2,7 +2,6 @@ package tui
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -31,11 +30,39 @@ func (a *App) useOutput() tea.Cmd {
 	return tea.Batch(ws.SetInput(ws.Output()), flash("output used as input"))
 }
 
-// editorDoneMsg arrives when the external editor exits.
-type editorDoneMsg struct {
-	path string
-	err  error
-}
+// Messages of the effects below: Update never touches the disk or runs
+// an export itself (ADR 0005); it returns a Cmd and handles its message.
+type (
+	// editorFileMsg: the temporary file for the editor is ready (or not).
+	editorFileMsg struct {
+		path string
+		err  error
+	}
+	// editorDoneMsg arrives when the external editor exits.
+	editorDoneMsg struct {
+		path string
+		err  error
+	}
+	// editorTextMsg carries what the editor left in the file.
+	editorTextMsg struct {
+		text string
+		err  error
+	}
+	// exportedMsg carries the binary form of the output, offered by Ctrl+S.
+	exportedMsg struct {
+		toolID string
+		data   []byte
+		ext    string
+		err    error
+	}
+	// savedMsg reports Ctrl+S.
+	savedMsg struct {
+		path     string // absolute when known
+		size     int
+		replaced bool
+		err      error
+	}
+)
 
 // editorCommand builds the $VISUAL or $EDITOR command (with its arguments,
 // e.g. "code --wait"); without either it uses vi (notepad on Windows).
@@ -55,47 +82,69 @@ func editorCommand(path string) *exec.Cmd {
 }
 
 // editInput opens the active input in the external editor (Ctrl+E). It is
-// also the way to edit an input in large mode.
+// also the way to edit an input in large mode. Writing the temporary file
+// happens in a Cmd; editorFileMsg then starts the editor.
 func (a *App) editInput() tea.Cmd {
 	ws := a.workspace()
 	if ws == nil || !ws.HasInput() {
 		return flash("this tool has no input")
 	}
-	f, err := os.CreateTemp("", "devtooltui-*.txt")
-	if err != nil {
-		return flash("could not create the temporary file: " + err.Error())
+	text := ws.ActiveValue()
+	return func() tea.Msg {
+		f, err := os.CreateTemp("", "devtooltui-*.txt")
+		if err != nil {
+			return editorFileMsg{err: err}
+		}
+		_, werr := f.WriteString(text)
+		if cerr := f.Close(); werr == nil {
+			werr = cerr
+		}
+		if werr != nil {
+			_ = os.Remove(f.Name())
+			return editorFileMsg{err: werr}
+		}
+		return editorFileMsg{path: f.Name()}
 	}
-	_, werr := f.WriteString(ws.ActiveValue())
-	if cerr := f.Close(); werr == nil {
-		werr = cerr
+}
+
+func (a *App) handleEditorFile(msg editorFileMsg) tea.Cmd {
+	if msg.err != nil {
+		return flash("could not write the temporary file: " + msg.err.Error())
 	}
-	if werr != nil {
-		_ = os.Remove(f.Name())
-		return flash("could not write the temporary file: " + werr.Error())
-	}
-	path := f.Name()
 	newCmd := a.opts.Editor
 	if newCmd == nil {
 		newCmd = editorCommand
 	}
+	path := msg.path
 	return tea.ExecProcess(newCmd(path), func(err error) tea.Msg { return editorDoneMsg{path: path, err: err} })
 }
 
-// handleEditorDone loads the edited text into the input and removes the temp file.
+// handleEditorDone reads the edited text and removes the temporary file,
+// in a Cmd.
 func (a *App) handleEditorDone(msg editorDoneMsg) tea.Cmd {
-	defer os.Remove(msg.path)
-	if msg.err != nil {
-		return flash("the editor exited with an error: " + msg.err.Error())
+	return func() tea.Msg {
+		defer os.Remove(msg.path)
+		if msg.err != nil {
+			return editorTextMsg{err: fmt.Errorf("the editor exited with an error: %w", msg.err)}
+		}
+		data, err := os.ReadFile(msg.path)
+		if err != nil {
+			return editorTextMsg{err: fmt.Errorf("could not read the edited text: %w", err)}
+		}
+		return editorTextMsg{text: string(data)}
 	}
-	data, err := os.ReadFile(msg.path)
-	if err != nil {
-		return flash("could not read the edited text: " + err.Error())
+}
+
+// handleEditorText loads the edited text into the input.
+func (a *App) handleEditorText(msg editorTextMsg) tea.Cmd {
+	if msg.err != nil {
+		return flash(msg.err.Error())
 	}
 	ws := a.workspace()
 	if ws == nil {
 		return nil
 	}
-	text := string(data)
+	text := msg.text
 	// Editors add a final line break; drop it if it was not there before.
 	if !strings.HasSuffix(ws.ActiveValue(), "\n") {
 		text = strings.TrimSuffix(text, "\n")
@@ -105,26 +154,48 @@ func (a *App) handleEditorDone(msg editorDoneMsg) tea.Cmd {
 
 var langExt = map[string]string{"json": ".json", "yaml": ".yaml", "xml": ".xml", "diff": ".diff", "diff-side": ".txt"}
 
-// askSave asks for the path to save the output to (Ctrl+S).
+// askSave asks for the path to save the output to (Ctrl+S). A tool with an
+// Exporter (qr) runs it first, in a Cmd (a plugin's export is a process):
+// exportedMsg then opens the prompt suggesting its extension.
 func (a *App) askSave() tea.Cmd {
 	ws := a.workspace()
 	if ws == nil || ws.Output() == "" {
 		return flash("no output to save")
 	}
-	ext := langExt[ws.OutputLang()]
-	if ext == "" {
-		ext = ".txt"
-	}
 	a.export, a.exportExt = nil, ""
-	if data, xext, ok, err := ws.Export(context.Background()); ok && err == nil {
-		// Suggest the binary form (qr → .png); a path with another
-		// extension still saves the text.
-		a.export, a.exportExt, ext = data, xext, xext
+	if cmd := ws.ExportCmd(func(id string, data []byte, ext string, err error) tea.Msg {
+		return exportedMsg{toolID: id, data: data, ext: ext, err: err}
+	}); cmd != nil {
+		return cmd
+	}
+	return a.openSavePrompt("")
+}
+
+// handleExported keeps the export for saveOutput and opens the prompt. A
+// failed export still lets the user save the text.
+func (a *App) handleExported(msg exportedMsg) tea.Cmd {
+	if msg.toolID != a.active {
+		return nil // the user moved on to another tool
+	}
+	if msg.err == nil {
+		a.export, a.exportExt = msg.data, msg.ext
+		return a.openSavePrompt(msg.ext)
+	}
+	return a.openSavePrompt("")
+}
+
+func (a *App) openSavePrompt(ext string) tea.Cmd {
+	if ext == "" {
+		if ext = langExt[a.workspace().OutputLang()]; ext == "" {
+			ext = ".txt"
+		}
 	}
 	a.prompt = palette.NewPrompt("save", "Save the output to", "output"+ext, a.theme.Palette, a.keys.Palette)
 	return a.prompt.Init()
 }
 
+// saveOutput writes the export, when the path has its extension, or the
+// text output; the write happens in a Cmd that answers savedMsg.
 func (a *App) saveOutput(path string) tea.Cmd {
 	ws := a.workspace()
 	path = strings.TrimSpace(path)
@@ -138,20 +209,36 @@ func (a *App) saveOutput(path string) tea.Cmd {
 		data = append(data, '\n')
 	}
 	a.export, a.exportExt = nil, ""
-	verb := "saved"
+	return func() tea.Msg { return writeFile(path, data) }
+}
+
+func writeFile(path string, data []byte) savedMsg {
+	msg := savedMsg{path: path, size: len(data)}
 	if _, err := os.Stat(path); err == nil {
-		verb = "replaced"
+		msg.replaced = true
 	} else if !errors.Is(err, os.ErrNotExist) {
-		return flash("not saved: " + err.Error())
+		msg.err = err
+		return msg
 	}
 	if err := os.WriteFile(path, data, 0o600); err != nil {
-		return flash("not saved: " + err.Error())
+		msg.err = err
+		return msg
 	}
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		abs = path
+	if abs, err := filepath.Abs(path); err == nil {
+		msg.path = abs
 	}
-	return flash(fmt.Sprintf("%s %s (%s)", verb, abs, statusbar.HumanBytes(len(data))))
+	return msg
+}
+
+func (a *App) handleSaved(msg savedMsg) tea.Cmd {
+	if msg.err != nil {
+		return flash("not saved: " + msg.err.Error())
+	}
+	verb := "saved"
+	if msg.replaced {
+		verb = "replaced"
+	}
+	return flash(fmt.Sprintf("%s %s (%s)", verb, msg.path, statusbar.HumanBytes(msg.size)))
 }
 
 // helpOverlay draws the full help over the view (?).

@@ -521,16 +521,19 @@ func (m *Model) request() tool.Request {
 	return tool.Request{Inputs: inputs, Opts: maps.Clone(m.opts.Values())}
 }
 
-// Export runs the tool's Exporter on the current inputs and options. ok is
-// false when the tool has none. It runs in the caller's goroutine: exports
-// are small (a QR PNG takes milliseconds).
-func (m *Model) Export(ctx context.Context) (data []byte, ext string, ok bool, err error) {
+// ExportCmd runs the tool's Exporter on a copy of the current inputs and
+// options in a Cmd (a plugin's export starts a process), answering with
+// msg. It returns nil when the tool has no Exporter.
+func (m *Model) ExportCmd(msg func(id string, data []byte, ext string, err error) tea.Msg) tea.Cmd {
 	e, ok := m.tool.(tool.Exporter)
 	if !ok {
-		return nil, "", false, nil
+		return nil
 	}
-	data, ext, err = e.Export(ctx, m.request())
-	return data, ext, true, err
+	req, id := m.request(), m.spec.ID
+	return func() tea.Msg {
+		data, ext, err := e.Export(context.Background(), req)
+		return msg(id, data, ext, err)
+	}
 }
 
 // HandleResult applies a result if it belongs to the current run.

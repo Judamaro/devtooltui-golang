@@ -10,9 +10,11 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/Judamaro/devtooltui-golang/internal/testutil"
 	"github.com/Judamaro/devtooltui-golang/internal/tools"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/encoders"
 	"github.com/Judamaro/devtooltui-golang/internal/tools/formatters"
+	"github.com/Judamaro/devtooltui-golang/internal/tui/palette"
 )
 
 func TestUseOutput(t *testing.T) {
@@ -142,5 +144,35 @@ func TestSaveExport(t *testing.T) {
 	data, err = os.ReadFile(txt)
 	if err != nil || !strings.Contains(string(data), "▀") {
 		t.Fatalf("code.txt = %q, %v; want the text art", data, err)
+	}
+}
+
+// TestUpdateDoesNoIO: saving and exporting happen in Cmds, never inside
+// Update (ADR 0005). Update returns the Cmd; only running it writes.
+func TestUpdateDoesNoIO(t *testing.T) {
+	a := newAppWith(t, 100, 30, encoders.QR{})
+	press(a, "tab", "tab", "hola")
+
+	// Ctrl+S on an exporting tool: Update only returns the export Cmd.
+	_, cmd := a.Update(keyCtrl('s'))
+	if a.prompt != nil || cmd == nil {
+		t.Fatal("the prompt must wait for the export, which runs in a Cmd")
+	}
+	testutil.RunCmds(cmd, func(m tea.Msg) tea.Cmd { _, c := a.Update(m); return c })
+	if a.prompt == nil || a.exportExt != ".png" {
+		t.Fatalf("after the export: prompt = %v, ext = %q", a.prompt != nil, a.exportExt)
+	}
+
+	path := filepath.Join(t.TempDir(), "code.png")
+	_, cmd = a.Update(palette.PromptDoneMsg{ID: "save", Value: path})
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatal("Update wrote the file itself")
+	}
+	testutil.RunCmds(cmd, func(m tea.Msg) tea.Cmd { _, c := a.Update(m); return c })
+	if data, err := os.ReadFile(path); err != nil || !bytes.HasPrefix(data, []byte("\x89PNG")) {
+		t.Fatalf("after the Cmd: %d bytes, %v", len(data), err)
+	}
+	if !strings.HasPrefix(a.flash, "saved ") {
+		t.Errorf("flash = %q", a.flash)
 	}
 }

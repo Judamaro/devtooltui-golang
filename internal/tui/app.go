@@ -201,8 +201,20 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, nil
 
+	case editorFileMsg:
+		return a, a.handleEditorFile(msg)
+
 	case editorDoneMsg:
 		return a, a.handleEditorDone(msg)
+
+	case editorTextMsg:
+		return a, a.handleEditorText(msg)
+
+	case exportedMsg:
+		return a, a.handleExported(msg)
+
+	case savedMsg:
+		return a, a.handleSaved(msg)
 
 	case palette.ChosenMsg:
 		return a, a.choose(msg.Item)
